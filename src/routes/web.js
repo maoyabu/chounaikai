@@ -115,6 +115,11 @@ webRouter.use(async (req, res, next) => {
           .filter((item) => item.association && item.role?.permissions?.includes('association.manage'))
           .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
       ).values()];
+      if (res.locals.currentManagerAssociations.length) {
+        const counts = await Promise.all(res.locals.currentManagerAssociations.map(async (item) => [String(item._id), await JoinApplication.countDocuments({ association: item._id, status: 'pending' })]));
+        const countMap = new Map(counts);
+        res.locals.currentManagerAssociations = res.locals.currentManagerAssociations.map(item => ({ ...item, actionCount: countMap.get(String(item._id)) || 0 }));
+      }
       const answerAssociations = [...new Map([
         ...annualOfficers.filter((item) => item.association).map((item) => [String(item.association._id), item.association]),
         ...res.locals.currentManagerAssociations.map((item) => [String(item._id), item])
@@ -132,6 +137,11 @@ webRouter.use(async (req, res, next) => {
           .filter((item) => item.association && item.fiscalYear === currentFiscalYear)
           .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
       ).values()];
+      if (res.locals.currentLeaderAssociations.length) {
+        const counts = await Promise.all(res.locals.currentLeaderAssociations.map(async (item) => [String(item._id), await JoinApplication.countDocuments({ association: item._id, status: 'pending' })]));
+        const countMap = new Map(counts);
+        res.locals.currentLeaderAssociations = res.locals.currentLeaderAssociations.map(item => ({ ...item, actionCount: countMap.get(String(item._id)) || 0 }));
+      }
       res.locals.currentHasAssociationMembership = Boolean(activeMembership);
       res.locals.currentMenuAssociationName = activeMembership?.association?.name || res.locals.currentOfficerQuestionBoxes[0]?.name || res.locals.currentLeaderAssociations[0]?.name || res.locals.currentManagerAssociations[0]?.name || null;
     }
