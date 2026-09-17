@@ -1,0 +1,32 @@
+<header class="site-header">
+  <a class="brand" href="/dashboard" aria-label="まちの伝言板 ホーム">
+    <span class="brand-mark" aria-hidden="true">町</span>
+    <span>まちの伝言板</span>
+  </a>
+  <% if (currentUser) { %>
+    <div class="header-account">
+      <span class="account-summary"><% if (currentUser.avatar) { %><img class="profile-avatar profile-avatar-header" src="<%= currentUser.avatar %>" alt=""><% } %><span class="account-name"><%= currentUser.displayname || currentUser.username %>さん</span><% (typeof currentRoleTags !== 'undefined' ? currentRoleTags : []).forEach((roleName) => { %><span class="role-tag"><%= roleName %></span><% }) %></span>
+      <details class="hamburger-menu">
+        <summary aria-label="メニューを開く"><span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span><span class="menu-label">メニュー</span></summary>
+        <nav class="menu-panel" aria-label="メインメニュー">
+          <a class="menu-user menu-profile-link <%= currentPath === '/profile' ? 'is-current' : '' %>" href="/profile" aria-label="プロフィールを編集"><span class="menu-user-top"><% if (currentUser.avatar) { %><img class="profile-avatar profile-avatar-menu" src="<%= currentUser.avatar %>" alt=""><% } else { %><span class="menu-avatar-placeholder" aria-hidden="true">人</span><% } %><span class="menu-association-name"><%= typeof currentMenuAssociationName !== 'undefined' && currentMenuAssociationName ? currentMenuAssociationName : currentUser.isAdmin ? 'システム管理者' : '町内会未参加' %></span></span><strong><%= currentUser.displayname || currentUser.username %>さん</strong><span class="menu-user-email"><%= currentUser.email %></span><span class="menu-profile-hint">✎ プロフィールを編集 <span aria-hidden="true">→</span></span></a>
+          <a class="menu-item <%= currentPath === '/dashboard' ? 'is-current' : '' %>" href="/dashboard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8M5 10v11h14V10M9 21v-6h6v6"/></svg><span>ホーム</span></a>
+          <% if (currentUser.isAdmin) { %>
+            <div class="menu-section-label">システム管理</div>
+            <a class="menu-item <%= currentPath === '/admin' ? 'is-current' : '' %>" href="/admin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg><span>管理者メニュー</span></a>
+          <% } %>
+          <% if (!currentUser.isAdmin && !(typeof currentHasAssociationMembership !== 'undefined' && currentHasAssociationMembership)) { %><a class="menu-item <%= currentPath === '/associations' ? 'is-current' : '' %>" href="/associations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V9l7-6 7 6v12M9 21v-6h6v6M19 4v4M21 6h-4"/></svg><span>町内会一覧</span></a><% } %>
+          <% (typeof currentManagerAssociations !== 'undefined' ? currentManagerAssociations : []).forEach((association) => { %><a class="menu-item" href="/associations/<%= association._id %>/manage"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3A1.7 1.7 0 0 0 14 21v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1"/></svg><span>町内会管理者メニュー</span></a><% }) %>
+          <% (typeof currentOfficerQuestionBoxes !== 'undefined' ? currentOfficerQuestionBoxes : []).forEach((association) => { %><a class="menu-item <%= currentPath === `/associations/${association._id}/officer` || currentPath === `/associations/${association._id}/questions/officer` ? 'is-current' : '' %>" href="/associations/<%= association._id %>/officer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 3V5ZM8 9h8M8 13h5"/></svg><span>役員メニュー</span><% if (association.unansweredCount > 0) { %><span class="menu-action-count" aria-label="未回答 <%= association.unansweredCount %>件" title="未回答 <%= association.unansweredCount %>件"><%= association.unansweredCount %></span><% } %></a><% }) %>
+          <% (typeof currentLeaderAssociations !== 'undefined' ? currentLeaderAssociations : []).forEach((association) => { %><a class="menu-item" href="/associations/<%= association._id %>/leader"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 17l2-8 4 4 4-4 2 8M8 5h.01M16 5h.01"/></svg><span>班長メニュー</span></a><% }) %>
+          <div class="menu-divider"></div>
+          <form action="/logout" method="post">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button class="menu-item menu-button" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg><span>ログアウト</span></button>
+          </form>
+        </nav>
+      </details>
+    </div>
+  <% } %>
+</header>
+<script>(()=>{const menu=document.querySelector('.hamburger-menu');if(!menu)return;document.addEventListener('click',event=>{if(menu.open&&!menu.contains(event.target))menu.removeAttribute('open')})})();</script>

@@ -1,0 +1,15 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow resident-participation-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <section class="page-heading"><div><p class="eyebrow">参加申請</p><h1><%= application.association?.name || '町内会' %>への申請状況</h1></div></section>
+  <section class="content-card management-card"><span class="status-badge"><%= application.districtGroup?.name || '班' %></span>
+    <h2><%= application.status === 'awaiting_household' ? '世帯主の確認待ち' : application.status === 'pending' ? '班長・町内会管理者の承認待ち' : application.status === 'approved' ? '参加が承認されました' : application.status === 'cancelled' ? '申請は取り消されました' : '申請が承認されませんでした' %></h2>
+    <p><%= application.source === 'household_invitation' ? '世帯主からの招待による申請です。登録済みの世帯メンバーと紐付いています。' : application.source === 'household_link' ? '一般メンバーとして既存の世帯への参加を申請しています。世帯主の確認後、班長または町内会管理者が承認します。' : '世帯主として町内会への参加を申請しています。' %></p>
+    <% if (application.rejectionReason) { %><p class="alert alert-error"><%= application.rejectionReason %></p><% } %>
+    <% if (application.status === 'approved') { %><a class="button button-primary" href="/dashboard">町内会を利用する</a><% } %>
+    <% if (application.status === 'rejected') { %><a class="button button-quiet" href="/associations/<%= application.association._id %>/join">再申請する</a><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

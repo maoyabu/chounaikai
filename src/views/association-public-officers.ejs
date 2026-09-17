@@ -1,0 +1,8 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell association-detail-shell">
+  <a class="back-link" href="/associations/<%= association._id %>">← <%= association.name %>へ戻る</a>
+  <section class="page-heading annual-heading"><div><p class="eyebrow">町内会の役員</p><h1><%= fiscalYear %>年度の役員</h1><p><%= association.name %>の運営を担当する役員です。</p></div><form class="year-selector" method="get"><label>表示年度<select name="year" onchange="this.form.submit()"><% for (let year = fiscalYear - 2; year <= fiscalYear + 2; year++) { %><option value="<%= year %>" <%= year === fiscalYear ? 'selected' : '' %>><%= year %>年度</option><% } %></select></label></form></section>
+  <section class="content-card"><div class="public-officer-list"><% officers.forEach((officer) => { const name = officer.user?.displayname || officer.user?.username || '退会済みユーザー'; %><article><% if (officer.user?.avatar) { %><img class="profile-avatar resident-avatar" src="<%= officer.user.avatar %>" alt=""><% } else { %><span class="profile-avatar resident-avatar profile-avatar-placeholder"><%= name.charAt(0) %></span><% } %><div><small><%= officer.role?.name || '役職未設定' %></small><strong><%= name %>さん</strong><span><%= officer.department?.name || '所属部未設定' %></span></div></article><% }) %></div><% if (!officers.length) { %><p class="help-text">この年度の役員情報はまだ登録されていません。</p><% } %></section>
+</main>
+<%- include('partials/foot') %>

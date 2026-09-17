@@ -1,0 +1,29 @@
+<section class="admin-section association-event-section" id="<%= calendarAnchor %>">
+  <div class="section-heading association-event-section-heading"><h2>町内会行事カレンダー</h2><nav class="association-event-navigation" aria-label="カレンダーの月を移動"><a href="<%= calendarPath %>?month=<%= calendarWindow.previousMonth %>#<%= calendarAnchor %>" aria-label="前の月へ">‹ 前へ</a><form action="<%= calendarPath %>#<%= calendarAnchor %>" method="get"><label>表示開始月 <input type="month" name="month" value="<%= calendarWindow.currentMonth %>" min="1900-01" max="2200-12"></label><button type="submit">移動</button></form><a href="<%= calendarPath %>?month=<%= calendarWindow.nextMonth %>#<%= calendarAnchor %>" aria-label="次の月へ">次へ ›</a></nav></div>
+  <% if (typeof associationName !== 'undefined' && associationName) { %><p class="association-event-association"><%= associationName %></p><% } %>
+  <div class="association-event-months">
+    <% months.forEach(month => { %>
+      <div class="association-event-month"><h3><%= month.label %></h3><div class="association-event-days"><% ['日','月','火','水','木','金','土'].forEach(day => { %><span class="association-event-weekday"><%= day %></span><% }); %>
+        <% month.cells.forEach(date => { const dayEvents = date ? events.filter(event => event.startDate <= date && event.endDate >= date) : []; %>
+          <% if (date) { %><span class="association-event-day <%= dayEvents.length ? 'has-event' : '' %>" title="<%= dayEvents.map(event => event.title).join('、') %>"><span><%= Number(date.slice(-2)) %></span><span class="association-event-dots"><% dayEvents.slice(0, 3).forEach(event => { %><i style="background-color:<%= event.color %>"></i><% }); %></span></span><% } else { %><span class="association-event-day is-empty"></span><% } %>
+        <% }); %>
+      </div></div>
+    <% }); %>
+  </div>
+  <div class="association-event-list"><h3>行事一覧</h3>
+    <% if (!events.length) { %><p>この３ヶ月に表示する行事はありません。</p><% } %>
+    <% events.forEach(event => { %><button type="button" class="association-event-list-item" data-event-dialog="event-<%= event._id %>"><span class="association-event-color" style="background-color:<%= event.color %>"></span><span><small><%= event.startDate %><%= event.endDate !== event.startDate ? ` 〜 ${event.endDate}` : '' %>・<%= event.category %></small><strong><%= event.title %></strong></span><% if (event.completed) { %><span class="status-badge">完了</span><% } %><span aria-hidden="true">›</span></button>
+      <dialog class="association-event-dialog" id="event-<%= event._id %>"><div class="dialog-heading"><h3><%= event.title %></h3><button type="button" class="dialog-close" data-event-close aria-label="閉じる">×</button></div><p><span class="association-event-color" style="background-color:<%= event.color %>"></span> <%= event.category %> <% if (event.completed) { %><span class="status-badge">完了</span><% } %></p><p><strong>日時：</strong><%= event.startDate %> <%= event.startTime %> ～ <%= event.endDate !== event.startDate ? `${event.endDate} ` : '' %><%= event.endTime %></p><p class="association-event-body"><%= event.body %></p><% if (event.image?.url) { %><figure class="association-event-media"><img src="<%= event.image.url %>" alt="<%= event.imageCaption || '' %>"><% if (event.imageCaption) { %><figcaption><%= event.imageCaption %></figcaption><% } %></figure><% } %><% if (event.youtubeUrl) { const yt = event.youtubeUrl.match(/(?:youtu\.be\/|v=)([\w-]{11})/); if (yt) { %><div class="association-event-video"><iframe src="https://www.youtube.com/embed/<%= yt[1] %>" title="YouTube動画" allowfullscreen></iframe></div><% } } %><% if (event.qrUrl) { %><div class="association-event-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=<%= encodeURIComponent(event.qrUrl) %>" alt="QRコード"><span><%= event.qrCaption || '' %></span></div><% } %><div class="form-actions"><button type="button" class="button button-quiet" data-event-close>閉じる</button></div></dialog>
+    <% }); %>
+  </div>
+</section>
+<script>
+  if (!window.associationEventDialogsReady) {
+    window.associationEventDialogsReady = true;
+    document.addEventListener('click', event => {
+      const opener = event.target.closest('[data-event-dialog]');
+      if (opener) document.getElementById(opener.dataset.eventDialog)?.showModal();
+      if (event.target.closest('[data-event-close]')) event.target.closest('dialog')?.close();
+    });
+  }
+</script>

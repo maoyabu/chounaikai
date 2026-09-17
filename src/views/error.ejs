@@ -1,0 +1,4 @@
+<%- include('partials/head') %>
+<% if (typeof currentUser !== 'undefined' && currentUser && typeof csrfToken !== 'undefined') { %><%- include('partials/header') %><% } %>
+<main class="page-shell page-narrow"><section class="empty-state"><div class="empty-mark" aria-hidden="true">!</div><h1 class="title-with-icon title-centered"><span class="title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.7 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg></span><span><%= title %></span></h1><p><%= message %></p><a class="button button-primary" href="<%= typeof currentUser !== 'undefined' && currentUser ? '/dashboard' : '/login' %>"><%= typeof currentUser !== 'undefined' && currentUser ? 'ホームへ戻る' : 'ログイン画面へ戻る' %></a></section></main>
+<%- include('partials/foot') %>

@@ -1,0 +1,12 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<% const isNetwork = typeof networkMode !== 'undefined' && networkMode; const isDistrict = typeof districtMode !== 'undefined' && districtMode; const inboxBase = isDistrict ? `/associations/${association._id}/district-messages/inbox` : isNetwork ? `/associations/${association._id}/officer-network/inbox` : `/associations/${association._id}/announcements`; %>
+<main class="page-shell communication-theme question-box-shell">
+  <a class="back-link" href="<%= isDistrict ? `/associations/${association._id}/district-messages` : isNetwork ? `/associations/${association._id}/officer-network` : '/dashboard' %>">← <%= isDistrict ? '班内の連絡' : isNetwork ? '役員間の連絡網' : 'ホーム' %>へ戻る</a>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><h1><%= association.name %>　<%= isDistrict ? '届いた班内の連絡' : isNetwork ? '届いた役員間の連絡' : '町内会役員から住人への連絡' %></h1></section>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2>届いた連絡</h2></div>
+    <% if (!receipts.length) { %><div class="admin-empty"><p>連絡はまだありません。</p></div><% } else { %><div class="question-home-list"><% receipts.forEach((receipt) => { const item = receipt.announcement; %><a class="question-home-link" href="<%= inboxBase %>/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= isDistrict ? '班内宛て' : isNetwork ? '役員宛て' : item.audience === 'leaders' ? '班長宛て' : '全住人宛て' %> ・ 緊急度 <%= '★'.repeat(item.urgency) %><%= item.urgency === 5 ? ' 緊急' : '' %> ・ <%= new Date(item.createdAt).toLocaleString('ja-JP') %></small></span><span class="status-badge <%= receipt.readAt ? '' : 'question-unread' %>"><%= receipt.readAt ? '確認済み' : '未確認' %></span><span class="list-arrow" aria-hidden="true">›</span></a><% }) %></div><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/profile">← プロフィールへ戻る</a>
+  <div class="page-heading"><h1>町内会の退会申請</h1></div>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <% headApplications.forEach(application => { %><section class="content-card"><h2>世帯メンバーからの退会申請</h2><%- include('partials/withdrawal-list', { association: application.association, withdrawalApplications: [application], withdrawalDecisionPath: 'head' }) %></section><% }) %>
+  <% memberships.forEach(membership => { const household = membership.household, isHead = String(household.representative) === String(currentUser._id); const candidates = successors.filter(candidate => String(candidate.household) === String(household._id)); %>
+    <section class="form-card form-stack"><h2><%= membership.association.name %>から退会</h2>
+      <% if (busyHouseholds.includes(String(household._id))) { %><p>この世帯には確認中の退会申請があります。完了または取り消し後に申請できます。</p><% } else { %>
+      <form class="form-stack" action="/associations/<%= membership.association._id %>/withdrawals" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (isHead) { %>
+          <label>退会方法<select name="scope" data-withdrawal-scope><option value="household">世帯全員で退会する</option><option value="representative" <%= candidates.length ? '' : 'disabled' %>>世帯主を引き継いで、自分だけ退会する</option></select></label>
+          <label data-successor hidden>新しい世帯主<select name="successorId"><option value="">選択してください</option><% candidates.forEach(candidate => { %><option value="<%= candidate.user._id %>"><%= candidate.user.displayname || candidate.user.username %></option><% }) %></select></label>
+          <p class="help-text">班長の承認で退会が完了します。本人だけ退会する場合は、同じ世帯の参加中の会員へ世帯主を引き継ぎます。世帯主の切り替えは班長の承認時に行います。</p>
+          <% if (!candidates.length) { %><p class="help-text">本人だけ退会するには、先に新しい世帯主となる同居人の会員登録・参加承認を完了してください。</p><% } %>
+        <% } else { %><input type="hidden" name="scope" value="individual"><p>世帯主の承認後、班長が承認すると本人の退会が完了します。</p><% } %>
+        <label>退会理由（任意）<textarea name="reason" maxlength="1000" rows="2"></textarea></label>
+        <label class="withdrawal-confirmation"><input type="checkbox" name="confirmWithdrawal" required><span>退会対象と承認の流れを確認しました</span></label>
+        <p class="help-text">退会後は対象者の町内会の利用と権限が終了します。共通アカウントは削除されません。</p>
+        <div class="form-actions"><button class="button button-danger-outline">退会を申請する</button></div>
+      </form><% } %>
+    </section>
+  <% }) %>
+  <section class="content-card"><h2>申請状況</h2>
+    <% if (!applications.length) { %><p>退会申請はありません。</p><% } %>
+    <% const statusLabels = { awaiting_household: '世帯主の承認待ち', pending: '班長の承認待ち', processing: '承認処理中', approved: '退会完了', rejected: '承認されませんでした', cancelled: '取り消し済み' }; applications.forEach(application => { %>
+      <div class="form-stack"><strong><%= application.association?.name || '町内会' %></strong><span class="status-badge"><%= statusLabels[application.status] %></span><p><%= application.scope === 'household' ? '世帯全員の退会' : '本人のみの退会' %></p>
+      <% if (['awaiting_household', 'pending'].includes(application.status)) { %><form action="/profile/withdrawals/<%= application._id %>/cancel" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small">申請を取り消す</button></form><% } %></div>
+    <% }) %>
+  </section>
+</main>
+<script>document.querySelectorAll('[data-withdrawal-scope]').forEach(select => {const update = () => {const label = select.form.querySelector('[data-successor]'); label.hidden = select.value !== 'representative'; label.querySelector('select').required = !label.hidden;}; select.addEventListener('change', update); update();});</script>
+<%- include('partials/foot') %>

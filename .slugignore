@@ -1,0 +1,8 @@
+# Heroku本番スラッグに含めないテスト・開発用ファイル
+test/
+scripts/
+coverage/
+.env.example
+README.md
+*.test.js
+*.test.mjs

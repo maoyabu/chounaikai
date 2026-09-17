@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow resident-participation-shell">
+  <section class="page-heading"><div><p class="eyebrow">世帯主からの招待</p><h1>同一世帯のメンバーとして参加</h1></div></section>
+  <section class="form-card form-stack">
+    <h2><%= invitation.association.name %></h2>
+    <p><%= invitation.invitedBy.displayname || invitation.invitedBy.username %>さんから、<%= invitation.member.name %>さんへの招待です。</p>
+    <p><span class="status-badge"><%= invitation.household.districtGroup.name %></span> <%= invitation.email %></p>
+    <p class="help-text">登録済みの世帯メンバーとアカウントを紐付けます。班長または町内会管理者の承認後に町内会の機能を利用できます。</p>
+    <% if (!currentUser) { %>
+      <div class="form-actions"><a class="button button-quiet" href="/login">アカウントをお持ちの方はログイン</a><a class="button button-primary" href="/register">招待から会員登録</a></div>
+    <% } else if (!emailMatches) { %>
+      <div class="alert alert-error">招待先のメールアドレスとログイン中のアカウントが異なります。招待されたメールアドレスのアカウントでログインしてください。</div>
+      <form action="/logout" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet">ログアウトする</button></form>
+    <% } else { %>
+      <form action="/household-invitations/<%= invitation._id %>/accept" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary">招待を受諾して参加を申請</button></form>
+    <% } %>
+    <form action="/household-invitations/decline" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet">この招待を使わずに戻る</button></form>
+  </section>
+</main>
+<%- include('partials/foot') %>

@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/manage/basic">← 基本設定へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">基本設定</p><h1>並び順設定</h1><p>上下のボタンで、画面や選択肢に表示される順番を変更します。</p></div></section>
+  <% const sections = [{ key: 'roles', title: '役職', items: roles }, { key: 'departments', title: '部会', items: departments }, { key: 'district-groups', title: '班', items: districtGroups }]; %>
+  <% sections.forEach((section) => { %><section id="<%= section.key %>" class="content-card management-card order-section"><form class="order-form" action="/associations/<%= association._id %>/manage/order/<%= section.key %>/move" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><div class="order-section-heading"><div><h2><%= section.title %></h2><p>移動する行を選択してください。</p></div><div class="order-toolbar"><button class="button button-quiet button-small" type="submit" name="direction" value="up" disabled>↑ 上へ移動</button><button class="button button-quiet button-small" type="submit" name="direction" value="down" disabled>↓ 下へ移動</button></div></div><% if (!section.items.length) { %><p class="help-text">登録されている項目はありません。</p><% } %><ol class="order-list"><% section.items.forEach((item, index) => { %><li data-order-row data-first="<%= index === 0 %>" data-last="<%= index === section.items.length - 1 %>"><label><input type="radio" name="itemId" value="<%= item._id %>"><span class="order-number"><%= index + 1 %></span><strong><%= item.name %></strong></label></li><% }) %></ol></form></section><% }) %>
+  <script>(()=>{document.querySelectorAll('.order-form').forEach(form=>{const up=form.querySelector('[value="up"]'),down=form.querySelector('[value="down"]'),rows=[...form.querySelectorAll('[data-order-row]')];const update=row=>{rows.forEach(item=>item.classList.toggle('is-selected',item===row));up.disabled=!row||row.dataset.first==='true';down.disabled=!row||row.dataset.last==='true'};rows.forEach(row=>row.querySelector('input').addEventListener('change',()=>update(row)));update(null)})})();</script>
+</main>
+<%- include('partials/foot') %>

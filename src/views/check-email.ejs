@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<main class="message-shell">
+  <section class="message-card">
+    <a class="brand" href="/login"><span class="brand-mark" aria-hidden="true">町</span><span>町内会管理</span></a>
+    <div class="message-icon <%= deliveryFailed ? 'is-error' : '' %>" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 6l8 7 8-7"/></svg></div>
+    <h1><%= title %></h1>
+    <% if (deliveryFailed) { %>
+      <p>アカウントは仮登録されていますが、メールを送信できませんでした。メール設定を確認してから再送してください。</p>
+    <% } else { %>
+      <p><strong><%= email %></strong> へ確認メールを送りました。メール内のリンクを開くと登録が完了します。</p>
+      <p class="message-note">リンクの有効期限は24時間です。メールが届かない場合は迷惑メールフォルダもご確認ください。</p>
+    <% } %>
+    <form action="/verification-email/resend" method="post" class="resend-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="email" value="<%= email %>">
+      <button class="button button-quiet button-wide" type="submit">確認メールを再送</button>
+    </form>
+    <a class="text-link" href="/login">ログイン画面へ戻る</a>
+  </section>
+</main>
+<%- include('partials/foot') %>

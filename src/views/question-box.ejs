@@ -1,0 +1,33 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell question-box-shell" data-open-thread="<%= openThread %>">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>質問・ご意見箱</h1><p>町内会の役員へ質問や意見を送れます。回答への返信・再質問もここから行えます。</p></div></section>
+
+  <section class="content-card question-compose"><h2>質問・ご意見を送る</h2>
+    <form class="form-stack" action="/associations/<%= association._id %>/questions" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>タイトル <span class="required">必須</span><input name="title" maxlength="120" required></label>
+      <label>内容 <span class="required">必須</span><textarea name="body" rows="5" maxlength="3000" required></textarea></label>
+      <div class="form-actions"><button class="button button-primary" type="submit">送信する</button></div>
+    </form>
+  </section>
+
+  <% const unreadCount = ownThreads.filter((thread) => ['unanswered', 'answered'].includes(thread.status) && thread.lastOfficerAt && (!thread.residentReadAt || new Date(thread.lastOfficerAt) > new Date(thread.residentReadAt))).length; %>
+  <% if (unreadCount) { %><div class="alert alert-success" role="status" id="question-answer-alert">役員から新しい回答が<%= unreadCount %>件届いています。</div><% } %>
+  <section class="admin-section"><div class="section-heading"><div><p class="eyebrow">自分の投稿</p><h2>質問・ご意見の履歴</h2></div></div>
+    <% if (!ownThreads.length) { %><div class="admin-empty"><p>まだ投稿はありません。</p></div><% } else { %>
+      <div class="question-thread-list"><% ownThreads.forEach((thread) => { const unread = ['unanswered', 'answered'].includes(thread.status) && thread.lastOfficerAt && (!thread.residentReadAt || new Date(thread.lastOfficerAt) > new Date(thread.residentReadAt)); %>
+        <a class="question-thread-row" href="/associations/<%= association._id %>/questions/<%= thread._id %>" data-open-question="own-<%= thread._id %>" data-thread-id="<%= thread._id %>" data-answer-at="<%= unread ? new Date(thread.lastOfficerAt).toISOString() : '' %>" aria-haspopup="dialog" aria-controls="question-dialog-own-<%= thread._id %>">
+          <span><strong><%= thread.title %></strong><small><%= new Date(thread.createdAt).toLocaleDateString('ja-JP') %> ・ <%= thread.districtGroup?.name || '班未設定' %></small></span>
+          <span><span class="status-badge <%= unread ? 'question-unread' : thread.status === 'unanswered' ? 'status-pending' : '' %>" data-answer-badge><%= unread ? '新しい回答' : thread.status === 'answered' ? '回答済み' : thread.status === 'no_reply' ? '返信不要' : thread.status === 'completed' ? '完了' : '回答待ち' %></span><small>内容・回答を見る ›</small></span>
+        </a>
+        <%- include('partials/question-thread-dialog', { thread, association, mode: 'resident', canAnswer: false }) %>
+      <% }) %></div>
+    <% } %>
+  </section>
+
+</main>
+<%- include('partials/question-box-script') %>
+<%- include('partials/foot') %>

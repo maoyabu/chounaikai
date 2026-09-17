@@ -1,0 +1,15 @@
+<div class="leader-application-list">
+  <% withdrawalApplications.forEach(application => { const scopeLabels = { individual: '本人のみの退会', household: '世帯全員の退会', representative: '世帯主を引き継いで本人のみ退会' }; %>
+    <article id="withdrawal-<%= application._id %>"><div>
+      <strong><%= application.household?.displayName || '' %>・<%= application.requestedBy?.displayname || application.requestedBy?.username || '' %>さん</strong>
+      <span class="status-badge"><%= scopeLabels[application.scope] %></span>
+      <% if (application.districtGroup?.name) { %><span class="status-badge"><%= application.districtGroup.name %></span><% } %>
+      <p><%= application.reason || '理由の記載なし' %></p>
+      <% if (application.successor) { %><p>新しい世帯主：<%= application.successor.displayname || application.successor.username %>さん（班長の承認時に切り替え）</p><% } %>
+      <p class="help-text"><%= withdrawalDecisionPath === 'head' ? '世帯主として承認すると、班長の承認待ちになります。' : '承認すると退会が完了し、対象者の町内会の利用・権限が終了します。共通アカウントは削除されません。' %></p>
+    </div><div class="admin-actions">
+      <form action="/associations/<%= association._id %>/<%= withdrawalDecisionPath === 'head' ? 'withdrawals/' + application._id + '/head' : 'leader/withdrawals/' + application._id %>/approve" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary"><%= withdrawalDecisionPath === 'head' ? '世帯主として承認' : '退会を承認' %></button></form>
+      <form action="/associations/<%= association._id %>/<%= withdrawalDecisionPath === 'head' ? 'withdrawals/' + application._id + '/head' : 'leader/withdrawals/' + application._id %>/reject" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-danger-outline">承認しない</button></form>
+    </div></article>
+  <% }) %>
+</div>

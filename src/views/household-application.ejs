@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow resident-participation-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">住民登録</p><h1><%= association.name %>への参加申請</h1><p>班を選択し、世帯主として世帯を登録するか、一般メンバーとして既存の世帯に参加するかを選んでください。</p></div></section>
+  <% if (!districtGroups.length) { %><div class="alert alert-error">現在、参加先として選択できる班がありません。</div><% } else { %>
+  <form action="/associations/<%= association._id %>/join" method="post" class="form-card form-stack">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>参加する班 <span class="required">必須</span><select name="districtGroupId" required><option value="">選択してください</option><% districtGroups.forEach((group) => { %><option value="<%= group._id %>" <%= String(values.districtGroupId || '') === String(group._id) ? 'selected' : '' %>><%= group.name %></option><% }) %></select></label>
+    <label>登録方法 <span class="required">必須</span><select name="residentMode" id="join-resident-mode"><option value="representative" <%= values.residentMode !== 'general' ? 'selected' : '' %>>世帯主として登録する</option><option value="general" <%= values.residentMode === 'general' ? 'selected' : '' %>>一般メンバーとして既存の世帯に参加する</option></select></label>
+    <div id="join-general-fields" class="form-stack" hidden><label>同居する世帯主のメールアドレス <span class="required">必須</span><input type="email" name="householdHeadEmail" value="<%= values.householdHeadEmail || '' %>" disabled></label><p class="help-text">世帯主の世帯が見つかった場合、その班を初期選択します。世帯主の確認後、班長または町内会管理者が承認します。住所は世帯情報を引き継ぎます。</p><label>続柄（任意）<input name="relationship" value="<%= values.relationship || '' %>" disabled></label></div>
+    <div id="join-representative-fields" class="form-stack">
+    <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" value="<%= values.postalCode || '' %>" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" value="<%= values.phone || '' %>" autocomplete="tel"></label></div>
+    <label>住所 <span class="required">必須</span><input name="street" value="<%= values.street || '' %>" autocomplete="street-address" required></label>
+    <label>建物名など<input name="building" value="<%= values.building || '' %>"></label>
+    </div>
+    <div class="form-columns"><label>代表者氏名（本人情報と共通）<input value="<%= currentUser.displayname || currentUser.username %>" disabled><small>氏名はプロフィールの「本人情報」で変更できます。</small></label><label>氏名（よみ） <span class="required">必須</span><input name="representativeKana" value="<%= values.representativeKana || '' %>" required></label></div>
+    <div class="form-columns"><label>生年月日 <span class="required">必須</span><input type="date" name="birthDate" value="<%= values.birthDate || '' %>" required></label><label>性別 <span class="required">必須</span><select name="gender" required><% [['unspecified', '回答しない'], ['male', '男性'], ['female', '女性'], ['other', 'その他']].forEach(([value, label]) => { %><option value="<%= value %>" <%= (values.gender || 'unspecified') === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label></div>
+    <div class="form-columns"><label>メールアドレス（任意）<input type="email" name="email" value="<%= currentUser.email || '' %>"></label><label>LINEアカウント（任意）<input name="lineAccount" value="<%= values.lineAccount || '' %>"></label></div>
+    <label>班長へのメッセージ（任意）<textarea name="applicantNote" rows="3"><%= values.applicantNote || '' %></textarea></label>
+    <div class="form-actions"><a class="button button-quiet" href="/dashboard">キャンセル</a><button class="button button-primary">参加を申請する</button></div>
+  </form><% } %>
+</main>
+<script>(() => { const mode = document.getElementById('join-resident-mode'); if (!mode) return; const update = () => { const general = mode.value === 'general'; ['general', 'representative'].forEach(key => { const panel = document.getElementById(`join-${key}-fields`); panel.hidden = key === 'general' ? !general : general; panel.querySelectorAll('input').forEach(input => { input.disabled = panel.hidden; if (input.name === 'householdHeadEmail') input.required = !panel.hidden; }); }); }; mode.addEventListener('change', update); update(); })();</script>
+<%- include('partials/foot') %>

@@ -1,0 +1,19 @@
+<script>(() => {
+  const shell = document.querySelector('.question-box-shell');
+  const csrf = document.querySelector('input[name="_csrf"]')?.value;
+  const open = (button) => {
+    const dialog = document.getElementById(`question-dialog-${button.dataset.openQuestion}`);
+    if (!dialog || typeof dialog.showModal !== 'function') return false;
+    if (!dialog.open) dialog.showModal();
+    if (button.dataset.answerAt && button.dataset.threadId && csrf) {
+      const body = new URLSearchParams({ _csrf: csrf, answerAt: button.dataset.answerAt });
+      fetch(`/associations/<%= association._id %>/questions/${button.dataset.threadId}/read`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+        .then((response) => { if (response.ok) { button.dataset.answerAt = ''; const badge = button.querySelector('[data-answer-badge]'); if (badge) { badge.textContent = '回答済み'; badge.classList.remove('question-unread'); } const count = document.querySelectorAll('[data-answer-at]:not([data-answer-at=""])').length; const alert = document.getElementById('question-answer-alert'); if (alert) { alert.hidden = count === 0; alert.textContent = `役員から新しい回答が${count}件届いています。`; } } }).catch(() => {});
+    }
+    return true;
+  };
+  document.querySelectorAll('[data-open-question]').forEach((button) => button.addEventListener('click', (event) => { if (open(button) && button.tagName === 'A') event.preventDefault(); }));
+  document.querySelectorAll('[data-close-question]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
+  document.querySelectorAll('.question-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
+  if (shell.dataset.openThread) { const button = [...document.querySelectorAll('[data-open-question]')].find((item) => item.dataset.openQuestion === shell.dataset.openThread); if (button) open(button); }
+})();</script>

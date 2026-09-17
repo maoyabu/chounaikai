@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<main class="registration-shell">
+  <section class="registration-card">
+    <a class="brand" href="/associations"><span class="brand-mark" aria-hidden="true">町</span><span>町内会管理</span></a>
+    <div class="registration-heading"><p class="eyebrow">アカウント</p><h1 class="title-with-icon"><span class="title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6"/></svg></span><span>新規会員登録</span></h1><p><% if (typeof association !== 'undefined' && association) { %>「<%= association.name %>」への参加用アカウントを作成します。ログイン後、世帯の参加申請を行います。<% } else if (typeof registrationPurpose !== 'undefined' && registrationPurpose === 'create') { %>町内会の新規作成申請用アカウントを作成します。<% } else { %>世帯からの招待を受けるアカウントを作成します。<% } %></p></div>
+    <% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-error" role="alert"><%= formError %></div><% } %>
+    <form action="/register" method="post" class="form-stack">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-columns">
+        <label>ユーザー名 <span class="required">必須</span><input name="username" value="<%= values.username || '' %>" autocomplete="username" required><small>既存の共通サービスでも使われる識別名です。</small></label>
+        <label>氏名 <span class="optional">任意</span><input name="displayname" value="<%= values.displayname || '' %>" autocomplete="name"><small>画面上で他の会員に表示される氏名です。</small></label>
+      </div>
+      <label>メールアドレス <span class="required">必須</span><input type="email" name="email" value="<%= values.email || '' %>" autocomplete="email" <%= typeof invitation !== 'undefined' && invitation ? 'readonly' : '' %> required></label>
+      <% if (typeof invitation !== 'undefined' && invitation) { %>
+        <input type="hidden" name="residentMode" value="general">
+        <p class="alert alert-success"><%= invitation.association.name %>：世帯主からの招待による会員登録です。招待先のメールアドレスで登録してください。</p>
+        <label class="household-invitation-consent"><input type="checkbox" name="acceptInvitation" required>世帯主からの招待を受諾します。メール確認後に世帯に紐付き、参加承認待ちになります。</label>
+      <% } else { %>
+        <% if (typeof registrationPurpose !== 'undefined' && registrationPurpose === 'create') { %><input type="hidden" name="residentMode" value="representative"><% } else { %>
+        <label>住民としての登録方法<select name="residentMode" id="registration-resident-mode"><option value="representative" <%= values.residentMode !== 'general' ? 'selected' : '' %>>世帯主として世帯を登録する</option><option value="general" <%= values.residentMode === 'general' ? 'selected' : '' %>>一般メンバーとして既存の世帯に参加する</option></select><small>町内会・班の参加申請時にも選択できます。</small></label>
+        <label id="registration-head-email">同居する世帯主のメールアドレス <span class="required">必須</span><input type="email" name="householdHeadEmail" value="<%= values.householdHeadEmail || '' %>"><small>登録後に世帯主の確認と、班長または町内会管理者の承認を受けます。</small></label>
+        <% } %>
+      <% } %>
+      <div class="form-columns">
+        <label>パスワード <span class="required">必須</span><input type="password" name="password" minlength="8" autocomplete="new-password" required><small>8文字以上で入力してください。</small></label>
+        <label>パスワード（確認） <span class="required">必須</span><input type="password" name="passwordConfirmation" minlength="8" autocomplete="new-password" required></label>
+      </div>
+      <button class="button button-primary button-wide" type="submit">アカウントを登録</button>
+    </form>
+    <p class="login-switch">すでにアカウントをお持ちですか？ <a href="/login">ログイン</a></p>
+  </section>
+</main>
+<script>(() => { const mode = document.getElementById('registration-resident-mode'), label = document.getElementById('registration-head-email'); if (!mode || !label) return; const update = () => { label.hidden = mode.value !== 'general'; label.querySelector('input').disabled = label.hidden; label.querySelector('input').required = !label.hidden; }; mode.addEventListener('change', update); update(); })();</script>
+<%- include('partials/foot') %>

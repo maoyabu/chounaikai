@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <section class="page-heading"><div><p class="eyebrow">住民の参加申請</p><h1><%= association.name %> 参加申請</h1><p>世帯主からの招待と、同居人からの世帯紐付け申請を確認できます。</p></div></section>
+  <section class="content-card management-card"><% if (!applications.length) { %><p class="help-text">確認中の参加申請はありません。</p><% } %><%- include('partials/join-application-list', { decisionPath: 'manage' }) %></section>
+</main>
+<%- include('partials/foot') %>

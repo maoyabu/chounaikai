@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow resident-participation-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">住民登録</p><h1>町内会と世帯への参加</h1><p>町内会を選び、班の選択後に「世帯主」または「一般メンバー」として申請してください。</p></div></section>
+  <% if (registration?.residentMode === 'general') { %><p class="help-text">世帯主のメールアドレス：<%= registration.householdHeadEmail || '申請画面で入力してください' %></p><% } %>
+  <section class="content-card management-card"><div class="management-list"><% associations.forEach((association) => { %><div><strong><%= association.name %></strong><a class="button button-primary button-small" href="/associations/<%= association._id %>/join">町内会と班を選択</a></div><% }) %></div><% if (!associations.length) { %><p>参加できる町内会はまだありません。</p><% } %></section>
+</main>
+<%- include('partials/foot') %>

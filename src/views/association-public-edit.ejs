@@ -1,0 +1,16 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <section class="page-heading public-edit-heading"><div><h1><%= association.name %> 編集</h1><p>写真と基本情報を編集します。</p></div><a class="button button-quiet" href="/associations/<%= association._id %>/public">公開ページを見る →</a></section>
+  <form class="form-stack" action="/associations/<%= association._id %>/public/edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <section class="content-card"><h2>メインフォト</h2><p class="help-text">最大３枚。登録した写真は公開ページの背景で自動的に切り替わります。各枠から差し替えや削除ができます。</p>
+      <div class="public-photo-editor"><% for (let slot = 0; slot < 3; slot++) { const photo = association.publicPhotos?.[slot]; %><div class="public-photo-slot"><strong>写真 <%= slot + 1 %></strong><% if (photo?.url) { %><img src="<%= photo.url %>" alt="現在の写真 <%= slot + 1 %>"><% } else { %><div class="public-photo-empty">未登録</div><% } %><label>写真を選択<input type="file" name="photo<%= slot %>" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"></label><% if (photo?.url) { %><label class="public-photo-remove"><input type="checkbox" name="remove<%= slot %>"> この写真を削除</label><% } %></div><% } %></div>
+    </section>
+    <section class="content-card"><h2>町内会の基本情報</h2><label>紹介文<textarea name="introduction" rows="8" maxlength="5000" placeholder="町内会の活動や地域について紹介してください"><%= association.introduction || '' %></textarea></label><p class="help-text">世帯数・住人数、現年度の役員、班ごとの人数は登録データから自動表示します。</p></section>
+    <div class="form-actions"><button class="button button-primary">公開ページを保存</button></div>
+  </form>
+</main>
+<%- include('partials/foot') %>

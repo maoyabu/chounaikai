@@ -1,0 +1,62 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell annual-settings-shell">
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <section class="page-heading annual-heading"><div><p class="eyebrow">年度設定</p><h1><%= fiscalYear %>年度の運営体制</h1><p>前年度末に次年度の役員・班長を設定できます。</p></div><form class="year-selector" method="get"><label>表示年度<select name="year" onchange="this.form.submit()"><% for (let year = fiscalYear - 2; year <= fiscalYear + 2; year++) { %><option value="<%= year %>" <%= year === fiscalYear ? 'selected' : '' %>><%= year %>年度</option><% } %></select></label></form></section>
+  <div class="management-tabs" role="tablist"><button type="button" role="tab" data-annual-tab="officers">役員の選定・設定</button><button type="button" role="tab" data-annual-tab="leaders">班長の設定</button></div>
+  <section class="content-card management-card" data-annual-panel="officers">
+    <h2>世帯主から役員を選定・設定</h2>
+    <p class="help-text">氏名、メールアドレス、住所、性別で絞り込み、年度役員フラグと役職・所属部を設定します。</p>
+    <label class="resident-search">世帯主を絞り込む<input type="search" id="officer-resident-search" placeholder="氏名・メール・住所・性別を入力" autocomplete="off"></label>
+    <% const genderLabels = { male: '男性', female: '女性', other: 'その他', unspecified: '回答なし' }; const representatives = typeof householdRepresentatives !== 'undefined' ? householdRepresentatives : []; const officerGroups = [{ title: '役員候補の世帯主', people: representatives.filter((item) => !item.officer), empty: '選定できる世帯主はいません。' }, { title: '選定済みの役員', people: representatives.filter((item) => item.officer), empty: '選定済みの役員はいません。' }]; %>
+    <% officerGroups.forEach(({ title, people, empty }) => { %>
+    <section class="annual-candidate-group"><div class="annual-candidate-heading"><h3><%= title %></h3><span class="status-badge"><%= people.length %>人</span></div>
+    <div class="resident-selection-list">
+      <% people.forEach(({ user, household, districtGroup, residentProfile, officer, attributeTags }) => { const residentName = residentProfile?.name || user.displayname || user.username; const residentEmail = user.email || residentProfile?.email || ''; const residentAddress = `〒${household.address?.postalCode || '—'} ${household.address?.street || ''} ${household.address?.building || ''}`; const searchText = [residentName, user.username, residentEmail, districtGroup?.name, residentAddress, genderLabels[residentProfile?.gender], ...(attributeTags || [])].filter(Boolean).join(' '); %>
+        <article class="resident-row" data-resident-row data-search="<%= searchText %>">
+          <button type="button" class="resident-row-button" data-open-officer-dialog="officer-dialog-<%= user._id %>" aria-label="<%= residentName %>さんの役員設定を開く">
+            <% if (user.avatar) { %><img class="profile-avatar resident-avatar" src="<%= user.avatar %>" alt=""><% } else { %><span class="profile-avatar resident-avatar profile-avatar-placeholder" aria-hidden="true"><%= residentName.charAt(0) %></span><% } %>
+            <strong><%= residentName %>さん</strong>
+            <span class="resident-tags"><span class="status-badge"><%= districtGroup?.name || '班未設定' %></span><% (attributeTags || []).forEach((tag) => { %><span class="status-badge member-attribute-tag"><%= tag %></span><% }) %></span>
+            <span><%= residentEmail || 'メール未登録' %></span>
+            <span class="resident-address"><%= residentAddress %></span>
+          </button>
+          <dialog class="officer-dialog" id="officer-dialog-<%= user._id %>">
+            <div class="dialog-heading"><div><p class="eyebrow"><%= fiscalYear %>年度</p><h3><%= residentName %>さんの役員設定</h3></div><button type="button" class="dialog-close" data-close-officer-dialog aria-label="閉じる">×</button></div>
+          <form class="resident-officer-form" action="/associations/<%= association._id %>/manage/annual/officers/configure" method="post">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="fiscalYear" value="<%= fiscalYear %>"><input type="hidden" name="userId" value="<%= user._id %>">
+            <label class="officer-flag"><input type="checkbox" name="isOfficer" value="1" <%= officer ? 'checked' : '' %>> <%= fiscalYear %>年度役員</label>
+            <label>所属班<select name="membershipDistrictGroupId" required><% districtGroups.forEach((group) => { %><option value="<%= group._id %>" <%= String(districtGroup?._id || '') === String(group._id) ? 'selected' : '' %>><%= group.name %></option><% }) %></select></label>
+            <label>役職<select name="roleId"><option value="">役職なし</option><% roles.forEach((role) => { %><option value="<%= role._id %>" <%= String(officer?.role?._id || officer?.role || '') === String(role._id) ? 'selected' : '' %>><%= role.name %></option><% }) %></select></label>
+            <label>所属部<select name="departmentId"><option value="">所属部なし</option><% departments.forEach((department) => { %><option value="<%= department._id %>" <%= String(officer?.department?._id || officer?.department || '') === String(department._id) ? 'selected' : '' %>><%= department.name %></option><% }) %></select></label>
+            <div class="form-actions"><button type="button" class="button button-quiet" data-close-officer-dialog>キャンセル</button><button class="button button-primary">設定を保存</button></div>
+          </form>
+          </dialog>
+        </article>
+      <% }) %>
+      <% if (!people.length) { %><p class="help-text annual-group-empty"><%= empty %></p><% } %>
+    </div></section>
+    <% }) %>
+    <p id="officer-search-empty" class="help-text" hidden>条件に一致する世帯主はいません。</p>
+  </section>
+  <section class="content-card management-card" data-annual-panel="leaders">
+    <h2>世帯主から班長を選定・設定</h2><p class="help-text">氏名、メールアドレス、住所、班で絞り込み、班長フラグと担当班を設定します。</p>
+    <label class="resident-search">世帯主を絞り込む<input type="search" id="leader-resident-search" placeholder="氏名・班・メール・住所を入力" autocomplete="off"></label>
+    <% const leaderGroups = [{ title: '班長候補の世帯主', people: representatives.filter((item) => !item.leaderAssignment), empty: '選定できる世帯主はいません。' }, { title: '選定済みの班長', people: representatives.filter((item) => item.leaderAssignment), empty: '選定済みの班長はいません。' }]; %>
+    <% leaderGroups.forEach(({ title, people, empty }) => { %>
+    <section class="annual-candidate-group"><div class="annual-candidate-heading"><h3><%= title %></h3><span class="status-badge"><%= people.length %>人</span></div>
+    <div class="resident-selection-list">
+      <% people.forEach(({ user, household, districtGroup, residentProfile, leaderAssignment, attributeTags }) => { const residentName = residentProfile?.name || user.displayname || user.username; const residentEmail = user.email || residentProfile?.email || ''; const residentAddress = `〒${household.address?.postalCode || '—'} ${household.address?.street || ''} ${household.address?.building || ''}`; const searchText = [residentName, user.username, residentEmail, districtGroup?.name, residentAddress, ...(attributeTags || [])].filter(Boolean).join(' '); %>
+        <article class="resident-row" data-leader-row data-search="<%= searchText %>"><button type="button" class="resident-row-button" data-open-leader-dialog="leader-dialog-<%= user._id %>"><% if (user.avatar) { %><img class="profile-avatar resident-avatar" src="<%= user.avatar %>" alt=""><% } else { %><span class="profile-avatar resident-avatar profile-avatar-placeholder"><%= residentName.charAt(0) %></span><% } %><strong><%= residentName %>さん</strong><span class="resident-tags"><span class="status-badge"><%= districtGroup?.name || '班未設定' %></span><% (attributeTags || []).forEach((tag) => { %><span class="status-badge member-attribute-tag"><%= tag %></span><% }) %></span><span><%= residentEmail || 'メール未登録' %></span><span class="resident-address"><%= residentAddress %></span></button>
+          <dialog class="officer-dialog" id="leader-dialog-<%= user._id %>"><div class="dialog-heading"><div><p class="eyebrow"><%= fiscalYear %>年度</p><h3><%= residentName %>さんの班長設定</h3></div><button type="button" class="dialog-close" data-close-leader-dialog>×</button></div><form class="resident-officer-form" action="/associations/<%= association._id %>/manage/leaders/configure" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="fiscalYear" value="<%= fiscalYear %>"><input type="hidden" name="userId" value="<%= user._id %>"><label class="officer-flag"><input type="checkbox" name="isLeader" value="1" <%= leaderAssignment ? 'checked' : '' %>> <%= fiscalYear %>年度班長</label><label>所属班<select name="membershipDistrictGroupId" required><% districtGroups.forEach((group) => { %><option value="<%= group._id %>" <%= String(districtGroup?._id || '') === String(group._id) ? 'selected' : '' %>><%= group.name %></option><% }) %></select></label><label>班長の担当班<select name="districtGroupId"><option value="">班を選択</option><% districtGroups.forEach((group) => { %><option value="<%= group._id %>" <%= String(leaderAssignment?.districtGroup?._id || leaderAssignment?.districtGroup || districtGroup?._id || '') === String(group._id) ? 'selected' : '' %>><%= group.name %></option><% }) %></select></label><div class="form-actions"><button type="button" class="button button-quiet" data-close-leader-dialog>キャンセル</button><button class="button button-primary">設定を保存</button></div></form></dialog>
+        </article>
+      <% }) %>
+      <% if (!people.length) { %><p class="help-text annual-group-empty"><%= empty %></p><% } %>
+    </div></section>
+    <% }) %>
+    <p id="leader-search-empty" class="help-text" hidden>条件に一致する世帯主はいません。</p>
+  </section>
+  <script>(()=>{const tabs=[...document.querySelectorAll('[data-annual-tab]')],panels=[...document.querySelectorAll('[data-annual-panel]')],key='annual-settings-tab:<%= association._id %>';const select=(value)=>{tabs.forEach(t=>t.setAttribute('aria-selected',String(t.dataset.annualTab===value)));panels.forEach(p=>p.hidden=p.dataset.annualPanel!==value);localStorage.setItem(key,value)};tabs.forEach(t=>t.addEventListener('click',()=>select(t.dataset.annualTab)));select(localStorage.getItem(key)||'officers');const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('ja'),setupFilter=(inputId,rowSelector,emptyId)=>{const search=document.getElementById(inputId),rows=[...document.querySelectorAll(rowSelector)],empty=document.getElementById(emptyId),filter=()=>{const terms=normalize(search?.value).trim().split(/\s+/).filter(Boolean);let visible=0;rows.forEach(row=>{const match=terms.every(term=>normalize(row.dataset.search).includes(term));row.hidden=!match;if(match)visible++});document.querySelectorAll(`[data-annual-panel="${inputId.startsWith('officer')?'officers':'leaders'}"] .annual-candidate-group`).forEach(group=>{group.hidden=terms.length>0&&![...group.querySelectorAll(rowSelector)].some(row=>!row.hidden)});if(empty)empty.hidden=!terms.length||visible>0};search?.addEventListener('input',filter);filter()};setupFilter('officer-resident-search','[data-resident-row]','officer-search-empty');setupFilter('leader-resident-search','[data-leader-row]','leader-search-empty');document.querySelectorAll('[data-open-officer-dialog]').forEach(button=>button.addEventListener('click',()=>document.getElementById(button.dataset.openOfficerDialog)?.showModal()));document.querySelectorAll('[data-open-leader-dialog]').forEach(button=>button.addEventListener('click',()=>document.getElementById(button.dataset.openLeaderDialog)?.showModal()));document.querySelectorAll('[data-close-officer-dialog],[data-close-leader-dialog]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog')?.close()));document.querySelectorAll('.officer-dialog').forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()}))})();</script>
+</main>
+<%- include('partials/foot') %>

@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme page-narrow">
+  <a class="back-link" href="/associations/<%= association._id %>/officer-network">← 役員間の連絡網へ戻る</a>
+  <section class="page-heading"><h1>役員間の連絡を送る</h1></section>
+  <section class="content-card announcement-card"><form class="form-stack" action="/associations/<%= association._id %>/officer-network" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>送信先<select name="audience" id="network-audience" required><option value="officers_all">全役員</option><option value="department">部に所属する役員</option><option value="officer_individual">個別の役員</option><option value="officer_group">役員グループ</option></select></label>
+    <label id="network-target-label" hidden>対象<select name="targetId" id="network-target"><% departments.forEach((department) => { %><option data-audience="department" value="<%= department._id %>"><%= department.name %></option><% }) %><% groups.forEach((group) => { %><option data-audience="officer_group" value="<%= group._id %>"><%= group.name %></option><% }) %></select></label>
+    <fieldset class="announcement-options" id="network-individual-officers" hidden><legend>送信先の役員（複数選択可）</legend><p class="help-text">1人以上選択してください。</p><div class="officer-recipient-list"><% officers.forEach((item) => { %><label><input type="checkbox" name="targetOfficerIds" value="<%= item.user._id %>" disabled> <%= item.user.displayname || item.user.username %><% if (item.department?.name) { %>（<%= item.department.name %>）<% } %></label><% }) %></div></fieldset>
+    <p class="help-text">送信時点で町内会に参加している現年度の役員へ連絡します。<a href="/associations/<%= association._id %>/officer-network/groups">役員グループを管理</a></p>
+    <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
+    <label>タイトル<input name="title" maxlength="120" required></label>
+    <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
+    <label>回答方法<select name="responseMode" id="network-response-mode"><option value="none">回答なし（確認のみ）</option><option value="single">選択肢から1つ</option><option value="multiple">選択肢から複数</option></select></label>
+    <fieldset class="announcement-options" id="network-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" data-announcement-option></label><% } %></fieldset>
+    <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
+  </form></section>
+</main>
+<script>(() => {
+  const audience = document.getElementById('network-audience'), target = document.getElementById('network-target'), targetLabel = document.getElementById('network-target-label');
+  const individual = document.getElementById('network-individual-officers'), officerChecks = [...individual.querySelectorAll('input[type="checkbox"]')];
+  const available = [...target.options].map(option => ({ audience: option.dataset.audience, value: option.value, label: option.textContent }));
+  const updateTarget = () => { const kind = audience.value; const usesSelect = kind === 'department' || kind === 'officer_group'; const filtered = available.filter(item => item.audience === kind); target.replaceChildren(...filtered.map(item => { const option = document.createElement('option'); option.value = item.value; option.textContent = item.label; return option; })); targetLabel.hidden = !usesSelect; target.disabled = !usesSelect; target.required = usesSelect; individual.hidden = kind !== 'officer_individual'; officerChecks.forEach(input => { input.disabled = kind !== 'officer_individual'; }); };
+  audience.addEventListener('change', updateTarget); updateTarget();
+  individual.closest('form').addEventListener('submit', event => { if (audience.value === 'officer_individual' && !officerChecks.some(input => input.checked)) { event.preventDefault(); officerChecks[0]?.focus(); alert('送信先の役員を1人以上選択してください。'); } });
+  const mode = document.getElementById('network-response-mode'), options = document.getElementById('network-options'), inputs = [...options.querySelectorAll('[data-announcement-option]')];
+  const updateOptions = () => { const enabled = mode.value !== 'none'; options.hidden = !enabled; inputs.forEach((input, index) => { input.disabled = !enabled; input.required = enabled && index < 2; }); };
+  mode.addEventListener('change', updateOptions); updateOptions();
+})();</script>
+<%- include('partials/foot') %>

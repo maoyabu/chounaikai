@@ -1,0 +1,21 @@
+<section class="association-public-hero <%= association.publicPhotos?.some(photo => photo?.url) ? 'has-photos' : '' %> <%= association.symbolImage?.url ? 'has-symbol' : '' %>" style="<%= association.symbolImage?.url ? `--symbol-url:url('${association.symbolImage.url}')` : '' %>">
+  <% (association.publicPhotos || []).forEach((photo, index) => { if (photo?.url) { %><img class="association-public-slide <%= index === (association.publicPhotos || []).findIndex(item => item?.url) ? 'is-active' : '' %>" src="<%= photo.url %>" alt="" aria-hidden="true"><% } }); %>
+  <div class="association-public-hero-content"><h1><%= association.name %></h1><% if (!isResidentPage) { %><a class="button button-primary" href="/associations/<%= association._id %>/register/start"><%= currentUser ? 'この町内会に参加する' : 'この町内会で会員登録' %></a><% } %></div>
+</section>
+<section class="content-card association-public-introduction"><details class="association-info-details"><summary><div class="association-info-summary-main"><h2>町内会の基本情報</h2><p class="body-copy"><%= association.introduction || 'ご案内は準備中です。' %></p></div><div class="association-public-stats"><div><strong><%= householdCount %></strong><span>世帯</span></div><div><strong><%= residentCount %></strong><span>住人</span></div></div><span aria-hidden="true">⌄</span></summary><div class="association-info-expanded"><p class="body-copy"><%= association.introduction || 'ご案内は準備中です。' %></p><% if (association.socialLinks && (association.socialLinks.instagram || association.socialLinks.x || association.socialLinks.youtube)) { %><div class="association-info-social"><h3>SNS</h3><div class="association-social-links"><% [['Instagram', association.socialLinks.instagram], ['X', association.socialLinks.x], ['YouTube', association.socialLinks.youtube]].forEach(([label, url]) => { if (url) { %><a href="<%= url %>" target="_blank" rel="noopener"><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=<%= encodeURIComponent(url) %>" alt="<%= label %>のQRコード"><strong><%= label %></strong></a><% } }); %></div></div><% } %></div></details></section>
+<%- include('association-event-calendar', { associationName: null, calendarAnchor: 'association-events', calendarPath }) %>
+<div class="association-public-info-grid">
+  <section class="content-card association-public-introduction"><div class="association-public-section-title"><h2><%= fiscalYear %>年度の町内会役員</h2><% if (currentUser) { %><a href="/associations/<%= association._id %>/officers">役員の一覧を見る →</a><% } %></div><% if (officers.length) { %><div class="public-officer-list"><% officers.forEach(officer => { %><article><% if (officer.user?.avatar) { %><img class="profile-avatar resident-avatar" src="<%= officer.user.avatar %>" alt=""><% } %><div><small><%= officer.role?.name || '役員' %></small><span><%= officer.department?.name || '' %></span></div></article><% }); %></div><% } else { %><p>役員情報はまだ登録されていません。</p><% } %></section>
+  <section class="content-card association-public-introduction"><h2>町内会の班</h2><% if (districtStats.length) { %><div class="association-public-districts"><% districtStats.forEach(group => { %><div><strong><%= group.name %></strong><span><%= group.householdCount %>世帯</span><span><%= group.residentCount %>人</span></div><% }); %></div><% } else { %><p>班の情報はまだ登録されていません。</p><% } %></section>
+</div>
+<script>
+  const publicSlides = [...document.querySelectorAll('.association-public-slide')];
+  if (publicSlides.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let activeSlide = 0;
+    setInterval(() => {
+      publicSlides[activeSlide].classList.remove('is-active');
+      activeSlide = (activeSlide + 1) % publicSlides.length;
+      publicSlides[activeSlide].classList.add('is-active');
+    }, 5000);
+  }
+</script>

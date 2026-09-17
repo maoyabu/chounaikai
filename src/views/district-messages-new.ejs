@@ -1,0 +1,27 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme page-narrow">
+  <a class="back-link" href="/associations/<%= association._id %>/district-messages">← 班内の連絡へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %> ・ <%= districtGroup.name %></p><h1>班内の連絡を送る</h1></div></section>
+  <section class="content-card announcement-card"><form class="form-stack" action="/associations/<%= association._id %>/district-messages" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>送信先<select name="audience" id="district-audience" required><% if (isLeader) { %><option value="district_all">班の住人全員</option><% } %><option value="district_individual">個別の班の住人（複数選択可）</option></select></label>
+    <fieldset class="announcement-options" id="district-recipients" hidden><legend>送信先の班員</legend><p class="help-text">1人以上選択してください。</p><div class="officer-recipient-list"><% members.forEach((item) => { %><label><input type="checkbox" name="recipientIds" value="<%= item.user._id %>" disabled> <%= item.user.displayname || item.user.username %></label><% }) %></div></fieldset>
+    <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
+    <label>タイトル<input name="title" maxlength="120" required></label>
+    <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
+    <label>回答方法<select name="responseMode" id="district-response-mode"><option value="none">回答なし（確認のみ）</option><option value="single">選択肢から1つ</option><option value="multiple">選択肢から複数</option></select></label>
+    <fieldset class="announcement-options" id="district-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" data-announcement-option></label><% } %></fieldset>
+    <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
+  </form></section>
+</main>
+<script>(() => {
+  const audience = document.getElementById('district-audience'), recipients = document.getElementById('district-recipients'), checks = [...recipients.querySelectorAll('input[type="checkbox"]')];
+  const updateRecipients = () => { const individual = audience.value === 'district_individual'; recipients.hidden = !individual; checks.forEach(input => { input.disabled = !individual; }); };
+  audience.addEventListener('change', updateRecipients); updateRecipients();
+  recipients.closest('form').addEventListener('submit', event => { if (audience.value === 'district_individual' && !checks.some(input => input.checked)) { event.preventDefault(); checks[0]?.focus(); alert('送信先の班員を1人以上選択してください。'); } });
+  const mode = document.getElementById('district-response-mode'), options = document.getElementById('district-options'), inputs = [...options.querySelectorAll('[data-announcement-option]')];
+  const updateOptions = () => { const enabled = mode.value !== 'none'; options.hidden = !enabled; inputs.forEach((input, index) => { input.disabled = !enabled; input.required = enabled && index < 2; }); };
+  mode.addEventListener('change', updateOptions); updateOptions();
+})();</script>
+<%- include('partials/foot') %>

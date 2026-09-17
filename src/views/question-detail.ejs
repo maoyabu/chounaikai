@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow question-box-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/questions">← 質問・ご意見箱へ戻る</a>
+  <section class="content-card question-compose">
+    <p class="eyebrow"><%= association.name %> ・ <%= thread.districtGroup?.name || '班未設定' %></p>
+    <h1><%= thread.title %></h1>
+    <p class="help-text">投稿日：<%= new Date(thread.createdAt).toLocaleString('ja-JP') %></p>
+    <div class="question-messages"><% thread.messages.forEach((message) => { %>
+      <article class="question-message <%= message.kind === 'resident' ? 'question-message-own' : 'question-message-other' %>"><div class="question-message-meta"><strong><%= message.kind === 'officer' ? '役員' : '住人' %>：<%= message.sender?.displayname || message.sender?.username || '退会済みの利用者' %></strong><time><%= new Date(message.createdAt).toLocaleString('ja-JP') %></time></div><p><%= message.body %></p></article>
+    <% }) %></div>
+    <% if (thread.lastOfficerAt && (!thread.residentReadAt || new Date(thread.lastOfficerAt) > new Date(thread.residentReadAt))) { %><form action="/associations/<%= association._id %>/questions/<%= thread._id %>/read-detail" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="answerAt" value="<%= new Date(thread.lastOfficerAt).toISOString() %>"><button class="button button-quiet" type="submit">回答を確認済みにする</button></form><% } %>
+    <% if (thread.status === 'answered') { %><form class="form-stack question-reply" action="/associations/<%= association._id %>/questions/<%= thread._id %>/messages" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>返信・再質問<textarea name="body" rows="5" maxlength="3000" required></textarea></label><div class="form-actions"><button class="button button-primary" type="submit">返信・再質問を送信</button></div></form><% } else if (thread.status === 'unanswered') { %><p class="help-text">役員からの回答を待っています。</p><% } else { %><p class="help-text">「<%= thread.status === 'no_reply' ? '返信不要' : '完了' %>」として、このやり取りを終了しました。</p><% } %>
+    <% if (['unanswered', 'answered'].includes(thread.status)) { %><form class="question-close-form" action="/associations/<%= association._id %>/questions/<%= thread._id %>/close" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><p class="help-text">やり取りを終了すると、返信・再質問はできなくなります。</p><div class="form-actions"><button class="button button-quiet" type="submit" name="resolution" value="no_reply">返信不要で終了</button><button class="button button-quiet" type="submit" name="resolution" value="completed">完了にする</button></div></form><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

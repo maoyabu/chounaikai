@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell question-box-shell" data-open-thread="<%= openThread %>">
+  <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+    <section class="admin-section question-home-section"><div class="section-heading"><h1 class="officer-question-heading">住人からの質問・ご意見</h1></div>
+      <% if (!officerThreads.length) { %><div class="admin-empty"><p>投稿はまだありません。</p></div><% } else { %>
+        <div class="question-thread-list question-officer-list">
+          <div class="question-list-head" aria-hidden="true"><span>日付</span><span>班</span><span>住人</span><span>タイトル</span><span>回答者・再質問</span><span>状態</span></div>
+          <% officerThreads.forEach((thread) => { %>
+            <button type="button" class="question-thread-row question-officer-row" data-open-question="officer-<%= thread._id %>" aria-haspopup="dialog" aria-controls="question-dialog-officer-<%= thread._id %>">
+              <span><%= new Date(thread.createdAt).toLocaleDateString('ja-JP') %></span><span><%= thread.districtGroup?.name || '班未設定' %></span><span><%= thread.author?.displayname || thread.author?.username || '退会済みの住人' %></span><strong><%= thread.title %></strong><span><%= thread.lastOfficer?.displayname || thread.lastOfficer?.username || '未回答' %><% if (thread.residentMessageCount > 1) { %><small>再質問あり</small><% } %></span><span class="status-badge <%= thread.status === 'unanswered' ? 'status-pending' : '' %>"><%= thread.status === 'unanswered' ? '未回答' : thread.status === 'answered' ? '回答済み' : thread.status === 'no_reply' ? '返信不要' : '完了' %></span>
+            </button>
+            <%- include('partials/question-thread-dialog', { thread, association, mode: 'officer', canAnswer: true }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+</main>
+<%- include('partials/question-box-script') %>
+<%- include('partials/foot') %>

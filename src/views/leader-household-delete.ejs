@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow resident-participation-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/leader?tab=members">← 班の世帯一覧へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">班長メニュー</p><h1>世帯削除の確認</h1><p>対象の世帯と、削除による影響をご確認ください。</p></div></section>
+  <section class="form-card form-stack">
+    <div><span class="status-badge"><%= household.districtGroup.name %></span><h2><%= household.displayName %></h2><p>世帯主：<%= household.representative?.displayname || household.representative?.username || '—' %></p><p><%= household.address.postalCode %> <%= household.address.street %> <%= household.address.building || '' %></p></div>
+    <div><h3>世帯メンバー（<%= members.length %>人）</h3><ul class="household-deletion-members"><% members.forEach(member => { %><li><%= member.name %> <% if (member.isRepresentative) { %><span class="status-badge">世帯代表者</span><% } %></li><% }) %></ul></div>
+    <div class="alert alert-error"><p>この世帯を削除すると、次の処理が行われます。</p><ul class="household-deletion-impact"><li>世帯は班の一覧とプロフィールの世帯情報から非表示になります。</li><li>この世帯に紐付いた会員の町内会所属が無効になり、町内会の利用が停止されます。</li><li>未完了の招待・世帯紐付け・参加申請を取り消します。</li><li>この世帯の会員の管理権限と、今年度以降の役員・班長の設定を無効にします。</li><li>共通アカウントや他のグループの所属は削除しません。世帯・メンバー情報と履歴は保持します。</li></ul></div>
+    <form class="form-stack" action="/associations/<%= association._id %>/leader/households/<%= household._id %>/delete" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="confirmationToken" value="<%= confirmationToken %>">
+      <label class="household-invitation-consent"><input type="checkbox" name="confirmDeletion" required>対象の世帯と削除の影響を確認しました。</label>
+      <div class="form-actions"><a class="button button-quiet" href="/associations/<%= association._id %>/leader?tab=members">キャンセル</a><button type="submit" class="button button-danger-outline">この世帯を削除する</button></div>
+    </form>
+  </section>
+</main>
+<%- include('partials/foot') %>

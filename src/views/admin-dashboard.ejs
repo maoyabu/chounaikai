@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading admin-heading">
+    <div><p class="eyebrow">システム管理</p><h1 class="title-with-icon"><span class="title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg></span><span>管理者メニュー</span></h1><p>町内会とサービス全体の設定を管理します。</p></div>
+  </section>
+  <section class="stat-grid" aria-label="登録状況">
+    <article class="stat-card"><span>町内会</span><strong><%= stats.total %></strong><small>登録数</small></article>
+    <article class="stat-card"><span>公開中</span><strong><%= stats.active %></strong><small>町内会</small></article>
+    <article class="stat-card"><span>承認待ち</span><strong><%= stats.pending %></strong><small>申請</small></article>
+    <article class="stat-card"><span>利用者</span><strong><%= stats.users %></strong><small>有効アカウント</small></article>
+  </section>
+  <section class="admin-section">
+    <div class="section-heading"><div><p class="eyebrow">町内会管理</p><h2>申請・登録済み町内会</h2></div></div>
+    <% if (associations.length === 0) { %>
+      <div class="admin-empty"><p>町内会の申請はありません。</p></div>
+    <% } else { %>
+      <div class="admin-list">
+        <% associations.forEach((association) => { %>
+          <article class="admin-list-item <%= association.deletedAt ? 'is-deleted' : '' %>"><span class="list-icon" aria-hidden="true"><%= association.status === 'pending' ? '申' : '町' %></span><a class="list-main" href="/associations/<%= association._id %>"><strong><%= association.name %></strong><small>申請者：<%= association.requestedBy?.displayname || association.requestedBy?.username || '不明' %> ・ <%= association.serviceArea || '対象地域未設定' %></small></a><span class="status-badge <%= association.status === 'pending' ? 'status-pending' : '' %>"><%= association.deletedAt ? '非表示' : association.status === 'active' ? '公開中' : association.status === 'pending' ? '承認待ち' : '停止中' %></span><div class="admin-actions"><a class="button button-quiet button-small" href="/associations/<%= association._id %>">閲覧</a><% if (association.status === 'pending' && !association.deletedAt && association.requestedBy) { %><form action="/admin/associations/<%= association._id %>/approve" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary button-small" type="submit">承認</button></form><% } %><% if (association.status === 'pending') { %><form action="/admin/associations/<%= association._id %>/delete" method="post" onsubmit="return confirm('この町内会の申請を完全に削除しますか？')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="deleteMode" value="permanent"><button class="button button-quiet button-small" type="submit">申請を削除</button></form><% } %><% if (association.deletedAt) { %><form action="/admin/associations/<%= association._id %>/restore" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary button-small" type="submit">再表示</button></form><% } %></div></article>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+  <section class="admin-section">
+    <div class="section-heading"><div><p class="eyebrow">会員登録</p><h2>メール確認前の登録</h2></div></div>
+    <p>ここにある登録は共通システムのユーザー一覧には表示されません。削除すると同じユーザー名とメールアドレスで登録し直せます。</p>
+    <% if (typeof pendingRegistrations === 'undefined' || !pendingRegistrations.length) { %><div class="admin-empty"><p>未完了の登録はありません。</p></div><% } else { %>
+      <div class="admin-list"><% pendingRegistrations.forEach((registration) => { %>
+        <article class="admin-list-item"><span class="list-icon" aria-hidden="true">仮</span><span class="list-main"><strong><%= registration.username %></strong><small><%= registration.email %> ・ <%= registration.registrationPurpose === 'create' ? '町内会作成' : registration.registrationPurpose === 'join' ? '町内会参加' : '招待から登録' %> ・ 期限 <%= registration.expiresAt.toLocaleString('ja-JP') %></small></span><form action="/admin/pending-registrations/<%= registration._id %>/delete" method="post" onsubmit="return confirm('この未完了の会員登録を削除しますか？')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small" type="submit">登録を削除</button></form></article>
+      <% }) %></div>
+    <% } %>
+  </section>
+  <section class="admin-section">
+    <div class="section-heading"><div><p class="eyebrow">会員登録</p><h2>共通システムで削除済みの利用者</h2></div></div>
+    <p>このサービスに登録履歴がある利用者のみ表示します。町内会や共通グループの記録が残る利用者は削除できません。</p>
+    <% if (typeof inactiveRegistrants === 'undefined' || !inactiveRegistrants.length) { %><div class="admin-empty"><p>該当する利用者はいません。</p></div><% } else { %>
+      <div class="admin-list"><% inactiveRegistrants.forEach((user) => { %>
+        <article class="admin-list-item"><span class="list-icon" aria-hidden="true">退</span><span class="list-main"><strong><%= user.username %></strong><small><%= user.email %></small></span><% if (user.canRemove) { %><form action="/admin/inactive-registrants/<%= user._id %>/delete" method="post" onsubmit="return confirm('この削除済み利用者の記録を完全に削除しますか？')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small" type="submit">記録を削除</button></form><% } else { %><span class="status-badge">関連記録あり</span><% } %></article>
+      <% }) %></div>
+    <% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

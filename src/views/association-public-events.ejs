@@ -1,0 +1,7 @@
+<%- include('partials/head') %>
+<% if (currentUser) { %><%- include('partials/header') %><% } %>
+<main class="page-shell association-public-page">
+  <a class="back-link" href="/associations">← 町内会一覧へ戻る</a>
+  <%- include('partials/association-page-content', { isResidentPage: false, calendarPath: `/associations/${association._id}/public` }) %>
+</main>
+<%- include('partials/foot') %>

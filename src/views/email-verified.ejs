@@ -1,0 +1,10 @@
+<%- include('partials/head') %>
+<main class="message-shell">
+  <section class="message-card">
+    <a class="brand" href="/login"><span class="brand-mark" aria-hidden="true">町</span><span>町内会管理</span></a>
+    <div class="message-icon <%= verified ? '' : 'is-error' %>" aria-hidden="true"><svg viewBox="0 0 24 24"><% if (verified) { %><path d="m5 12 4 4L19 6"/><% } else { %><path d="M12 8v5M12 17h.01M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><% } %></svg></div>
+    <h1><%= title %></h1>
+    <% if (verified) { %><p>メールアドレスを確認し、会員登録が完了しました。</p><% if (typeof householdParticipationSubmitted !== 'undefined' && householdParticipationSubmitted) { %><p>招待された世帯に紐付きました。班長または町内会管理者の参加承認をお待ちください。</p><% } else if (typeof householdParticipationError !== 'undefined' && householdParticipationError) { %><p class="alert alert-error"><%= householdParticipationError %></p><% } else { %><p>ログイン後、町内会と班を選んで世帯主または一般メンバーとして参加を申請してください。</p><% } %><a class="button button-primary button-wide" href="/login">ログインする</a><% } else { %><p>確認リンクの有効期限が切れているか、すでに使用されています。ログイン画面から確認メールを再送してください。</p><a class="button button-primary button-wide" href="/login">ログイン画面へ</a><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

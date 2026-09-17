@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/associations">← 町内会一覧へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">新規作成申請</p><h1 class="title-with-icon"><span class="title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-6 7 6v12M9 21v-6h6v6M19 4v4M21 6h-4"/></svg></span><span>町内会を申請</span></h1><p>承認されると町内会が公開され、あなたが町内会管理者になります。</p></div></section>
+  <% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-error" role="alert"><%= formError %></div><% } %>
+  <form action="/associations" method="post" class="form-card form-stack">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>町内会名 <span class="required">必須</span><input name="name" value="<%= values.name || '' %>" required></label>
+    <label>共通グループ名 <span class="required">必須</span><input name="groupName" value="<%= values.groupName || '' %>" required><small>既存システムにも表示される名称です。他のグループと重複できません。</small></label>
+    <label>公開URL名 <span class="required">必須</span><div class="input-prefix"><span>/n/</span><input name="publicSlug" value="<%= values.publicSlug || '' %>" pattern="[a-z0-9][a-z0-9-]{2,62}" required></div><small>半角英小文字・数字・ハイフンで入力してください。</small></label>
+    <label>対象地域<input name="serviceArea" value="<%= values.serviceArea || '' %>" placeholder="例：横浜市戸塚区吉田町"></label>
+    <label>連絡担当者<input name="contactName" value="<%= values.contact?.name || '' %>"></label>
+    <label>連絡先メール<input type="email" name="contactEmail" value="<%= values.contact?.email || currentUser.email || '' %>"></label>
+    <label>連絡先電話番号<input type="tel" name="contactPhone" value="<%= values.contact?.phone || '' %>"></label>
+    <label>紹介文<textarea name="introduction" rows="5"><%= values.introduction || '' %></textarea></label>
+    <div class="form-actions"><a class="button button-quiet" href="/associations">キャンセル</a><button class="button button-primary" type="submit">申請する</button></div>
+  </form>
+</main>
+<%- include('partials/foot') %>

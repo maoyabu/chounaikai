@@ -1,0 +1,109 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">初期設定</p><h1>町内会の基本設定</h1><p>年度が変わっても継続して使う項目を、上から順に設定します。各行の「⋮⋮」をつまんで並び替えられます。</p></div></section>
+  <nav class="setup-progress" role="tablist" aria-label="基本設定の順序"><button type="button" role="tab" data-basic-tab="roles"><span>1</span>役職</button><button type="button" role="tab" data-basic-tab="departments"><span>2</span>部会</button><button type="button" role="tab" data-basic-tab="district-groups"><span>3</span>班</button><button type="button" role="tab" data-basic-tab="association-name"><span>4</span>町内会基本情報</button></nav>
+  <section id="roles" class="content-card management-card setup-section"><div class="section-number">1</div><div class="setup-content"><h2>町内会役員会の役職</h2><form class="inline-form" action="/associations/<%= association._id %>/manage/roles" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" placeholder="例：会長、副会長、会計" required><button class="button button-primary">作成</button></form><div class="management-list"><% roles.forEach((role) => { %><div><form class="inline-form" action="/associations/<%= association._id %>/manage/roles/<%= role._id %>/update" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" value="<%= role.name %>" <%= role.name === '町内会管理者' ? 'readonly' : '' %> required><% role.permissions.forEach((permission) => { %><input type="hidden" name="permissions" value="<%= permission %>"><% }) %><button class="button button-quiet button-small">更新</button></form><% if (role.name !== '町内会管理者') { %><form action="/associations/<%= association._id %>/manage/roles/<%= role._id %>/delete" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form><% } %></div><% }) %></div></div></section>
+  <section id="departments" class="content-card management-card setup-section"><div class="section-number">2</div><div class="setup-content"><h2>部会</h2><form class="inline-form" action="/associations/<%= association._id %>/manage/departments" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" placeholder="例：総務部、防災部" required><button class="button button-primary">作成</button></form><div class="management-list"><% departments.forEach((item) => { %><div><form class="inline-form" action="/associations/<%= association._id %>/manage/departments/<%= item._id %>/update" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" value="<%= item.name %>" required><button class="button button-quiet button-small">更新</button></form><form action="/associations/<%= association._id %>/manage/departments/<%= item._id %>/delete" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form></div><% }) %></div></div></section>
+  <section id="district-groups" class="content-card management-card setup-section"><div class="section-number">3</div><div class="setup-content"><h2>班</h2><form class="inline-form" action="/associations/<%= association._id %>/manage/district-groups" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" placeholder="例：1班" required><button class="button button-primary">作成</button></form><div class="management-list"><% districtGroups.forEach((item) => { %><div><form class="inline-form" action="/associations/<%= association._id %>/manage/district-groups/<%= item._id %>/update" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="name" value="<%= item.name %>" required><button class="button button-quiet button-small">更新</button></form><form action="/associations/<%= association._id %>/manage/district-groups/<%= item._id %>/delete" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form></div><% }) %></div></div></section>
+  <section id="association-name" class="content-card management-card setup-section"><div class="section-number">4</div><div class="setup-content"><h2>町内会の基本情報</h2><form class="form-stack" action="/associations/<%= association._id %>/manage/name" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>町内会名<input name="name" value="<%= association.name %>" required></label><label>対象地域<input name="serviceArea" value="<%= association.serviceArea || '' %>"></label><label>紹介文<textarea name="introduction" rows="5"><%= association.introduction || '' %></textarea></label><div class="form-columns"><label>連絡先氏名<input name="contactName" value="<%= association.contact?.name || '' %>"></label><label>連絡先メール<input type="email" name="contactEmail" value="<%= association.contact?.email || '' %>"></label></div><label>連絡先電話<input name="contactPhone" value="<%= association.contact?.phone || '' %>"></label><div class="form-columns"><label>Instagram URL<input type="url" name="instagram" value="<%= association.socialLinks?.instagram || '' %>"></label><label>X URL<input type="url" name="x" value="<%= association.socialLinks?.x || '' %>"></label></div><label>YouTube URL<input type="url" name="youtube" value="<%= association.socialLinks?.youtube || '' %>"></label><div class="form-actions"><button class="button button-primary">基本情報を更新</button></div></form></div></section>
+  <section class="content-card management-card symbol-settings-section"><h2>町内会シンボル</h2><p class="help-text">町内会名の左側に表示する画像を１枚登録できます。</p><form class="form-stack" action="/associations/<%= association._id %>/manage/symbol" method="post" enctype="multipart/form-data"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% if (association.symbolImage?.url) { %><img class="association-symbol-preview" src="<%= association.symbolImage.url %>" alt="現在のシンボル"><% } %><label>シンボル画像<input type="file" name="symbolImage" accept="image/*" required></label><div class="form-actions"><button class="button button-primary">シンボル画像を保存</button></div></form></section>
+  <script>
+    (() => {
+      const tabs = [...document.querySelectorAll('[data-basic-tab]')];
+      const panels = [...document.querySelectorAll('.setup-section')];
+      const tabKey = 'basic-settings-tab:<%= association._id %>';
+      const select = (value) => {
+        if (!tabs.some((tab) => tab.dataset.basicTab === value)) value = 'roles';
+        tabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.basicTab === value)));
+        panels.forEach((panel) => { panel.hidden = panel.id !== value; });
+        localStorage.setItem(tabKey, value);
+      };
+      tabs.forEach((tab) => tab.addEventListener('click', () => select(tab.dataset.basicTab)));
+      select(localStorage.getItem(tabKey) || 'roles');
+
+      const csrfToken = '<%= csrfToken %>';
+      const associationId = '<%= association._id %>';
+      const typeByPanel = { roles: 'roles', departments: 'departments', 'district-groups': 'district-groups' };
+      Object.entries(typeByPanel).forEach(([panelId, type]) => {
+        const panel = document.getElementById(panelId);
+        const list = panel?.querySelector('.management-list');
+        if (!list) return;
+        const status = document.createElement('p');
+        status.className = 'drag-save-status';
+        status.setAttribute('aria-live', 'polite');
+        list.before(status);
+        let draggedRow = null;
+        let originalRows = [];
+        let dropCompleted = false;
+        [...list.children].forEach((row) => {
+          const updateForm = row.querySelector('form[action$="/update"]');
+          const match = updateForm?.action.match(/\/([^/]+)\/update$/);
+          if (!match) return;
+          row.dataset.orderId = match[1];
+          row.classList.add('draggable-setting-row');
+          const handle = document.createElement('button');
+          handle.type = 'button';
+          handle.className = 'drag-handle';
+          handle.draggable = true;
+          handle.setAttribute('aria-label', 'ドラッグして並び替え');
+          handle.title = 'ドラッグして並び替え';
+          handle.textContent = '⋮⋮';
+          row.prepend(handle);
+          handle.addEventListener('dragstart', (event) => {
+            draggedRow = row;
+            originalRows = [...list.children];
+            dropCompleted = false;
+            row.classList.add('is-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', row.dataset.orderId);
+          });
+          handle.addEventListener('dragend', () => {
+            if (!dropCompleted) originalRows.forEach((item) => list.append(item));
+            row.classList.remove('is-dragging');
+            list.querySelectorAll('.is-drag-over').forEach((item) => item.classList.remove('is-drag-over'));
+            draggedRow = null;
+          });
+        });
+        list.addEventListener('dragover', (event) => {
+          if (!draggedRow) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          const targetRow = event.target.closest('[data-order-id]');
+          list.querySelectorAll('.is-drag-over').forEach((item) => item.classList.remove('is-drag-over'));
+          if (!targetRow || targetRow === draggedRow) return;
+          targetRow.classList.add('is-drag-over');
+          const after = event.clientY > targetRow.getBoundingClientRect().top + targetRow.offsetHeight / 2;
+          list.insertBefore(draggedRow, after ? targetRow.nextSibling : targetRow);
+        });
+        list.addEventListener('drop', async (event) => {
+          if (!draggedRow) return;
+          event.preventDefault();
+          dropCompleted = true;
+          list.querySelectorAll('.is-drag-over').forEach((item) => item.classList.remove('is-drag-over'));
+          const order = [...list.children].map((item) => item.dataset.orderId).filter(Boolean);
+          status.classList.remove('is-error');
+          status.textContent = '並び順を保存しています…';
+          try {
+            const response = await fetch(`/associations/${associationId}/manage/order/${type}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken, Accept: 'application/json' },
+              body: JSON.stringify({ order })
+            });
+            if (!response.ok) throw new Error('save_failed');
+            const result = await response.json();
+            if (!result.ok || result.order.join(',') !== order.join(',')) throw new Error('saved_order_mismatch');
+            status.textContent = '並び順を保存しました。';
+          } catch (_error) {
+            originalRows.forEach((item) => list.append(item));
+            status.textContent = '保存できませんでした。画面を再読み込みしてください。';
+            status.classList.add('is-error');
+          }
+        });
+      });
+    })();
+  </script>
+</main>
+<%- include('partials/foot') %>

@@ -1,0 +1,159 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <div class="page-heading"><div><p class="eyebrow">ACCOUNT</p><h1>プロフィール</h1><p>本人のプロフィールと、町内会に登録した世帯情報を管理します。</p></div></div>
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <% if (formError) { %><div class="alert alert-error"><%= formError %></div><% } %>
+  <% if (typeof errorMessage !== 'undefined' && errorMessage) { %><div class="alert alert-error" role="alert"><%= errorMessage %></div><% } %>
+  <div class="profile-tabs" role="tablist" aria-label="プロフィール管理メニュー">
+    <button type="button" role="tab" id="profile-tab-account" aria-controls="profile-panel-account" data-profile-tab="account">本人情報</button>
+    <button type="button" role="tab" id="profile-tab-household" aria-controls="profile-panel-household" data-profile-tab="household">世帯情報</button>
+  </div>
+  <p><a href="/profile/withdrawals">町内会の退会申請・世帯メンバーの退会承認</a></p>
+  <section id="profile-panel-account" role="tabpanel" aria-labelledby="profile-tab-account" data-profile-panel="account">
+  <form class="form-card form-stack" action="/profile" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="profile-image-editor">
+      <% if (values.avatar) { %><img id="avatar-preview" class="profile-avatar profile-avatar-large" src="<%= values.avatar %>" alt="現在のプロフィール画像"><% } else { %><span id="avatar-placeholder" class="profile-avatar profile-avatar-large profile-avatar-placeholder" aria-hidden="true"><%= (values.displayname || values.username || '人').charAt(0) %></span><img id="avatar-preview" class="profile-avatar profile-avatar-large" alt="選択したプロフィール画像" hidden><% } %>
+      <label class="profile-image-input">プロフィール画像<input id="avatar-input" type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"><small>JPEG・PNG・WebP・GIF・HEIC、15MB以下</small></label>
+    </div>
+    <label>ユーザー名<input value="<%= values.username || '' %>" disabled><small>共通サービスで使用する識別名のため、ここでは変更できません。</small></label>
+    <label>氏名 <span class="required">必須</span><input name="displayname" value="<%= values.displayname || '' %>" maxlength="100" required></label>
+    <label>メールアドレス <span class="required">必須</span><input type="email" name="email" value="<%= values.email || '' %>" required></label>
+    <label>生年月日<input type="date" name="birth_date" value="<%= values.birth_date ? new Date(values.birth_date).toISOString().slice(0, 10) : '' %>"></label>
+    <label>性別<select name="sex"><option value="unspecified" <%= !values.sex || values.sex === 'unspecified' ? 'selected' : '' %>>回答しない</option><option value="male" <%= values.sex === 'male' ? 'selected' : '' %>>男性</option><option value="female" <%= values.sex === 'female' ? 'selected' : '' %>>女性</option><option value="other" <%= values.sex === 'other' ? 'selected' : '' %>>その他</option></select></label>
+    <div class="form-actions"><a class="button button-quiet" href="/dashboard">キャンセル</a><button class="button button-primary" type="submit">プロフィールを保存</button></div>
+  </form>
+  <form id="password-change" class="form-card form-stack" action="/profile/password" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2>パスワードの変更</h2>
+    <p class="help-text">共通アカウントを使用する他のサービスのパスワードも変更されます。</p>
+    <label>現在のパスワード<input type="password" name="currentPassword" autocomplete="current-password" required></label>
+    <label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required><small>8〜128文字で入力してください。</small></label>
+    <label>新しいパスワード（確認）<input type="password" name="passwordConfirmation" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+    <div class="form-actions"><button class="button button-primary" type="submit">パスワードを変更</button></div>
+    <a href="/forgot-password">現在のパスワードを忘れた方</a>
+  </form>
+  </section>
+  <section id="profile-panel-household" role="tabpanel" aria-labelledby="profile-tab-household" data-profile-panel="household" hidden>
+    <% const profileHouseholds = typeof households !== 'undefined' ? households : []; const profileMembers = typeof membersByHousehold !== 'undefined' ? membersByHousehold : {}; const availableRegistrations = typeof availableHouseholdRegistrations !== 'undefined' ? availableHouseholdRegistrations : []; %>
+    <% const linkedHouseholds = typeof affiliatedHouseholds !== 'undefined' ? affiliatedHouseholds : []; const linkApplications = typeof householdLinkApplications !== 'undefined' ? householdLinkApplications : []; const memberInvitations = typeof invitationByMember !== 'undefined' ? invitationByMember : {}; %>
+    <% linkedHouseholds.forEach((household) => { const ownMember = (typeof ownHouseholdMembers !== 'undefined' ? ownHouseholdMembers : []).find(member => String(member.household) === String(household._id)); %>
+      <section class="profile-household form-card form-stack" id="household-<%= household._id %>"><div class="profile-household-heading"><div><p class="eyebrow"><%= household.association.name %></p><h2>所属する世帯</h2></div><span class="status-badge"><%= household.districtGroup?.name %></span></div>
+        <p>世帯主：<%= household.representative?.displayname || household.representative?.username %></p><p><%= household.address?.postalCode %> <%= household.address?.street %> <%= household.address?.building || '' %></p><% if (household.phone) { %><p>電話番号：<%= household.phone %></p><% } %><p class="help-text">世帯情報やアカウントを持たないメンバーは世帯主が管理します。</p>
+        <% if (ownMember) { %><form class="form-stack" action="/associations/<%= household.association._id %>/household/<%= household._id %>/members/<%= ownMember._id %>/self-update" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>氏名（よみ）<input name="nameKana" value="<%= ownMember.nameKana %>" required></label><label>LINEアカウント（任意）<input name="lineAccount" value="<%= ownMember.lineAccount || '' %>"></label><label>続柄（任意）<input name="relationship" value="<%= ownMember.relationship || '' %>"></label><p class="help-text">氏名・メールアドレス・生年月日・性別は「本人情報」タブで変更できます。</p><div class="form-actions"><button class="button button-primary">本人の世帯メンバー情報を保存</button></div></form><% } %>
+      </section>
+    <% }) %>
+    <% if (!profileHouseholds.length && !availableRegistrations.length && !linkedHouseholds.length) { %>
+      <div class="form-card profile-empty"><h2>世帯情報はまだありません</h2><p>町内会への参加後、この画面からいつでも世帯情報を登録・編集できます。</p><a class="button button-primary" href="/dashboard">参加中の町内会を確認する</a></div>
+    <% } %>
+    <% availableRegistrations.forEach(({ membership, districtGroups }) => { %>
+      <div class="profile-household profile-household-registration">
+        <div class="profile-household-heading"><div><p class="eyebrow"><%= membership.association.name %></p><h2>世帯情報を登録</h2><p>参加後でも、世帯と世帯代表者の情報を登録できます。</p></div></div>
+        <% if (!districtGroups.length) { %><div class="alert alert-error">登録できる班がありません。町内会管理者へ確認してください。</div><% } else { %>
+        <form class="form-card form-stack" action="/associations/<%= membership.association._id %>/household" method="post">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label>班 <span class="required">必須</span><select name="districtGroupId" required><option value="">選択してください</option><% districtGroups.forEach((district) => { %><option value="<%= district._id %>"><%= district.name %></option><% }) %></select></label>
+          <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" inputmode="numeric" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" autocomplete="tel"></label></div>
+          <label>住所 <span class="required">必須</span><input name="street" autocomplete="street-address" required></label><label>建物名など（任意）<input name="building"></label>
+          <h3>世帯代表者</h3>
+          <div class="form-columns"><label>氏名（本人情報と共通）<input value="<%= values.displayname || values.username || '' %>" disabled><small>氏名は「本人情報」タブで変更できます。</small></label><label>氏名（よみ） <span class="required">必須</span><input name="nameKana" maxlength="100" required></label></div>
+          <div class="form-columns"><label>生年月日 <span class="required">必須</span><input type="date" name="birthDate" value="<%= values.birth_date ? new Date(values.birth_date).toISOString().slice(0,10) : '' %>" required></label><label>性別 <span class="required">必須</span><select name="gender" required><option value="unspecified" <%= !values.sex || values.sex === 'unspecified' ? 'selected' : '' %>>回答しない</option><option value="male" <%= values.sex === 'male' ? 'selected' : '' %>>男性</option><option value="female" <%= values.sex === 'female' ? 'selected' : '' %>>女性</option><option value="other" <%= values.sex === 'other' ? 'selected' : '' %>>その他</option></select></label></div>
+          <div class="form-columns"><label>メールアドレス（任意）<input type="email" name="email" value="<%= values.email || '' %>"></label><label>LINEアカウント（任意）<input name="lineAccount"></label></div>
+          <div class="form-actions"><button class="button button-primary">世帯情報を登録</button></div>
+        </form>
+        <% } %>
+      </div>
+    <% }) %>
+    <% profileHouseholds.forEach((household) => { const associationId = household.association._id; const householdMembers = profileMembers[String(household._id)] || []; %>
+      <div class="profile-household" id="household-<%= household._id %>">
+        <div class="profile-household-heading"><div><p class="eyebrow"><%= household.association.name %></p><h2>世帯情報</h2></div><span class="status-badge"><%= household.districtGroup?.name || '班未設定' %></span></div>
+        <% linkApplications.filter(application => String(application.household) === String(household._id)).forEach((application) => { const unlinkedMembers = householdMembers.filter(member => !member.isRepresentative && !member.user); %>
+          <section class="form-card form-stack household-link-request"><h3>同居人からの世帯紐付け申請</h3><strong><%= application.applicant?.displayname || application.applicant?.username %></strong><p><%= application.applicant?.email %></p><p class="help-text">同居する本人であることを確認してください。登録済みのメンバーを選ぶと、重複せずにアカウントを紐付けます。</p>
+            <form class="form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/applications/<%= application._id %>/confirm" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>紐付ける世帯メンバー<select name="memberId"><option value="">新しい世帯メンバーとして追加</option><% unlinkedMembers.forEach(member => { %><option value="<%= member._id %>" <%= member.email && member.email.toLowerCase() === application.applicant?.email?.toLowerCase() ? 'selected' : '' %>><%= member.name %></option><% }) %></select></label><div class="form-actions"><button class="button button-primary">同居人であることを確認</button></div></form>
+            <form action="/associations/<%= associationId %>/household/<%= household._id %>/applications/<%= application._id %>/reject" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">この世帯紐付け申請を拒否</button></form>
+          </section>
+        <% }) %>
+        <form class="form-card form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/update" method="post">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" value="<%= household.address?.postalCode || '' %>" inputmode="numeric" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" value="<%= household.phone || '' %>" autocomplete="tel"></label></div>
+          <label>住所 <span class="required">必須</span><input name="street" value="<%= household.address?.street || '' %>" autocomplete="street-address" required></label>
+          <label>建物名など（任意）<input name="building" value="<%= household.address?.building || '' %>"></label>
+          <div class="form-actions"><button class="button button-primary">世帯情報を保存</button></div>
+        </form>
+
+        <div class="profile-members-heading"><div><h2>同一世帯のメンバー</h2><p>メンバーを選ぶとプロフィールを確認・管理できます。</p></div><span class="household-count-tag"><%= householdMembers.length %>人</span></div>
+        <div class="household-member-list profile-member-list">
+          <% householdMembers.forEach((member) => { %>
+            <article class="profile-member-row">
+              <button type="button" class="profile-member-open" data-open-member-dialog="member-dialog-<%= member._id %>" aria-haspopup="dialog" aria-controls="member-dialog-<%= member._id %>"><span><strong><%= member.user?.displayname || member.name %></strong><small><%= member.isRepresentative ? '世帯代表者' : member.linkedAccountMissing ? 'アカウント削除済み' : member.user ? 'アカウント紐付け済み' : member.relationship || 'アカウント未紐付け' %></small></span><span aria-hidden="true">詳細を見る ›</span></button>
+              <dialog class="household-member-dialog" id="member-dialog-<%= member._id %>" aria-labelledby="member-dialog-title-<%= member._id %>">
+                <div class="dialog-heading"><div><p class="eyebrow">世帯メンバー</p><h3 id="member-dialog-title-<%= member._id %>"><%= member.user?.displayname || member.name %>さんのプロフィール</h3></div><button type="button" class="dialog-close" data-close-member-dialog aria-label="閉じる">×</button></div>
+              <% if (!member.isRepresentative && member.user) { %><div class="member-heading"><strong><%= member.user.displayname || member.name %></strong><span class="status-badge">アカウント紐付け済み</span></div>
+                <p>ユーザー名：<%= member.user.username || '—' %></p><p>メールアドレス：<%= member.user.email || member.email || '—' %></p><p>氏名（よみ）：<%= member.nameKana || '—' %></p><p>生年月日：<%= member.user.birth_date || member.birthDate ? new Date(member.user.birth_date || member.birthDate).toLocaleDateString('ja-JP') : '—' %></p><p>性別：<%= ({ male: '男性', female: '女性', other: 'その他', unspecified: '回答しない' })[member.user.sex || member.gender] || '—' %></p><p>続柄：<%= member.relationship || '—' %></p><p>LINEアカウント：<%= member.lineAccount || '—' %></p>
+                <p class="help-text">本人情報は本人のプロフィールから変更できます。世帯から削除すると、この町内会への参加も終了します。共通アカウントは残ります。</p>
+                <form action="/associations/<%= associationId %>/household/<%= household._id %>/members/<%= member._id %>/delete" method="post" onsubmit="return confirm('このメンバーを世帯から削除し、町内会への参加を終了しますか？ 共通アカウントは残ります。')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">このメンバーを世帯から削除</button></form>
+              <% } else if (!member.isRepresentative && member.linkedAccountMissing) { %>
+                <div class="member-heading"><strong><%= member.name %></strong><span class="status-badge">アカウント削除済み</span></div>
+                <p>氏名（よみ）：<%= member.nameKana || '—' %></p><p>メールアドレス：<%= member.email || '—' %></p><p>続柄：<%= member.relationship || '—' %></p>
+                <p class="help-text">以前のアカウントへの参照が残っています。このメンバーを削除すると、関連する町内会の記録も整理されます。</p>
+                <form action="/associations/<%= associationId %>/household/<%= household._id %>/members/<%= member._id %>/delete" method="post" onsubmit="return confirm('このメンバーと、削除済みアカウントへの参照を整理しますか？')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">このメンバーを削除</button></form>
+              <% } else { %>
+              <form class="form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/members/<%= member._id %>/update" method="post">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div class="member-heading"><strong><%= member.isRepresentative ? '世帯代表者' : '世帯メンバー' %></strong><% if (!member.isRepresentative && member.relationship) { %><span><%= member.relationship %></span><% } %></div>
+                <div class="form-columns"><label>氏名<% if (member.isRepresentative) { %>（本人情報と共通）<input value="<%= values.displayname || values.username || '' %>" disabled><small>氏名は「本人情報」タブで変更できます。</small><% } else { %> <span class="required">必須</span><input name="name" value="<%= member.name %>" maxlength="100" required><% } %></label><label>氏名（よみ） <span class="required">必須</span><input name="nameKana" value="<%= member.nameKana %>" maxlength="100" required></label></div>
+                <div class="form-columns"><label>生年月日 <span class="required">必須</span><input type="date" name="birthDate" value="<%= member.birthDate ? new Date(member.birthDate).toISOString().slice(0,10) : '' %>" required></label><label>性別 <span class="required">必須</span><select name="gender" required><option value="unspecified" <%= member.gender === 'unspecified' ? 'selected' : '' %>>回答しない</option><option value="male" <%= member.gender === 'male' ? 'selected' : '' %>>男性</option><option value="female" <%= member.gender === 'female' ? 'selected' : '' %>>女性</option><option value="other" <%= member.gender === 'other' ? 'selected' : '' %>>その他</option></select></label></div>
+                <div class="form-columns"><label>メールアドレス（任意）<input type="email" name="email" value="<%= member.email || '' %>"></label><label>LINEアカウント（任意）<input name="lineAccount" value="<%= member.lineAccount || '' %>"></label></div>
+                <% if (!member.isRepresentative) { %><label>続柄（任意）<input name="relationship" value="<%= member.relationship || '' %>" placeholder="例：配偶者、子"></label><% } %>
+                <div class="form-actions"><button class="button button-quiet">メンバー情報を保存</button></div>
+              </form>
+              <% if (!member.isRepresentative) { %><form action="/associations/<%= associationId %>/household/<%= household._id %>/members/<%= member._id %>/delete" method="post" onsubmit="return confirm('この世帯メンバーを削除しますか？')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">このメンバーを削除</button></form><% } %>
+              <% if (!member.isRepresentative) { const invitation = memberInvitations[String(member._id)]; %><div class="household-invite-controls"><p class="help-text">本人がシステムを利用する場合は招待できます。子どもなど、アカウントを持たないメンバーはそのまま世帯主が管理できます。</p><% if (invitation?.status === 'pending' && new Date(invitation.expiresAt) > new Date()) { %><span class="status-badge">招待メール送信済み</span><form action="/associations/<%= associationId %>/household/<%= household._id %>/invitations/<%= invitation._id %>/cancel" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small">招待を取り消す</button></form><% } %>
+                <% if (typeof activeHouseholdIds !== 'undefined' && activeHouseholdIds.includes(String(household._id))) { %><form class="form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/members/<%= member._id %>/invite" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>招待先メールアドレス<input type="email" name="email" value="<%= member.email || '' %>" required></label><div class="form-actions"><button class="button button-quiet">招待メールを送信</button></div></form><% } else { %><p class="help-text">町内会への参加承認後に招待できます。</p><% } %>
+              </div><% } %>
+              <% } %>
+              </dialog>
+            </article>
+          <% }) %>
+        </div>
+        <details class="form-card profile-member-add">
+          <summary>世帯メンバーを追加</summary>
+          <form class="form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/members" method="post">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="form-columns"><label>氏名 <span class="required">必須</span><input name="name" maxlength="100" required></label><label>氏名（よみ） <span class="required">必須</span><input name="nameKana" maxlength="100" required></label></div>
+            <div class="form-columns"><label>生年月日 <span class="required">必須</span><input type="date" name="birthDate" required></label><label>性別 <span class="required">必須</span><select name="gender" required><option value="unspecified">回答しない</option><option value="male">男性</option><option value="female">女性</option><option value="other">その他</option></select></label></div>
+            <div class="form-columns"><label>メールアドレス（任意）<input type="email" name="email"></label><label>LINEアカウント（任意）<input name="lineAccount"></label></div>
+            <label>続柄（任意）<input name="relationship" placeholder="例：配偶者、子"></label>
+            <div class="form-actions"><button class="button button-primary">メンバーを追加</button></div>
+          </form>
+        </details>
+      </div>
+    <% }) %>
+  </section>
+</main>
+<script>
+  document.getElementById('avatar-input')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const preview = document.getElementById('avatar-preview');
+    preview.src = URL.createObjectURL(file);
+    preview.hidden = false;
+    document.getElementById('avatar-placeholder')?.setAttribute('hidden', '');
+  });
+  const tabs = [...document.querySelectorAll('[data-profile-tab]')];
+  const panels = [...document.querySelectorAll('[data-profile-panel]')];
+  const selectProfileTab = (name, updateUrl = false) => {
+    if (!tabs.some((tab) => tab.dataset.profileTab === name)) name = 'account';
+    tabs.forEach((tab) => { const selected = tab.dataset.profileTab === name; tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1; });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== name; });
+    if (updateUrl) { const url = new URL(location.href); url.searchParams.set('tab', name); history.replaceState(null, '', url); }
+  };
+  tabs.forEach((tab) => tab.addEventListener('click', () => selectProfileTab(tab.dataset.profileTab, true)));
+  selectProfileTab(new URLSearchParams(location.search).get('tab') || 'account');
+  document.querySelectorAll('[data-open-member-dialog]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.openMemberDialog)?.showModal()));
+  document.querySelectorAll('[data-close-member-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
+  document.querySelectorAll('.household-member-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
+</script>
+<%- include('partials/foot') %>

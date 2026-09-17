@@ -1,0 +1,23 @@
+<%- include('partials/head') %>
+<% if (currentUser) { %><%- include('partials/header') %><% } %>
+<main class="page-shell page-narrow">
+  <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div><% if (!currentUser) { %><a class="button button-quiet" href="/login">すでに会員の方はログイン</a><% } %></section>
+  <section class="content-card management-card">
+    <% if (associations.length) { %>
+      <div class="management-list"><% associations.forEach((association) => { %>
+        <div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small><a href="/associations/<%= association._id %>/public">町内会のことを詳しく知る →</a></span><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start"><%= currentUser ? 'この町内会に参加' : 'この町内会で会員登録' %></a></div>
+      <% }) %></div>
+    <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
+  </section>
+  <section class="content-card"><h2>町内会が見つからない場合</h2><p>一覧を確認しても該当する町内会がない場合は、新規作成を申請できます。</p>
+    <div class="form-actions">
+      <% if (currentUser) { %>
+        <a class="button button-primary" href="/associations/create/start">新規町内会作成を申請する</a>
+      <% } else { %>
+        <a class="button button-quiet" href="/associations/create/start">すでに会員の方：ログインして申請</a>
+        <a class="button button-primary" href="/associations/create/register">はじめての方：新規会員登録して申請</a>
+      <% } %>
+    </div>
+  </section>
+</main>
+<%- include('partials/foot') %>

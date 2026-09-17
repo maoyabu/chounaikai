@@ -1,0 +1,20 @@
+<div class="leader-application-list">
+  <% applications.forEach((application) => { %>
+    <article id="application-<%= application._id %>">
+      <div>
+        <strong><% if (application.source === 'household_invitation') { %><%= application.household?.displayName %>の<% } %><%= application.applicant?.displayname || application.applicant?.username || application.household?.displayName %><% if (application.source === 'household_invitation') { %>さんの参加申請<% } %></strong>
+        <span class="status-badge"><%= application.districtGroup?.name %></span>
+        <span class="status-badge"><%= application.source === 'household_invitation' ? '世帯主からの招待' : application.source === 'household_link' ? '一般メンバー・世帯紐付け' : '世帯主' %></span>
+        <p><%= application.applicant?.email || '' %></p>
+        <small>世帯：<%= application.household?.displayName %><% if (application.invitedBy) { %> ／ 招待元：<%= application.invitedBy.displayname || application.invitedBy.username %><% } else if (application.household?.representative?.displayname) { %> ／ 世帯主：<%= application.household.representative.displayname %><% } %></small>
+        <p class="application-address"><%= application.household?.address?.postalCode %> <%= application.household?.address?.street %> <%= application.household?.address?.building || '' %></p>
+        <small><%= application.applicantNote || 'メッセージなし' %></small>
+        <% if (application.status === 'awaiting_household') { %><p class="help-text">世帯主の確認待ちです。確認が完了するまで承認できません。</p><% } else if (application.source !== 'representative' && application.source) { %><p class="help-text"><%= application.source === 'household_invitation' ? '世帯主からの招待のため、世帯主による再確認は不要です。' : '世帯主の確認済み。' %><%= application.districtGroup?.name %>への参加と、<%= application.household?.displayName %>への参加をまとめて承認します。承認すると本人が町内会の機能を利用できます。</p><% } %>
+      </div>
+      <% if (application.status !== 'awaiting_household') { %><div class="admin-actions">
+        <form action="/associations/<%= association._id %>/<%= decisionPath %>/applications/<%= application._id %>/approve" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary"><%= ['household_invitation', 'household_link'].includes(application.source) ? '班・世帯への参加を承認' : '承認' %></button></form>
+        <form class="reject-form" action="/associations/<%= association._id %>/<%= decisionPath %>/applications/<%= application._id %>/reject" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input name="rejectionReason" placeholder="拒否理由" required><button class="button button-danger-outline">拒否して通知</button></form>
+      </div><% } %>
+    </article>
+  <% }) %>
+</div>

@@ -1,0 +1,14 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme question-box-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %> ・ <%= districtGroup.name %></p><h1>班内の連絡</h1></div><a class="button button-primary" href="/associations/<%= association._id %>/district-messages/new">新しい連絡を送る</a></section>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2>連絡メニュー</h2></div><div class="question-home-list">
+    <a class="question-home-link" href="/associations/<%= association._id %>/district-messages/inbox"><span><strong>届いた班内の連絡</strong><small>確認と回答を行う</small></span><% if (unreadCount) { %><span class="status-badge question-unread">未確認 <%= unreadCount %>件</span><% } %><span class="list-arrow" aria-hidden="true">›</span></a>
+  </div></section>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2>送信した連絡</h2></div>
+    <% if (!announcements.length) { %><div class="admin-empty"><p>送信した連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach((item) => { %><a class="question-home-link" href="/associations/<%= association._id %>/district-messages/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %> ・ <%= item.audience === 'district_all' ? '班の住人全員' : `個別の班員 ${item.targetOfficers?.length || 1}人` %> ・ 緊急度 <%= '★'.repeat(item.urgency) %><%= item.urgency === 5 ? ' 緊急' : '' %></small></span><span class="status-badge <%= item.unreadCount ? 'status-pending' : '' %>">未確認 <%= item.unreadCount %> / <%= item.recipientCount %>人</span><span class="list-arrow" aria-hidden="true">›</span></a><% }) %></div><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>

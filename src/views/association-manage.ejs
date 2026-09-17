@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>">← <%= association.name %>へ戻る</a>
+  <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><div><p class="eyebrow">町内会管理</p><h1><%= association.name %> 運営管理</h1><p>参加申請の確認、役員・班長・住人の確認、町内会の設定を行います。</p></div></section>
+  <div class="association-manage-layout">
+    <div class="association-manage-main">
+      <section class="association-manage-section" aria-labelledby="manage-applications-heading">
+        <div class="association-manage-section-heading"><div><p class="eyebrow">受付・承認</p><h2 id="manage-applications-heading">参加申請</h2></div></div>
+        <a class="settings-entry-card association-manage-application" href="/associations/<%= association._id %>/manage/applications"><span class="settings-step">参加申請<%= typeof pendingApplicationCount !== 'undefined' && pendingApplicationCount ? `・${pendingApplicationCount}件` : '' %></span><h3>住人の参加申請・世帯主からの招待</h3><p>招待元と世帯の確認状況を確認して、参加を承認できます。</p><strong>参加申請を確認 →</strong></a>
+      </section>
+      <section class="association-manage-section" aria-labelledby="manage-directories-heading">
+        <div class="association-manage-section-heading"><div><p class="eyebrow">確認・検索</p><h2 id="manage-directories-heading">各種一覧</h2></div><span><%= fiscalYear %>年度</span></div>
+        <div class="association-manage-directory-grid">
+          <a class="settings-entry-card" href="/associations/<%= association._id %>/manage/officers?year=<%= fiscalYear %>"><span class="settings-step">役員一覧</span><h3><%= fiscalYear %>年度の役員一覧</h3><p>今年度の役員、役職、所属部、世帯情報を一覧で確認します。</p><strong>役員一覧を開く →</strong></a>
+          <a class="settings-entry-card" href="/associations/<%= association._id %>/manage/leaders?year=<%= fiscalYear %>"><span class="settings-step">班長一覧</span><h3><%= fiscalYear %>年度の班長一覧</h3><p>今年度の班長と担当班、連絡先、世帯住所を一覧で確認します。</p><strong>班長一覧を開く →</strong></a>
+          <a class="settings-entry-card" href="/associations/<%= association._id %>/manage/members"><span class="settings-step">住人一覧</span><h3><%= association.name %>住人一覧</h3><p>班、役職、部会や氏名・メールアドレスから町内会住人を検索します。</p><strong>住人一覧を開く →</strong></a>
+        </div>
+      </section>
+    </div>
+    <aside class="association-manage-settings" aria-labelledby="manage-settings-heading">
+      <div class="association-manage-section-heading"><div><p class="eyebrow">管理・変更</p><h2 id="manage-settings-heading">設定</h2></div></div>
+      <p>町内会の基本情報と年度ごとの担当を設定します。</p>
+      <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/basic"><span><strong>基本設定を開く</strong><small>役職・部会・班・町内会名</small></span><span aria-hidden="true">→</span></a>
+      <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/annual"><span><strong>年度設定を開く</strong><small>年度役員・所属部・班長</small></span><span aria-hidden="true">→</span></a>
+      <a class="association-manage-setting-link" href="/associations/<%= association._id %>/public/edit"><span><strong>公開ページを編集</strong><small>メインフォト・町内会の基本情報</small></span><span aria-hidden="true">→</span></a>
+    </aside>
+  </div>
+</main>
+<%- include('partials/foot') %>

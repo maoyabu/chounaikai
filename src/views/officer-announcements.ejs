@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme question-box-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading"><h1>町内会役員から住人への連絡</h1><a class="button button-primary" href="/associations/<%= association._id %>/announcements/officer/new">新しい連絡を送る</a></section>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2>送信した連絡</h2></div>
+    <% if (!announcements.length) { %><div class="admin-empty"><p>送信した連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach((item) => { %>
+      <a class="question-home-link" href="/associations/<%= association._id %>/announcements/officer/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %> ・ <%= item.audience === 'leaders' ? '班長' : '全住人' %> ・ 緊急度 <%= '★'.repeat(item.urgency) %><%= item.urgency === 5 ? ' 緊急' : '' %></small></span><span class="question-home-counts"><span class="status-badge <%= item.unreadCount ? 'status-pending' : '' %>">未確認 <%= item.unreadCount %> / <%= item.recipientCount %>人</span></span><span class="list-arrow" aria-hidden="true">›</span></a>
+    <% }) %></div><% } %>
+  </section>
+</main>
+<%- include('partials/foot') %>
