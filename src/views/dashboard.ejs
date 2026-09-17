@@ -24,6 +24,7 @@
       <div class="empty-mark" aria-hidden="true">町</div>
       <h2>参加中の町内会はありません</h2>
       <p>招待または参加申請が承認されると、ここに表示されます。</p>
+      <% if (!currentUser.isAdmin) { %><a class="button button-primary" href="/associations">存在する町内会を選んで参加申請する</a><% } %>
     </section>
   <% } %>
   <% if (pendingJoins?.length) { %><section class="content-card join-section"><p class="eyebrow">参加申請</p><h2>参加申請を確認中</h2><div class="management-list"><% pendingJoins.forEach((application) => { %><div><span><%= application.status === 'awaiting_household' ? '世帯主の確認待ちです。' : '班長・町内会管理者の承認待ちです。' %></span><a class="button button-quiet button-small" href="/associations/<%= application.association %>/participation">申請状況を確認</a></div><% }) %></div></section><% } %>
