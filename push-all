@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+current_branch="$(git branch --show-current)"
+if [ -z "$current_branch" ]; then
+  echo "ブランチを確認できません。" >&2
+  exit 1
+fi
+
+echo "GitHubへpush: $current_branch"
+git push github "$current_branch"
+
+echo "Herokuへデプロイ: $current_branch -> main"
+git push heroku "$current_branch:main"
+
+echo "GitHubとHerokuへのpushが完了しました。"
