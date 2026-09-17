@@ -54,7 +54,7 @@ householdsRouter.post('/:associationId/household', verifyCsrfToken, async (req, 
 
 householdsRouter.get('/:associationId/join', async (req, res, next) => {
   try {
-    if (req.user.isAdmin || !validId(req.params.associationId)) throw fail('申請できません。', 403);
+    if (!validId(req.params.associationId)) throw fail('申請できません。', 403);
     const [association, membership, existingApplication, districtGroups] = await Promise.all([
       NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean(),
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }),
@@ -70,7 +70,7 @@ householdsRouter.get('/:associationId/join', async (req, res, next) => {
 
 householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, next) => {
   try {
-    if (req.user.isAdmin || !validId(req.params.associationId) || !validId(req.body.districtGroupId)) throw fail('申請内容を確認してください。');
+    if (!validId(req.params.associationId) || !validId(req.body.districtGroupId)) throw fail('申請内容を確認してください。');
     const mode = String(req.body.residentMode || 'representative');
     if (!['representative', 'general'].includes(mode)) throw fail('登録方法を選択してください。');
     if (mode === 'general') {

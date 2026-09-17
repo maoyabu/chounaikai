@@ -483,7 +483,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const pendingJoins = await JoinApplication.find({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }).select('association status source').lean();
     const excludedIds = [...visibleMemberships.map((item) => item.association._id), ...pendingJoins.map((item) => item.association)];
     const [availableAssociations, unreadNotifications, readNotifications, unreadNotificationCount] = await Promise.all([
-      req.user.isAdmin ? [] : NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false }, _id: { $nin: excludedIds } }).sort('name').lean(),
+      NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false }, _id: { $nin: excludedIds } }).sort('name').lean(),
       Notification.find({ recipient: req.user._id, readAt: null }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
       Notification.find({ recipient: req.user._id, readAt: { $ne: null } }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
       Notification.countDocuments({ recipient: req.user._id, readAt: null })

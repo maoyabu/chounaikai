@@ -4,7 +4,7 @@
   <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
   <section class="page-heading dashboard-heading">
     <% if (memberships.length) { const primaryMembership = memberships[0]; %><a class="dashboard-association-title" href="/associations/<%= primaryMembership.association._id %>"><span class="dashboard-title-main"><span class="dashboard-name-and-arrow"><span class="dashboard-association-name"><% if (primaryMembership.association.symbolImage?.url) { %><img class="dashboard-association-symbol" src="<%= primaryMembership.association.symbolImage.url %>" alt=""><% } %><span><%= primaryMembership.association.name %></span></span><span class="dashboard-title-arrow" aria-hidden="true">→</span></span><% if (primaryMembership.districtGroup?.name) { %><span class="status-badge"><%= primaryMembership.districtGroup.name %></span><% } %><% (primaryMembership.memberTags || ['メンバー']).forEach((tag) => { %><span class="status-badge member-attribute-tag"><%= tag %></span><% }) %></span></a><% } else { %><div><p class="eyebrow">ホーム</p><h1>町内会ホーム</h1><p>お知らせや地域の情報を確認できます。</p></div><% } %>
-    <% if (!currentUser.isAdmin && memberships.length === 0) { %><a class="button button-primary" href="/associations">町内会一覧を見る</a><% } %>
+    <% if (memberships.length === 0) { %><a class="button button-primary" href="/associations">町内会一覧を見る</a><% } %>
   </section>
   <details class="admin-section application-section notification-inbox" <%= typeof currentPath !== 'undefined' && currentPath === '/dashboard' && typeof notificationInboxOpen !== 'undefined' && notificationInboxOpen ? 'open' : '' %>>
     <summary class="section-heading"><strong class="notification-heading">お知らせ</strong><span class="notification-summary-meta"><% if (typeof unreadNotificationCount !== 'undefined' && unreadNotificationCount > 0) { %><span class="status-badge question-unread notification-unread-tag">未読 <%= unreadNotificationCount %>件</span><% } %><span class="notification-chevron" aria-hidden="true">⌄</span></span></summary>
@@ -24,7 +24,7 @@
       <div class="empty-mark" aria-hidden="true">町</div>
       <h2>参加中の町内会はありません</h2>
       <p>招待または参加申請が承認されると、ここに表示されます。</p>
-      <% if (!currentUser.isAdmin) { %><a class="button button-primary" href="/associations">存在する町内会を選んで参加申請する</a><% } %>
+      <a class="button button-primary" href="/associations">存在する町内会を選んで参加申請する</a>
     </section>
   <% } %>
   <% if (pendingJoins?.length) { %><section class="content-card join-section"><p class="eyebrow">参加申請</p><h2>参加申請を確認中</h2><div class="management-list"><% pendingJoins.forEach((application) => { %><div><span><%= application.status === 'awaiting_household' ? '世帯主の確認待ちです。' : '班長・町内会管理者の承認待ちです。' %></span><a class="button button-quiet button-small" href="/associations/<%= application.association %>/participation">申請状況を確認</a></div><% }) %></div></section><% } %>
