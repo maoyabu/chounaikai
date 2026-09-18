@@ -1,0 +1,16 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme group-communication-theme">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= group.name %></p><h1>グループ内の連絡</h1></div><a class="button button-primary" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages/new">新しい連絡を送る</a></section>
+  <div class="group-messages-layout">
+    <div class="group-messages-calendar">
+      <%- include('partials/association-event-calendar', { calendarTitle: group.name + 'カレンダー', calendarAnchor: 'group-message-events', calendarPath: '/associations/' + group.association + '/groups/' + group._id + '/messages', events, months, calendarWindow }) %>
+    </div>
+    <div class="group-messages-communications">
+      <section class="admin-section question-home-section"><div class="section-heading"><h2>連絡メニュー</h2></div><a class="question-home-link" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages/inbox"><span><strong>届いたグループの連絡</strong><small>確認と回答を行う</small></span><% if (unreadCount) { %><span class="status-badge question-unread">未確認 <%= unreadCount %>件</span><% } %><span>›</span></a></section>
+      <section class="admin-section question-home-section"><div class="section-heading"><h2>送信した連絡</h2></div><% if (!announcements.length) { %><div class="admin-empty"><p>送信した連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach(item => { %><div class="question-home-link"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %></small></span></div><% }) %></div><% } %></section>
+    </div>
+  </div>
+</main>
+<%- include('partials/foot') %>

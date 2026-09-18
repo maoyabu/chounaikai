@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 const announcementSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  channel: { type: String, enum: ['resident', 'officer', 'district'], required: true, default: 'resident' },
+  channel: { type: String, enum: ['resident', 'officer', 'district', 'association_group'], required: true, default: 'resident' },
   audience: { type: String, enum: ['leaders', 'all', 'officers_all', 'department', 'officer_individual', 'officer_group', 'district_all', 'district_individual'], required: true },
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
+  associationGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'AssociationGroup', index: true },
   targetDepartment: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
   targetOfficer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   targetOfficers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

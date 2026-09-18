@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell communication-theme group-communication-theme page-narrow">
+  <a class="back-link" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages">← グループ内の連絡へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= group.name %></p><h1>グループ内の連絡を送る</h1></div></section>
+  <section class="content-card announcement-card"><form class="form-stack" action="/associations/<%= group.association %>/groups/<%= group._id %>/messages" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>送信先<select required><option>グループの参加メンバー全員</option></select></label>
+    <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
+    <label>タイトル<input name="title" maxlength="120" required></label>
+    <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
+    <label>回答方法<select name="responseMode" id="group-response-mode"><option value="none">回答なし（確認のみ）</option><option value="single">選択肢から1つ</option><option value="multiple">選択肢から複数</option></select></label>
+    <fieldset class="announcement-options" id="group-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" data-group-option></label><% } %></fieldset>
+    <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
+  </form></section>
+</main>
+<script>(() => {
+  const mode = document.getElementById('group-response-mode'), options = document.getElementById('group-options'), inputs = [...options.querySelectorAll('[data-group-option]')];
+  const updateOptions = () => { const enabled = mode.value !== 'none'; options.hidden = !enabled; inputs.forEach((input, index) => { input.disabled = !enabled; input.required = enabled && index < 2; }); };
+  mode.addEventListener('change', updateOptions); updateOptions();
+})();</script>
+<%- include('partials/foot') %>

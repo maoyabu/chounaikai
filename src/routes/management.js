@@ -10,6 +10,7 @@ import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { Notification } from '../models/notification.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AuditLog } from '../models/auditLog.js';
+import { AssociationGroupRequest } from '../models/associationGroup.js';
 import { JoinApplication } from '../models/workflow.js';
 import { decideJoinApplication } from '../services/householdParticipationService.js';
 import { acceptSymbolImage, uploadPublicPhoto } from '../services/publicPageImageService.js';
@@ -32,8 +33,11 @@ managementRouter.get('/:associationId/manage', requirePermission('association.ma
     const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) return res.status(404).render('error', { title: '町内会が見つかりません', message: '公開中の町内会を確認できませんでした。' });
-    const pendingApplicationCount = await JoinApplication.countDocuments({ association: association._id, status: 'pending' });
-    return res.render('association-manage', { title: `${association.name} 管理`, association, fiscalYear, pendingApplicationCount });
+    const [pendingApplicationCount, pendingGroupRequestCount] = await Promise.all([
+      JoinApplication.countDocuments({ association: association._id, status: 'pending' }),
+      AssociationGroupRequest.countDocuments({ association: association._id, status: 'pending' })
+    ]);
+    return res.render('association-manage', { title: `${association.name} 管理`, association, fiscalYear, pendingApplicationCount, pendingGroupRequestCount });
   } catch (error) { return next(error); }
 });
 

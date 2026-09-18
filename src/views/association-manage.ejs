@@ -8,7 +8,7 @@
     <div class="association-manage-main">
       <section class="association-manage-section" aria-labelledby="manage-applications-heading">
         <div class="association-manage-section-heading"><div><p class="eyebrow">受付・承認</p><h2 id="manage-applications-heading">参加申請</h2></div></div>
-        <a class="settings-entry-card association-manage-application" href="/associations/<%= association._id %>/manage/applications"><span class="settings-step">参加申請<%= typeof pendingApplicationCount !== 'undefined' && pendingApplicationCount ? `・${pendingApplicationCount}件` : '' %></span><h3>住人の参加申請・世帯主からの招待</h3><p>招待元と世帯の確認状況を確認して、参加を承認できます。</p><strong>参加申請を確認 →</strong></a>
+        <a class="settings-entry-card association-manage-application" href="/associations/<%= association._id %>/manage/applications"><span class="settings-step">参加申請<% if (pendingApplicationCount) { %><span class="pending-count-badge"><%= pendingApplicationCount %>件</span><% } %></span><h3>住人の参加申請・世帯主からの招待</h3><p>招待元と世帯の確認状況を確認して、参加を承認できます。</p><strong>参加申請を確認 →</strong></a>
       </section>
       <section class="association-manage-section" aria-labelledby="manage-directories-heading">
         <div class="association-manage-section-heading"><div><p class="eyebrow">確認・検索</p><h2 id="manage-directories-heading">各種一覧</h2></div><span><%= fiscalYear %>年度</span></div>
@@ -23,6 +23,7 @@
       <div class="association-manage-section-heading"><div><p class="eyebrow">管理・変更</p><h2 id="manage-settings-heading">設定</h2></div></div>
       <p>町内会の基本情報と年度ごとの担当を設定します。</p>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/managers"><span><strong>町内会管理者を指定</strong><small>管理者の追加・解除</small></span><span aria-hidden="true">→</span></a>
+      <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/groups"><span><strong>町内会内グループを管理<% if (pendingGroupRequestCount) { %> <span class="pending-count-badge"><%= pendingGroupRequestCount %>件</span><% } %></strong><small>作成申請・責任者の設定</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/basic"><span><strong>基本設定を開く</strong><small>役職・部会・班・町内会名</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/annual"><span><strong>年度設定を開く</strong><small>年度役員・所属部・班長</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/public/edit"><span><strong>公開ページを編集</strong><small>メインフォト・町内会の基本情報</small></span><span aria-hidden="true">→</span></a>

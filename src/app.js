@@ -18,6 +18,7 @@ import { officerAnnouncementsRouter } from './routes/officerAnnouncements.js';
 import { officerNetworkRouter } from './routes/officerNetwork.js';
 import { districtMessagesRouter } from './routes/districtMessages.js';
 import { associationEventsRouter } from './routes/associationEvents.js';
+import { associationGroupsRouter } from './routes/associationGroups.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,6 +57,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development' }) 
 
   app.use('/', webRouter);
   app.use('/associations', associationEventsRouter);
+  app.use('/associations', associationGroupsRouter);
   app.use('/', householdInvitationsRouter);
   app.use('/', withdrawalsRouter);
   app.use('/associations', questionBoxRouter);

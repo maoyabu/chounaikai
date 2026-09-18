@@ -26,6 +26,7 @@ import { assertMailConfigured, resendVerification, sendVerificationEmail, verify
 import { acceptProfileImage, uploadProfileImage } from '../services/profileImageService.js';
 import { requestPasswordReset, isPasswordResetValid, resetPassword } from '../services/passwordResetService.js';
 import { changePassword } from '../services/passwordChangeService.js';
+import { AssociationGroupMembership } from '../models/associationGroup.js';
 
 export const webRouter = express.Router();
 
@@ -78,6 +79,7 @@ webRouter.use(async (req, res, next) => {
     res.locals.currentManagerAssociations = [];
     res.locals.currentLeaderAssociations = [];
     res.locals.currentOfficerQuestionBoxes = [];
+    res.locals.currentGroupManagers = [];
     res.locals.currentHasAssociationMembership = false;
     res.locals.currentMenuAssociationName = null;
     if (req.user?.isAdmin) {
@@ -85,7 +87,7 @@ webRouter.use(async (req, res, next) => {
     } else if (req.user?._id) {
       const now = new Date();
       const currentFiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
-      const [assignments, leaderAssignments, annualOfficers, activeMembership] = await Promise.all([
+      const [assignments, leaderAssignments, annualOfficers, activeMembership, groupManagerMemberships] = await Promise.all([
         RoleAssignment.find({
           user: req.user._id,
           startsAt: { $lte: now },
@@ -100,8 +102,10 @@ webRouter.use(async (req, res, next) => {
           .populate('role', 'name').populate('department', 'name')
           .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
         AssociationMembership.findOne({ user: req.user._id, status: 'active' })
-          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean()
+          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
+        AssociationGroupMembership.find({ user: req.user._id, role: 'manager', status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name association' }).lean()
       ]);
+      res.locals.currentGroupManagers = groupManagerMemberships.filter(item => item.group).map(item => ({ _id: item.group._id, name: item.group.name, association: item.group.association }));
       const roleNames = [
         ...assignments.map((item) => item.role?.name).filter(Boolean),
         ...annualOfficers.filter((item) => item.association && item.role?.name).map((item) => `${item.fiscalYear}年度 ${item.role.name}`)
@@ -470,7 +474,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     ]);
     const officerAssociationIds = new Set(officerAssignments.map((item) => String(item.association)));
     const myAnsweredThreads = await QuestionThread.find({ association: { $in: visibleMemberships.map((item) => item.association._id) }, author: req.user._id, status: { $in: ['unanswered', 'answered'] }, lastOfficerAt: { $exists: true } }).select('association lastOfficerAt residentReadAt').lean();
-    const unreadAnnouncements = await OfficerAnnouncementReceipt.find({ association: { $in: visibleMemberships.map((item) => item.association._id) }, recipient: req.user._id, readAt: null }).populate('announcement', 'channel districtGroup').select('association announcement').lean();
+    const unreadAnnouncements = await OfficerAnnouncementReceipt.find({ association: { $in: visibleMemberships.map((item) => item.association._id) }, recipient: req.user._id, readAt: null }).populate('announcement', 'channel districtGroup associationGroup').select('association announcement').lean();
     const questionBoxes = visibleMemberships.map((item) => {
       const id = String(item.association._id);
       return { association: item.association,
@@ -482,6 +486,8 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
       .map(item => ({ association: item.association, unreadCount: unreadAnnouncements.filter(receipt => String(receipt.association) === String(item.association._id) && receipt.announcement?.channel === 'officer').length }));
     const districtMessageBoxes = visibleMemberships.filter(item => item.districtGroup).map(item => ({ association: item.association, districtGroup: item.districtGroup,
       unreadCount: unreadAnnouncements.filter(receipt => String(receipt.association) === String(item.association._id) && receipt.announcement?.channel === 'district' && String(receipt.announcement.districtGroup) === String(item.districtGroup._id)).length }));
+    const groupMemberships = await AssociationGroupMembership.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, user: req.user._id, status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name association' }).lean();
+    const groupMessageBoxes = groupMemberships.filter(item => item.group).map(item => ({ group: item.group, unreadCount: unreadAnnouncements.filter(receipt => receipt.announcement?.channel === 'association_group' && String(receipt.announcement.associationGroup) === String(item.group._id)).length }));
     const leaderAssociationIds = new Set(leaderAssignments.map((item) => String(item.association)));
     visibleMemberships.forEach((membership) => {
       const associationId = String(membership.association._id), memberTags = [];
@@ -526,7 +532,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     }
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
-    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

@@ -1,0 +1,3 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow"><a class="back-link" href="/dashboard">← ホームへ戻る</a><section class="page-heading"><div><p class="eyebrow">町内会内グループ</p><h1>グループ作成を申請</h1><p>子供会やサークルなど、町内会内のグループ作成を町内会管理者へ申請します。</p></div></section>
+<section class="content-card"><form class="form-stack" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>グループ名<input name="name" maxlength="100" placeholder="例：吉田元町子供会" required></label><label>活動内容・目的<textarea name="purpose" rows="5" maxlength="1000" placeholder="活動内容を入力してください"></textarea></label><div class="form-actions"><button class="button button-primary">作成を申請する</button></div></form></section></main><%- include('partials/foot') %>
