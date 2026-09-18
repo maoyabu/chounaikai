@@ -37,6 +37,19 @@ managementRouter.get('/:associationId/manage', requirePermission('association.ma
   } catch (error) { return next(error); }
 });
 
+managementRouter.get('/:associationId/manage/managers', requirePermission('role.manage'), async (req, res, next) => {
+  try {
+    const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
+    if (!association) throw fail('町内会を確認できません。', 404);
+    const [members, managerAssignments] = await Promise.all([
+      AssociationMembership.find({ association: association._id, status: 'active' }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name').sort({ startedAt: 1 }).lean(),
+      RoleAssignment.find({ association: association._id, startsAt: { $lte: new Date() }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: new Date() } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' }, select: 'name permissions' }).lean()
+    ]);
+    const managerIds = new Set(managerAssignments.filter((item) => item.role).map((item) => String(item.user)));
+    return res.render('association-managers', { title: `${association.name} 町内会管理者`, association, members: members.filter((item) => item.user).map((item) => ({ ...item, isAssociationManager: managerIds.has(String(item.user._id)) })) });
+  } catch (error) { return next(error); }
+});
+
 managementRouter.get('/:associationId/manage/applications', requirePermission('association.manage'), async (req, res, next) => {
   try {
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
@@ -174,6 +187,29 @@ managementRouter.get('/:associationId/manage/order', requirePermission('associat
       DistrictGroup.find({ association: association._id }).sort({ sortOrder: 1, name: 1 }).lean()
     ]);
     return res.render('association-order-settings', { title: '並び順設定', association, roles, departments, districtGroups });
+  } catch (error) { return next(error); }
+});
+
+managementRouter.post('/:associationId/manage/members/:userId/manager', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!validId(req.params.userId)) throw fail('住人を確認できません。');
+    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.params.userId, status: 'active' });
+    if (!membership) throw fail('参加中の住人を確認できません。', 404);
+    const role = await RoleDefinition.findOne({ association: req.params.associationId, name: '町内会管理者', active: true, permissions: 'association.manage' });
+    if (!role) throw fail('町内会管理者の役職を確認できません。', 409);
+    const now = new Date();
+    const filter = { association: req.params.associationId, role: role._id, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] };
+    const existing = await RoleAssignment.findOne({ ...filter, user: req.params.userId });
+    if (req.body.action === 'remove') {
+      if (!existing) throw fail('この住人は町内会管理者ではありません。');
+      if (await RoleAssignment.countDocuments(filter) <= 1) throw fail('町内会管理者は最低1人必要です。');
+      await RoleAssignment.updateOne({ _id: existing._id }, { $set: { endsAt: new Date(now.getTime() - 1) } });
+      req.session.notice = String(req.user._id) === String(req.params.userId) ? '町内会管理者から外れました。' : '町内会管理者を解除しました。';
+    } else {
+      if (!existing) await RoleAssignment.create({ association: req.params.associationId, user: req.params.userId, role: role._id, startsAt: now });
+      req.session.notice = '町内会管理者を追加しました。';
+    }
+    return res.redirect(`/associations/${req.params.associationId}/manage/managers`);
   } catch (error) { return next(error); }
 });
 

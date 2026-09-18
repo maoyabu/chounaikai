@@ -1,0 +1,38 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow">権限管理</p><h1>町内会管理者を指定</h1><p>住人を検索して、町内会管理者を追加・解除できます。</p></div></section>
+
+  <section class="content-card management-card">
+    <h2>現在の町内会管理者</h2>
+    <p class="help-text">管理者は最低1人必要です。最後の1人は解除できません。</p>
+    <div class="resident-selection-list">
+      <% const currentManagers = members.filter((member) => member.isAssociationManager); %>
+      <% if (!currentManagers.length) { %><p class="help-text">現在の管理者が登録されていません。</p><% } %>
+      <% currentManagers.forEach((member) => { const name = member.user.displayname || member.user.username; %>
+        <article class="resident-row-static manager-row"><strong><%= name %>さん</strong><span><%= member.user.email || 'メール未登録' %></span><form method="post" action="/associations/<%= association._id %>/manage/members/<%= member.user._id %>/manager"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="remove"><button class="button manager-remove-button">管理者から外す</button></form></article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="content-card management-card">
+    <h2>住人から追加</h2>
+    <label class="resident-search">名前・メールアドレス・班で絞り込む<input type="search" id="manager-search" placeholder="部分一致で検索" autocomplete="off"></label>
+    <div class="resident-selection-list manager-candidate-list" id="manager-candidates">
+      <% members.filter((member) => !member.isAssociationManager).forEach((member) => { const name = member.user.displayname || member.user.username; const text = [name, member.user.username, member.user.email, member.districtGroup?.name].filter(Boolean).join(' '); %>
+        <article class="resident-row-static manager-candidate-row" data-manager-candidate data-search="<%= text %>"><strong><%= name %>さん</strong><span><%= member.user.email || 'メール未登録' %></span><span><%= member.districtGroup?.name || '班未設定' %></span><form method="post" action="/associations/<%= association._id %>/manage/members/<%= member.user._id %>/manager"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="action" value="add"><button class="button button-primary">管理者に指定</button></form></article>
+      <% }) %>
+    </div>
+    <p id="manager-search-empty" class="help-text" hidden>条件に一致する住人はいません。</p>
+  </section>
+  <style>
+    .manager-row,.manager-candidate-row{display:flex;align-items:center;gap:.7rem;min-height:0;padding:.45rem .8rem}
+    .manager-row form,.manager-candidate-row form{margin:0 0 0 auto}
+    .manager-row .button,.manager-candidate-row .button{white-space:nowrap;padding:.4rem .7rem}
+    .manager-remove-button{background:#fff1f1;border:1px solid #d66;color:#a22}
+    .manager-remove-button:hover{background:#ffe0e0}
+    @media (max-width:700px){.manager-row,.manager-candidate-row{flex-wrap:wrap}.manager-row form,.manager-candidate-row form{margin-left:auto}}
+  </style>
+  <script>(()=>{const input=document.getElementById('manager-search'),rows=[...document.querySelectorAll('[data-manager-candidate]')],empty=document.getElementById('manager-search-empty'),norm=v=>String(v||'').normalize('NFKC').toLocaleLowerCase('ja');input.addEventListener('input',()=>{const terms=norm(input.value).trim().split(/\s+/).filter(Boolean);let count=0;rows.forEach(row=>{const visible=terms.every(term=>norm(row.dataset.search).includes(term));row.hidden=!visible;if(visible)count++});empty.hidden=count>0});})();</script>
+</main><%- include('partials/foot') %>
