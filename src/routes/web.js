@@ -182,7 +182,7 @@ webRouter.get('/associations/:associationId/register/start', async (req, res, ne
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) return res.redirect('/associations');
     req.session.registrationChoice = { purpose: 'join', associationId: String(association._id) };
-    return res.redirect(req.isAuthenticated?.() ? `/associations/${association._id}/join` : '/register');
+    return res.redirect(req.isAuthenticated?.() ? `/associations/${association._id}/join` : (req.query.login === '1' ? '/login' : '/register'));
   } catch (error) { return next(error); }
 });
 
@@ -628,6 +628,7 @@ webRouter.post('/associations', requireLogin, verifyCsrfToken, async (req, res, 
     name: String(req.body.name || '').trim(),
     groupName: String(req.body.groupName || '').trim(),
     publicSlug: String(req.body.publicSlug || '').trim().toLowerCase(),
+    address: { postalCode: String(req.body.postalCode || '').replace(/[^0-9]/g, ''), prefecture: String(req.body.prefecture || '').trim(), city: String(req.body.city || '').trim(), street: String(req.body.street || '').trim() },
     serviceArea: String(req.body.serviceArea || '').trim(),
     introduction: String(req.body.introduction || '').trim(),
     contact: { name: String(req.body.contactName || '').trim(), email: String(req.body.contactEmail || '').trim(), phone: String(req.body.contactPhone || '').trim() }

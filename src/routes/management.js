@@ -222,6 +222,7 @@ managementRouter.post('/:associationId/manage/name', requirePermission('associat
     const name = String(req.body.name || '').trim(); if (!name) throw fail('町内会名を入力してください。');
     const association = await NeighborhoodAssociation.findById(req.params.associationId); if (!association) throw fail('町内会を確認できません。', 404);
     const before = { name: association.name }; association.name = name;
+    association.address = { postalCode: String(req.body.postalCode || '').replace(/[^0-9]/g, ''), prefecture: String(req.body.prefecture || '').trim(), city: String(req.body.city || '').trim(), street: String(req.body.street || '').trim() };
     association.serviceArea = String(req.body.serviceArea || '').trim(); association.introduction = String(req.body.introduction || '').trim();
     association.contact = { name: String(req.body.contactName || '').trim(), email: String(req.body.contactEmail || '').trim(), phone: String(req.body.contactPhone || '').trim() };
     association.socialLinks = { instagram: String(req.body.instagram || '').trim(), x: String(req.body.x || '').trim(), youtube: String(req.body.youtube || '').trim() };
