@@ -17,6 +17,7 @@ const valid = value => mongoose.isValidObjectId(value);
 const groupAccess = async (groupId, associationId, userId) => AssociationGroupMembership.findOne({ group: groupId, association: associationId, user: userId, role: 'manager', status: 'active' });
 
 associationGroupsRouter.get('/:associationId/groups/:groupId', async (req, res, next) => {
+  if (req.params.groupId === 'request') return next();
   try {
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: 'active' }).lean();
     const association = await NeighborhoodAssociation.findById(req.params.associationId).select('name').lean();
