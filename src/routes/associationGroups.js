@@ -95,6 +95,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/events/:eve
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId', verifyCsrfToken, async (req, res, next) => {
+  if (req.params.groupId === 'request') return next();
   try {
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: 'active' });
     if (!group || !await AssociationMembership.exists({ association: req.params.associationId, user: req.user._id, status: 'active' })) throw fail('参加できるグループを確認できません。', 403);
