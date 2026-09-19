@@ -9,6 +9,16 @@ const schema = new mongoose.Schema({
   endDate: { type: String, required: true },
   startTime: { type: String, required: true },
   endTime: { type: String, required: true },
+  allDay: { type: Boolean, default: false },
+  hasEndDate: { type: Boolean, default: true },
+  recurrence: {
+    frequency: { type: String, enum: ['none', 'daily', 'weekly', 'monthly', 'yearly'], default: 'none' },
+    weekdays: { type: [Number], default: [] },
+    monthDays: { type: [Number], default: [] },
+    yearMonth: Number,
+    yearDay: Number,
+    until: String
+  },
   category: { type: String, required: true, trim: true },
   color: { type: String, required: true },
   visible: { type: Boolean, default: true },
