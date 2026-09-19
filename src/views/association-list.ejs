@@ -10,15 +10,15 @@
       <% }) %></div>
     <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
   </section>
-  <section class="content-card association-list-request"><h2>町内会が見つからない場合</h2><p>一覧を確認しても該当する町内会がない場合は、新規で町内会を申請できます。</p><p>※申請者が町内会の管理者となりますが、後で別の人に変更も可能です</p>
-    <div class="form-actions">
+  <section class="content-card association-list-request"><div class="association-list-request-heading"><h2>町内会が見つからない場合</h2></div><p>一覧を確認しても該当する町内会がない場合は、新規で町内会を申請できます。</p><p>※申請者が町内会の管理者となりますが、後で別の人に変更も可能です</p>
+    <div class="association-list-request-actions"><div class="form-actions">
       <% if (currentUser) { %>
         <a class="button button-primary" href="/associations/create/start">新規町内会を申請する</a>
       <% } else { %>
         <a class="button button-quiet" href="/associations/create/start">ログインして申請</a>
         <a class="button button-primary" href="/associations/create/register">会員登録して申請</a>
       <% } %>
-    </div>
+    </div></div>
   </section>
   </div>
 </main>

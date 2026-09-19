@@ -277,6 +277,7 @@ h1, h2, h3, h4, h5, h6,
 .admin-operation-card h2 { margin: .2rem 0 1rem; }
 .account-summary { display: flex; align-items: center; gap: .45rem; }
 .role-tag { display: inline-flex; align-items: center; min-height: 24px; padding: .15rem .5rem; border: 1px solid #b8d5c7; border-radius: 999px; background: var(--green-pale); color: var(--green-dark); font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.menu-role-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
 .association-manage-link { display: flex; justify-content: flex-end; margin: -0.25rem 0 1.25rem; }
 .management-tabs { display: flex; gap: .35rem; margin-bottom: 1rem; padding: .65rem .55rem .4rem; overflow-x: auto; border: 1px solid var(--line); border-radius: .85rem; background: #fff; scrollbar-width: thin; }
 .management-tabs [role="tab"] { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; flex: 1 0 auto; min-height: 42px; padding: .55rem 1rem; border: 0; border-radius: .6rem; background: transparent; color: var(--muted); font: inherit; font-size: .9rem; font-weight: 800; cursor: pointer; }
@@ -692,7 +693,9 @@ h1, h2, h3, h4, h5, h6,
   .registration-card { padding: 1.25rem; }
   .title-with-icon { align-items: flex-start; }
   .title-icon { margin-top: .12rem; }
-  .menu-label, .account-summary { display: none; }
+  .menu-label { display: none; }
+  .account-summary { display: flex; }
+  .account-summary .account-name, .account-summary .role-tag { display: none; }
   .site-header { padding-left: 1rem; padding-right: 1rem; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .admin-list-item { grid-template-columns: auto minmax(0, 1fr) auto; gap: .7rem; }
@@ -826,6 +829,12 @@ h1, h2, h3, h4, h5, h6,
 .association-list-layout > .content-card { min-width: 0; }
 .association-list-request .form-actions { flex-direction: column; align-items: stretch; }
 .association-list-request .form-actions .button { width: 100%; }
+.association-list-request { background: #eef8f1; }
+.association-list-request-heading { margin: -1.5rem -1.5rem 1.25rem; padding: 1.25rem 1.5rem; background: var(--green-dark); color: #fff; border-radius: 1rem 1rem 0 0; }
+.association-list-request-heading h2 { margin: 0; font-size: 1.15rem; text-align: center; }
+.association-list-request p { font-size: .92rem; }
+.association-list-request-actions { margin-top: 1.25rem; }
+.association-list-request-actions .form-actions { margin-top: 0; }
 @media (max-width: 800px) { .association-list-layout { grid-template-columns: 1fr; } }
 .group-messages-layout .association-event-section { margin-bottom: 0; }
 .group-messages-communications { min-width: 0; }
