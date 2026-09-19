@@ -161,8 +161,31 @@ webRouter.get('/', (req, res) => res.redirect(req.isAuthenticated?.() ? '/dashbo
 
 webRouter.get('/associations', async (req, res, next) => {
   try {
-    const associations = await NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false } }).sort('name').lean();
-    return res.render('association-list', { title: '町内会一覧', associations });
+    const prefecture = String(req.query.prefecture || '').trim();
+    const city = String(req.query.city || '').trim();
+    const keyword = String(req.query.keyword || '').trim();
+    const filter = { status: 'active', deletedAt: { $exists: false } };
+    if (prefecture) filter['address.prefecture'] = new RegExp(prefecture.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (city) filter['address.city'] = new RegExp(city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (keyword) {
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = ['name', 'serviceArea', 'address.street'].map((field) => ({ [field]: new RegExp(escapedKeyword, 'i') }));
+    }
+    const [associations, locationAssociations] = await Promise.all([
+      NeighborhoodAssociation.find(filter).sort('name').lean(),
+      NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false } }).select('address.prefecture address.city').lean(),
+    ]);
+    const locations = {};
+    locationAssociations.forEach((association) => {
+      const selectedPrefecture = String(association.address?.prefecture || '').trim();
+      const selectedCity = String(association.address?.city || '').trim();
+      if (!selectedPrefecture || !selectedCity) return;
+      if (!locations[selectedPrefecture]) locations[selectedPrefecture] = new Set();
+      locations[selectedPrefecture].add(selectedCity);
+    });
+    const prefectures = Object.keys(locations).sort((a, b) => a.localeCompare(b, 'ja'));
+    const citiesByPrefecture = Object.fromEntries(prefectures.map((name) => [name, [...locations[name]].sort((a, b) => a.localeCompare(b, 'ja'))]));
+    return res.render('association-list', { title: '町内会一覧', associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
   } catch (error) { return next(error); }
 });
 

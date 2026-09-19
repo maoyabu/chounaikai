@@ -835,7 +835,15 @@ h1, h2, h3, h4, h5, h6,
 .association-list-request p { font-size: .92rem; }
 .association-list-request-actions { margin-top: 1.25rem; }
 .association-list-request-actions .form-actions { margin-top: 0; }
-@media (max-width: 800px) { .association-list-layout { grid-template-columns: 1fr; } }
+.association-list-request-actions .button-quiet { background: #fff; }
+.association-login-button { background: #2f6fab; border-color: #2f6fab; color: #fff; }
+.association-login-button:hover { background: #245a8d; border-color: #245a8d; }
+.association-list-search { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.5fr) auto auto; gap: .75rem; align-items: end; margin-bottom: 1.25rem; padding: 1rem 1.25rem; }
+.association-list-search label { display: grid; gap: .35rem; font-size: .85rem; font-weight: 700; }
+.association-list-search input { width: 100%; min-width: 0; padding: .65rem .75rem; border: 1px solid #bdcac3; border-radius: .55rem; font: inherit; }
+.association-list-search select { width: 100%; min-width: 0; padding: .65rem .75rem; border: 1px solid #bdcac3; border-radius: .55rem; background: #fff; font: inherit; }
+.association-list-search .button { min-height: 42px; white-space: nowrap; }
+@media (max-width: 800px) { .association-list-layout { grid-template-columns: 1fr; } .association-list-search { grid-template-columns: 1fr; } .association-list-search .button { width: 100%; } }
 .group-messages-layout .association-event-section { margin-bottom: 0; }
 .group-messages-communications { min-width: 0; }
 .group-messages-calendar .association-event-section-heading { display: block; }

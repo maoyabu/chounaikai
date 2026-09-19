@@ -2,11 +2,18 @@
 <% if (currentUser) { %><%- include('partials/header') %><% } %>
 <main class="page-shell association-list-shell">
   <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
+  <form class="association-list-search content-card" method="get" action="/associations">
+    <label>都道府県<select name="prefecture" id="association-search-prefecture"><option value="">すべて</option><% (prefectures || []).forEach((prefecture) => { %><option value="<%= prefecture %>" <%= filters?.prefecture === prefecture ? 'selected' : '' %>><%= prefecture %></option><% }) %></select></label>
+    <label>市区町村<select name="city" id="association-search-city" data-selected-city="<%= filters?.city || '' %>"><option value="">すべて</option></select></label>
+    <label class="association-list-search-keyword">フリーワード<input name="keyword" value="<%= filters?.keyword || '' %>" placeholder="町内会名・対象地域など"></label>
+    <button class="button button-primary" type="submit">絞り込む</button>
+    <% if (filters?.prefecture || filters?.city || filters?.keyword) { %><a class="button button-quiet" href="/associations">条件をクリア</a><% } %>
+  </form>
   <div class="association-list-layout">
   <section class="content-card management-card association-list-directory">
     <% if (associations.length) { %>
       <div class="management-list"><% associations.forEach((association) => { %>
-        <div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small><a href="/associations/<%= association._id %>/public">町内会のことを詳しく知る →</a></span><span class="association-list-actions"><% if (!currentUser) { %><a class="button button-quiet button-small" href="/associations/<%= association._id %>/register/start?login=1">すでに会員の方はログイン</a><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会で会員登録</a><% } else { %><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会に参加</a><% } %></span></div>
+        <div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small><a href="/associations/<%= association._id %>/public">町内会のことを詳しく知る →</a></span><span class="association-list-actions"><% if (!currentUser) { %><a class="button button-quiet button-small association-login-button" href="/associations/<%= association._id %>/register/start?login=1">この町内会にログイン</a><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会で会員登録</a><% } else { %><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会に参加</a><% } %></span></div>
       <% }) %></div>
     <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
   </section>
@@ -22,4 +29,19 @@
   </section>
   </div>
 </main>
+<script>
+  (() => {
+    const prefecture = document.getElementById('association-search-prefecture');
+    const city = document.getElementById('association-search-city');
+    const citiesByPrefecture = <%- JSON.stringify(citiesByPrefecture || {}) %>;
+    const selectedCity = city?.dataset.selectedCity || '';
+    const updateCities = () => {
+      const cities = citiesByPrefecture[prefecture?.value] || [];
+      city.innerHTML = '<option value="">すべて</option>' + cities.map((name) => `<option value="${name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}">${name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`).join('');
+      if (cities.includes(selectedCity)) city.value = selectedCity;
+    };
+    prefecture?.addEventListener('change', () => { city.dataset.selectedCity = ''; updateCities(); });
+    updateCities();
+  })();
+</script>
 <%- include('partials/foot') %>
