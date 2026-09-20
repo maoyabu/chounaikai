@@ -853,6 +853,7 @@ h1, h2, h3, h4, h5, h6,
 .finance-total-income strong { color: #2563a6; }.finance-total-expense strong { color: var(--danger); }
 .finance-total-income span, .finance-total-expense span, .finance-income-heading, .finance-expense-heading { display: inline-flex; align-items: center; width: fit-content; padding: .25rem .65rem; border-radius: .35rem; color: #fff; font-weight: 800; }
 .finance-total-income span, .finance-income-heading { background: #2563a6; }.finance-total-expense span, .finance-expense-heading { background: var(--danger); }
+.finance-total-income span::after, .finance-total-expense span::after { content: '（実績／予算）'; margin-left: .35rem; font-size: .68em; font-weight: 500; color: rgba(255,255,255,.82); }
 .finance-entry-list article { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto 7.5rem; }
 .finance-entry-actions { display: flex; justify-content: flex-end; gap: .35rem; }
 .finance-entry-actions form { margin: 0; }
@@ -974,6 +975,7 @@ h1, h2, h3, h4, h5, h6,
 .button-blue { background: #2f6fb3; border-color: #2f6fb3; color: #fff; }
 .button-blue:hover { background: #245a91; border-color: #245a91; color: #fff; }
 .finance-annual-card { overflow: hidden; }
+.finance-annual-card { padding: .85rem; }
 .finance-inline-menu { display: grid; gap: .55rem; margin-top: 1.25rem; padding-top: .65rem; border-top: 0; }
 .finance-inline-menu::before { content: 'メニュー'; display: block; color: var(--ink); font-weight: 800; font-size: 1.25rem; margin-bottom: .1rem; }
 .finance-inline-menu .settings-entry-card { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .6rem; text-decoration: none; background: var(--green-pale); }
@@ -992,10 +994,20 @@ h1, h2, h3, h4, h5, h6,
 .finance-inline-menu .settings-entry-card strong::before { color: var(--green) !important; background-color: var(--green) !important; }
 .finance-inline-menu .settings-entry-card:nth-child(4) strong::before { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='black' d='M64 448V64h64v384H64zm96 0V256h64v192h-64zm96 0V128h64v320h-64zm96 0V192h64v256h-64z'/%3E%3C/svg%3E"); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='black' d='M64 448V64h64v384H64zm96 0V256h64v192h-64zm96 0V128h64v320h-64zm96 0V192h64v256h-64z'/%3E%3C/svg%3E"); }
 .finance-annual-year-selector { margin-top: .75rem; }
+.finance-annual-year-selector { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+.finance-annual-period { color: var(--muted); font-size: .9rem; white-space: nowrap; }
 .finance-annual-year-selector select { padding: .55rem .8rem; border: 1px solid #bdcac3; border-radius: .55rem; background: #fff; font: inherit; }
+.finance-annual-year-selector select, .finance-public-summary select { min-width: 120px; height: 40px; padding: .45rem .75rem; border: 1px solid #bdcac3; border-radius: .65rem; background: #fff; color: var(--ink); font: inherit; font-size: .95rem; }
 .finance-annual-table-wrap { overflow-x: auto; }
 .finance-annual-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: .92rem; }
-.finance-annual-table th, .finance-annual-table td { padding: .45rem .55rem; border: 1px solid #cbd9d1; text-align: right; white-space: nowrap; }
+.finance-annual-table th, .finance-annual-table td { padding: .36rem .46rem; border: 1px solid #cbd9d1; text-align: right; white-space: nowrap; }
+.finance-annual-table th:first-child, .finance-annual-table td:first-child { position: sticky; left: 0; z-index: 2; min-width: 136px; }
+.finance-annual-table th:nth-child(2), .finance-annual-table td:nth-child(2) { position: sticky; left: 136px; z-index: 2; min-width: 116px; box-shadow: 2px 0 3px rgba(21,50,39,.08); }
+.finance-annual-table tbody th:first-child, .finance-annual-table tbody td:nth-child(2) { background: var(--surface); }
+.finance-annual-table tbody tr:nth-child(even) th:first-child, .finance-annual-table tbody tr:nth-child(even) td:nth-child(2) { background: var(--green-pale); }
+.finance-annual-table tbody tr.finance-annual-subtotal th:first-child, .finance-annual-table tbody tr.finance-annual-subtotal td:nth-child(2) { background: #c7e3d4; }
+.finance-annual-table tbody tr.finance-annual-balance th:first-child, .finance-annual-table tbody tr.finance-annual-balance td:nth-child(2) { background: #e8dcae; }
+.finance-annual-table thead th:first-child, .finance-annual-table thead th:nth-child(2) { z-index: 4; }
 .finance-annual-table thead th { background: var(--green-dark); color: #fff; text-align: center; }
 .finance-annual-table tbody th { text-align: left; }
 .finance-annual-row:nth-child(even) { background: var(--green-pale); }
@@ -1024,6 +1036,14 @@ h1, h2, h3, h4, h5, h6,
 .finance-chart-tooltip { position: absolute; z-index: 3; pointer-events: none; padding: .65rem .8rem; border-radius: .55rem; background: rgba(23,35,31,.94); color: #fff; font-size: .82rem; line-height: 1.5; box-shadow: var(--shadow); white-space: nowrap; }
 .finance-expense-chart { position: relative; }
 .finance-tooltip-color { display: inline-block; width: .75rem; height: .75rem; margin-right: .3rem; border-radius: .15rem; vertical-align: -.05rem; }
+.finance-filter-summary { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
+.finance-filter-summary span { padding: .3rem .65rem; border-radius: 999px; background: var(--green-pale); color: var(--green-dark); font-size: .9rem; font-weight: 700; }
+.finance-public-entry-table { overflow-x: auto; }
+.finance-public-entry-head, .finance-public-entry-row { min-width: 720px; display: grid; grid-template-columns: 7rem 6rem 1.1fr 2fr 1fr 8rem; gap: .8rem; align-items: center; }
+.finance-public-entry-head { padding: .7rem .8rem; background: var(--green-dark); color: #fff; font-weight: 800; }
+.finance-public-entry-row { padding: .75rem .8rem; border-bottom: 1px solid var(--line); }
+.finance-public-entry-row:nth-child(even) { background: var(--green-pale); }
+.finance-public-entry-row strong { text-align: right; }
 .finance-chart-year-picker { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem 1rem; }
 .finance-chart-year-picker p { width: 100%; margin: 0; font-weight: 700; }
 .finance-monthly-chart { position: relative; overflow-x: auto; }

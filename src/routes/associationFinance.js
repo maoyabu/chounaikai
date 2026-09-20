@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { RoleAssignment } from '../models/role.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
+import { AssociationMembership } from '../models/associationMembership.js';
 import { Finance } from '../models/finance.js';
 import { FinanceBudget } from '../models/financeBudget.js';
 import { requireLogin } from '../middleware/auth.js';
@@ -11,23 +12,38 @@ import ExcelJS from 'exceljs';
 
 export const associationFinanceRouter = express.Router();
 associationFinanceRouter.use(requireLogin);
+associationFinanceRouter.use('/:associationId/finance', (req, res, next) => {
+  const referer = req.get('referer') || '';
+  if (req.path === '' && referer.includes(`/associations/${req.params.associationId}/finance/public`)) return res.redirect(`/associations/${req.params.associationId}/finance/public`);
+  return next();
+});
 
 const fiscalYear = (date, startMonth = 4) => {
   const value = new Date(date);
   return value.getMonth() + 1 >= Number(startMonth) ? value.getFullYear() : value.getFullYear() - 1;
 };
 
+async function availableFinanceYears(groupId, startMonth) {
+  const [budgetYears, dates] = await Promise.all([FinanceBudget.distinct('year', { group: groupId }), Finance.find({ group: groupId }).select('date').lean()]);
+  const years = new Set(budgetYears.map(Number).filter(Number.isFinite));
+  dates.forEach((entry) => years.add(fiscalYear(entry.date, startMonth)));
+  return [...years].sort((a, b) => b - a);
+}
+
 async function loadContext(req, res, next) {
   if (!mongoose.isValidObjectId(req.params.associationId)) return res.status(400).render('error', { title: '町内会が見つかりません', message: '町内会IDが正しくありません。' });
   const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
   if (!association?.group) return res.status(404).render('error', { title: '町内会が見つかりません', message: '会計を利用できる町内会が見つかりません。' });
   const now = new Date();
-  const [manager, officer] = await Promise.all([
+  const publicAccess = req.originalUrl.includes(`/associations/${req.params.associationId}/finance/public`) || req.path.includes('/public') || req.query.public === '1';
+  const [manager, officer, membership] = await Promise.all([
     RoleAssignment.findOne({ association: association._id, user: req.user._id, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' } }).lean(),
-    AnnualOfficer.findOne({ association: association._id, user: req.user._id, fiscalYear: fiscalYear(now), cancelledAt: null }).lean()
+    AnnualOfficer.findOne({ association: association._id, user: req.user._id, fiscalYear: fiscalYear(now), cancelledAt: null }).lean(),
+    publicAccess ? AssociationMembership.findOne({ association: association._id, user: req.user._id, status: { $in: ['active'] } }).lean() : null
   ]);
-  if (!manager?.role && !officer && !req.user.isAdmin) return res.status(403).render('error', { title: '権限がありません', message: '町内会管理者または役員のみ利用できます。' });
-  req.financeContext = { association, groupId: association.group, year: fiscalYear(now, association.financeFiscalStartMonth || 4), isManager: Boolean(manager?.role || req.user.isAdmin) };
+  if (!manager?.role && !officer && !req.user.isAdmin && !(publicAccess && Boolean(association.financePublic) && membership)) return res.status(403).render('error', { title: '権限がありません', message: '公開設定されていない会計、または町内会の住人限定ページです。' });
+  req.financeContext = { association, groupId: association.group, year: fiscalYear(now, association.financeFiscalStartMonth || 4), isManager: Boolean(manager?.role || req.user.isAdmin), publicAccess };
+  res.locals.financeYears = await availableFinanceYears(association.group, association.financeFiscalStartMonth || 4);
   return next();
 }
 
@@ -37,6 +53,7 @@ associationFinanceRouter.get('/:associationId/finance', async (req, res, next) =
   try {
     const { association, groupId, year: currentYear } = req.financeContext;
     const year = Number(req.query.year) || currentYear;
+    const fiscalYears = await availableFinanceYears(groupId, association.financeFiscalStartMonth || 4);
     const budgets = await FinanceBudget.find({ group: groupId, year: String(year) }).sort({ display_order: 1 }).lean();
     const start = new Date(year, (association.financeFiscalStartMonth || 4) - 1, 1);
     const end = new Date(year + 1, (association.financeFiscalStartMonth || 4) - 1, 1);
@@ -47,7 +64,7 @@ associationFinanceRouter.get('/:associationId/finance', async (req, res, next) =
     const budgetTotals = budgets.reduce((result, item) => { result[item.cf] = (result[item.cf] || 0) + (Number(item.budget) || 0); return result; }, {});
     const totals = rows.reduce((result, row) => { result[row._id.cf] = (result[row._id.cf] || 0) + row.total; return result; }, {});
     ['収入', '支出'].forEach((type) => { const actualValue = totals[type] || 0; const budgetValue = budgetTotals[type] || 0; totals[type] = { toLocaleString: () => `${actualValue.toLocaleString()} / ¥${budgetValue.toLocaleString()}` }; });
-    return res.render('association-finance-dashboard', { title: `${association.name} 町内会会計管理`, association, year, totals, totalBudget, budgetTotals, budgetItems, isManager: req.financeContext.isManager });
+    return res.render('association-finance-dashboard', { title: `${association.name} 町内会会計管理`, association, year, fiscalYears, totals, totalBudget, budgetTotals, budgetItems, isManager: req.financeContext.isManager });
   } catch (error) { return next(error); }
 });
 
@@ -67,10 +84,15 @@ associationFinanceRouter.get('/:associationId/finance/entries', async (req, res,
   } catch (error) { return next(error); }
 });
 
+associationFinanceRouter.get('/:associationId/finance/public/annual', (req, res) => res.redirect(`/associations/${req.params.associationId}/finance/annual?public=1`));
+associationFinanceRouter.get('/:associationId/finance/public', async (req, res, next) => { try { const { association, groupId, year: currentYear } = req.financeContext; const year = Number(req.query.year) || currentYear; const startMonth = Number(association.financeFiscalStartMonth || 4); const start = new Date(year, startMonth - 1, 1); const end = new Date(year + 1, startMonth - 1, 1); const [rows, budgets] = await Promise.all([Finance.aggregate([{ $match: { group: new mongoose.Types.ObjectId(groupId), date: { $gte: start, $lt: end } } }, { $group: { _id: '$cf', total: { $sum: '$amount' } } }]), FinanceBudget.find({ group: groupId, year: String(year) }).lean()]); const actual = rows.reduce((result, row) => ({ ...result, [row._id]: row.total }), {}); const budget = budgets.reduce((result, item) => ({ ...result, [item.cf]: (result[item.cf] || 0) + Number(item.budget || 0) }), {}); return res.render('association-finance-public', { title: `${association.name} 会計報告`, association, year, fiscalYears: await availableFinanceYears(groupId, startMonth), startMonth, endMonth: startMonth === 1 ? 12 : startMonth - 1, endYear: startMonth === 1 ? year : year + 1, actual, budget }); } catch (error) { return next(error); } });
+associationFinanceRouter.get('/:associationId/finance/public/entries', async (req, res, next) => { try { const { association, groupId } = req.financeContext; const query = { group: groupId }; if (req.query.cf) query.cf = req.query.cf; if (req.query.payment_type) query.payment_type = req.query.payment_type; if (req.query.item) query.$and = [{ $or: [{ expense_item: req.query.item }, { income_item: req.query.item }] }]; if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }]; if (req.query.month && req.query.year) { const month = Number(req.query.month); const fiscalYear = Number(req.query.year) + (month < Number(association.financeFiscalStartMonth || 4) ? 1 : 0); query.date = { $gte: new Date(fiscalYear, month - 1, 1), $lt: new Date(fiscalYear, month, 1) }; } else if (req.query.from || req.query.to) { query.date = {}; if (req.query.from) query.date.$gte = new Date(req.query.from); if (req.query.to) query.date.$lte = new Date(`${req.query.to}T23:59:59.999`); } const entries = await Finance.find(query).sort({ date: -1, entry_date: -1 }).lean(); const [expenseItems, incomeItems, paymentTypes] = await Promise.all([Finance.distinct('expense_item', { group: groupId, expense_item: { $nin: ['', null] } }), Finance.distinct('income_item', { group: groupId, income_item: { $nin: ['', null] } }), Finance.distinct('payment_type', { group: groupId, payment_type: { $nin: ['', null] } })]); return res.render('association-finance-public-entries', { title: `${association.name} 会計報告 入力一覧`, association, entries, filters: req.query, filterItemsByCf: { 収入: incomeItems.filter(Boolean).sort(), 支出: expenseItems.filter(Boolean).sort() }, filterPaymentTypes: paymentTypes.filter(Boolean).sort() }); } catch (error) { return next(error); } });
+
 associationFinanceRouter.get('/:associationId/finance/annual', async (req, res, next) => {
   try {
     const { association, groupId, year: currentYear } = req.financeContext;
     const year = Number(req.query.year) || currentYear;
+    const fiscalYears = await availableFinanceYears(groupId, association.financeFiscalStartMonth || 4);
     const startMonth = Number(association.financeFiscalStartMonth || 4);
     const months = Array.from({ length: 12 }, (_, index) => (startMonth - 1 + index) % 12 + 1);
     const start = new Date(year, startMonth - 1, 1);
@@ -82,7 +104,7 @@ associationFinanceRouter.get('/:associationId/finance/annual', async (req, res, 
     const incomeRows = [income]; const expenseRows = [expense];
     budgets.forEach((item) => { const name = item.expense_item || item.income_item || '未分類'; (item.cf === '支出' ? expenseRows : incomeRows).push(makeRow(name, item.cf, item.budget)); });
     const totalRow = { name: '収支', cf: '収支', budget: income.budget - expense.budget, months: income.months.map((value, index) => value - expense.months[index]) };
-    return res.render('association-finance-annual', { title: `${association.name} 年度集計`, association, year, months, incomeRows, expenseRows, totalRow });
+    return res.render('association-finance-annual', { title: `${association.name} 年度集計`, association, year, fiscalYears, months, incomeRows, expenseRows, totalRow, publicMode: req.financeContext.publicAccess });
   } catch (error) { return next(error); }
 });
 
@@ -108,7 +130,7 @@ associationFinanceRouter.get('/:associationId/finance/expense-chart', async (req
     const { association, groupId, year: currentYear } = req.financeContext;
     const latest = Number(req.query.year) || currentYear; const years = Array.from({ length: 5 }, (_, index) => latest - 4 + index); const startMonth = Number(association.financeFiscalStartMonth || 4);
     const data = await Promise.all(years.map(async (year) => { const start = new Date(year, startMonth - 1, 1); const end = new Date(year + 1, startMonth - 1, 1); const rows = await Finance.aggregate([{ $match: { group: new mongoose.Types.ObjectId(groupId), cf: '支出', date: { $gte: start, $lt: end } } }, { $group: { _id: { $ifNull: ['$expense_item', '未分類'] }, total: { $sum: '$amount' } } }]); return { year, values: Object.fromEntries(rows.map((row) => [row._id, row.total])) }; }));
-    const items = [...new Set(data.flatMap((entry) => Object.keys(entry.values)))].sort(); return res.render('association-finance-expense-chart', { title: `${association.name} 支出項目別グラフ`, association, years, data, items });
+    const items = [...new Set(data.flatMap((entry) => Object.keys(entry.values)))].sort(); return res.render('association-finance-expense-chart', { title: `${association.name} 支出項目別グラフ`, association, years, data, items, publicMode: req.financeContext.publicAccess });
   } catch (error) { return next(error); }
 });
 
@@ -116,7 +138,7 @@ associationFinanceRouter.get('/:associationId/finance/monthly-expense-chart', as
   try {
     const { association, groupId, year: currentYear } = req.financeContext; const latest = Number(req.query.year) || currentYear; const selected = [...new Set((Array.isArray(req.query.years) ? req.query.years : [req.query.years]).filter(Boolean).map(Number).filter(Number.isFinite))].slice(0, 3); const years = selected.length ? selected : [latest]; const startMonth = Number(association.financeFiscalStartMonth || 4); const months = Array.from({ length: 12 }, (_, index) => (startMonth - 1 + index) % 12 + 1);
     const data = await Promise.all(years.map(async (year) => { const start = new Date(year, startMonth - 1, 1); const end = new Date(year + 1, startMonth - 1, 1); const rows = await Finance.aggregate([{ $match: { group: new mongoose.Types.ObjectId(groupId), cf: '支出', date: { $gte: start, $lt: end } } }, { $group: { _id: { month: { $month: '$date' }, item: { $ifNull: ['$expense_item', '未分類'] } }, total: { $sum: '$amount' } } }]); return { year, values: Object.fromEntries(months.map((month) => [month, Object.fromEntries(rows.filter((row) => row._id.month === month).map((row) => [row._id.item, row.total]))])) }; }));
-    const items = [...new Set(data.flatMap((entry) => Object.values(entry.values).flatMap((month) => Object.keys(month))))].sort(); return res.render('association-finance-monthly-expense-chart', { title: `${association.name} 月別支出項目別グラフ`, association, years, months, data, items });
+    const items = [...new Set(data.flatMap((entry) => Object.values(entry.values).flatMap((month) => Object.keys(month))))].sort(); return res.render('association-finance-monthly-expense-chart', { title: `${association.name} 月別支出項目別グラフ`, association, years, months, data, items, publicMode: req.financeContext.publicAccess });
   } catch (error) { return next(error); }
 });
 
@@ -182,7 +204,7 @@ associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToke
     const names = Array.isArray(req.body.paymentName) ? req.body.paymentName : [req.body.paymentName].filter(Boolean);
     const active = Array.isArray(req.body.paymentActive) ? req.body.paymentActive : [req.body.paymentActive].filter(Boolean);
     const paymentMethods = names.filter(Boolean).map((name, index) => ({ name: String(name).trim(), order: index + 1, active: active.includes(String(index)) }));
-    await NeighborhoodAssociation.updateOne({ _id: association._id }, { $set: { financePublic: req.body.financePublic === undefined ? association.financePublic : req.body.financePublic === 'on', financeFiscalStartMonth: Number(req.body.fiscalStartMonth) || association.financeFiscalStartMonth || 4, financePaymentTypes: paymentMethods.map((item) => item.name), financePaymentMethods: paymentMethods } });
+    await NeighborhoodAssociation.updateOne({ _id: association._id }, { $set: { financePublic: req.body.financePublic === 'on' || req.body.financePublic === 'true' || req.body.financePublic === '1', financeFiscalStartMonth: Number(req.body.fiscalStartMonth) || association.financeFiscalStartMonth || 4, financePaymentTypes: paymentMethods.map((item) => item.name), financePaymentMethods: paymentMethods } });
     return res.redirect(`/associations/${association._id}/finance/settings`);
   } catch (error) { return next(error); }
 });

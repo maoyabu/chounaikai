@@ -553,9 +553,10 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
         notification.actionUrl = `/associations/${notification.association._id}/leader?tab=applications#application-${notification.relatedId}`;
       }
     }
+    const financeReports = visibleMemberships.filter((item) => item.association.financePublic).map((item) => ({ association: item.association }));
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
-    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

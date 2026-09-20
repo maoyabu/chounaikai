@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="町内会の情報と運営を、分かりやすくひとつにまとめるサービスです。">
   <title><%= title %> | 町内会管理</title>
+  <% if (typeof financeYears !== 'undefined') { %><script>window.financeYears=<%- JSON.stringify(financeYears) %>;</script><% } %>
   <link rel="stylesheet" href="/assets/app.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/assets/registration.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/assets/profile.css?v=<%= assetVersion %>">
