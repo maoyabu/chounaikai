@@ -1,0 +1,14 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell finance-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/finance">← 会計管理トップへ戻る</a>
+  <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>町内会会計の設定</h1></div></div>
+  <form class="form-card form-stack" action="/associations/<%= association._id %>/finance/settings" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="finance-public-toggle"><span>会計を住人に公開する</span><label class="finance-toggle"><input type="checkbox" name="financePublic" <%= association.financePublic ? 'checked' : '' %>><span aria-hidden="true"></span></label></div>
+    <label>年度の開始月<select name="fiscalStartMonth"><% for (let month = 1; month <= 12; month++) { %><option value="<%= month %>" <%= Number(association.financeFiscalStartMonth || 4) === month ? 'selected' : '' %>><%= month %>月</option><% } %></select></label>
+    <div class="form-actions"><button class="button button-primary">基本設定を保存</button></div>
+  </form>
+  <%- include('partials/finance-payment-methods', { paymentMethods: paymentMethods || [] }) %>
+  <form class="finance-year-selector" method="get"><label>予算年度<select name="year" onchange="this.form.submit()"><% for (let fiscal = new Date().getFullYear() - 2; fiscal <= new Date().getFullYear() + 3; fiscal++) { %><option value="<%= fiscal %>" <%= Number(year) === fiscal ? 'selected' : '' %>><%= fiscal %>年度</option><% } %></select></label></form>
+  <%- include('partials/finance-budget-settings', { budgets, year, association, csrfToken }) %>
+</main><%- include('partials/foot') %>

@@ -3,7 +3,7 @@
 <main class="page-shell question-box-shell">
   <a class="back-link" href="/dashboard">← ホームへ戻る</a>
   <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><h1><%= association.name %>　役員メニュー</h1></section>
-  <section class="admin-section question-home-section officer-menu-section">
+  <div class="officer-menu-layout"><section class="admin-section question-home-section officer-menu-section">
     <div class="section-heading"><h2>役員の連絡</h2></div>
     <div class="question-home-list">
       <a class="question-home-link" href="/associations/<%= association._id %>/questions/officer"><span><strong>住人からの質問・ご意見</strong><small>投稿と再質問を確認して回答する</small></span><span class="question-home-counts"><% if (unansweredCount) { %><span class="status-badge status-pending">未回答 <%= unansweredCount %>件</span><% } %></span><span class="list-arrow" aria-hidden="true">›</span></a>
@@ -11,6 +11,6 @@
       <a class="question-home-link communication-menu-link" href="/associations/<%= association._id %>/officer-network"><span><strong>役員間の連絡網</strong><small>全役員・部・個別役員・役員グループへ連絡する</small></span><span class="list-arrow" aria-hidden="true">›</span></a>
       <a class="question-home-link" href="/associations/<%= association._id %>/events/manage"><span><strong>町内会行事管理</strong><small>行事の登録・編集・公開・完了を管理する</small></span><span class="list-arrow" aria-hidden="true">›</span></a>
     </div>
-  </section>
+  </section><aside class="admin-section question-home-section officer-functions-section"><div class="section-heading"><h2>役員機能</h2></div><div class="question-home-list"><a class="question-home-link" href="/associations/<%= association._id %>/finance"><span><strong>町内会会計管理</strong><small>年度予算・収支・会計データを管理する</small></span><span class="list-arrow" aria-hidden="true">›</span></a></div></aside></div>
 </main>
 <%- include('partials/foot') %>

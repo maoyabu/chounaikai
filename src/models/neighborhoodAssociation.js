@@ -30,7 +30,11 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   publicPhotos: { type: [{ url: String, publicId: String }], default: [] },
   eventCategories: { type: [String], default: [] },
   socialLinks: { instagram: String, x: String, youtube: String },
-  symbolImage: { url: String, publicId: String }
+  symbolImage: { url: String, publicId: String },
+  financePublic: { type: Boolean, default: false },
+  financeFiscalStartMonth: { type: Number, default: 4, min: 1, max: 12 },
+  financePaymentTypes: { type: [String], default: ['現金', '銀行引き落とし', 'クレジットカード'] }
+  ,financePaymentMethods: { type: [{ name: String, order: Number, active: Boolean }], default: [] }
 }, { timestamps: true, collection: 'neighborhood_associations' });
 
 export const NeighborhoodAssociation = mongoose.model('NeighborhoodAssociation', neighborhoodAssociationSchema);
