@@ -927,6 +927,36 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 700px) { .finance-budget-header { display: none; } .finance-budget-row { grid-template-columns: 2rem 5rem minmax(150px, 1fr) 8rem 4rem; padding: .5rem; } }
 @media (max-width: 700px) { .finance-summary-grid, .finance-dashboard-links { grid-template-columns: 1fr; } .finance-dashboard-links h2 { grid-column: auto; } .finance-filter { align-items: stretch; flex-direction: column; } .finance-filter input, .finance-filter select, .finance-filter button { width: 100%; } }
 @media (max-width: 800px) { .officer-menu-layout { grid-template-columns: 1fr; } }
+.leader-fees-heading { align-items: center; }
+.leader-fees-heading h1 { display: inline; margin-right: .8rem; }
+.leader-fees-heading .eyebrow { display: inline; }
+.leader-fees-heading p:not(.eyebrow) { margin-top: .75rem; }
+.leader-fees-year-selector select { min-width: 120px; height: 40px; padding: .45rem .75rem; border: 1px solid #bdcac3; border-radius: .65rem; background: #fff; color: var(--ink); font: inherit; }
+.household-add-modal { width: min(92vw, 520px); border: 0; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 20px 60px rgba(21,50,39,.25); }
+.household-add-modal::backdrop { background: rgba(23,35,31,.42); }
+.household-edit-modal { width: min(92vw, 520px); border: 0; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 20px 60px rgba(21,50,39,.25); }
+.household-edit-modal::backdrop { background: rgba(23,35,31,.42); }
+.household-row-actions { margin-left: auto; display: inline-flex; align-items: center; gap: .45rem; }
+.leader-fees-page .member-table > div { grid-template-columns: 90px 78px minmax(150px, 1fr) 104px auto; align-items: center; column-gap: .55rem; min-width: 0; }
+.leader-fees-page .member-table > div > dialog { display: none; }
+.leader-fees-page .member-table > div > dialog[open] { display: block; }
+.leader-fees-page .member-table > div > span:nth-of-type(1) { grid-column: 1; }
+.leader-fees-page .member-table > div > span:nth-of-type(1), .leader-fees-page .member-table > div > strong, .leader-fees-page .member-table > div > form, .leader-fees-page .member-table > div > span:nth-of-type(2), .leader-fees-page .member-table > div > span.household-row-actions { grid-row: 1; min-width: 0; }
+.leader-fees-page .member-table > div > strong { grid-column: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.leader-fees-page .member-table > div > span:nth-of-type(2) { grid-column: 2; justify-self: start; padding: .25rem .6rem; border-radius: 999px; background: var(--green-pale); color: var(--green-dark); font-weight: 800; white-space: nowrap; }
+.leader-fees-page .member-table > div > span:nth-of-type(2).is-non-member { background: var(--danger-bg); color: var(--danger); }
+.leader-badge { justify-self: start; padding: .25rem .6rem; border-radius: 999px; background: #fff0b8; color: #8a5b00; font-weight: 800; white-space: nowrap; }
+.leader-fees-page .member-table > div > span:nth-of-type(3) { grid-column: 5; }
+.leader-fees-page .member-table > div > span.household-row-actions { grid-column: 5; justify-self: end; }
+.leader-fees-page .card-top { align-items: center; }
+.leader-fees-page .card-top > div { display: flex; align-items: center; gap: .5rem; padding-bottom: 18px; }
+.leader-fees-page .member-table > div > form { grid-column: 4; margin: 0; }
+.leader-fees-page .member-table > div > form label { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); white-space: nowrap; }
+.leader-fees-page .member-table > div > form input[type="checkbox"] { appearance: none; width: 38px; height: 22px; margin: 0; border: 1px solid #bdcac3; border-radius: 999px; background: #dfe6e1; position: relative; cursor: pointer; }
+.leader-fees-page .member-table > div > form input[type="checkbox"]::after { content: ''; position: absolute; width: 16px; height: 16px; top: 2px; left: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: .15s; }
+.leader-fees-page .member-table > div > form input[type="checkbox"]:checked { background: var(--green); border-color: var(--green); }
+.leader-fees-page .member-table > div > form input[type="checkbox"]:checked::after { transform: translateX(16px); }
+@media (max-width: 800px) { .leader-fees-page .member-table > div { grid-template-columns: 1fr 1fr; } .leader-fees-page .member-table > div > span:nth-of-type(1), .leader-fees-page .member-table > div > strong, .leader-fees-page .member-table > div > span:nth-of-type(2), .leader-fees-page .member-table > div > span:nth-of-type(3), .leader-fees-page .member-table > div > span.household-row-actions, .leader-fees-page .member-table > div > form { grid-column: auto; } }
 .association-login-button { background: #2f6fab; border-color: #2f6fab; color: #fff; }
 .association-login-button:hover { background: #245a8d; border-color: #245a8d; }
 .association-list-search { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.5fr) auto auto; gap: .75rem; align-items: end; margin-bottom: 1.25rem; padding: 1rem 1.25rem; }

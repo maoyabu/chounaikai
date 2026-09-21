@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/header') %>
-<main class="page-shell">
-  <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+<main class="page-shell"><script>document.addEventListener('DOMContentLoaded',()=>{const form=document.querySelector('#association-name form');if(!form)return;const label=document.createElement('label');label.textContent='町内会費（年額・円）';const input=document.createElement('input');input.name='annualAssociationFee';input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.required=true;input.value='<%= association.annualAssociationFee || 0 %>';label.append(input);form.querySelector('.form-actions')?.before(label)});
+  </script><% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
   <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
   <section class="page-heading"><div><p class="eyebrow">初期設定</p><h1>町内会の基本設定</h1><p>年度が変わっても継続して使う項目を、上から順に設定します。各行の「⋮⋮」をつまんで並び替えられます。</p></div></section>
   <nav class="setup-progress" role="tablist" aria-label="基本設定の順序"><button type="button" role="tab" data-basic-tab="roles"><span>1</span>役職</button><button type="button" role="tab" data-basic-tab="departments"><span>2</span>部会</button><button type="button" role="tab" data-basic-tab="district-groups"><span>3</span>班</button><button type="button" role="tab" data-basic-tab="association-name"><span>4</span>町内会基本情報</button></nav>

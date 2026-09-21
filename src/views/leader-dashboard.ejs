@@ -1,10 +1,12 @@
 <%- include('partials/head') %>
 <%- include('partials/header') %>
 <main class="page-shell">
+  <script>document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.question-home-link strong').forEach(item=>{if(item.textContent.trim()==='町内会費管理')item.textContent='町内会会費管理'}));</script>
   <% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
   <a class="back-link" href="/dashboard">← ホームへ戻る</a>
   <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><div><p class="eyebrow"><%= fiscalYear %>年度 班長</p><h1><%= association.name %> 班長メニュー</h1><p><%= districtGroups.map((item) => item.name).join('・') %>の参加申請と班員情報を確認できます。</p></div></section>
   <section class="admin-section question-home-section communication-theme communication-home-section"><div class="question-home-list"><a class="question-home-link" href="/associations/<%= association._id %>/district-messages"><span><strong>班内の連絡</strong><small>班の住人全員または個別の班員に連絡する</small></span><span class="list-arrow" aria-hidden="true">›</span></a></div></section>
+  <section class="admin-section question-home-section communication-theme communication-home-section"><div class="question-home-list"><a class="question-home-link" href="/associations/<%= association._id %>/leader/fees"><span><strong>町内会費管理</strong><small>班の全世帯を登録し、年度ごとの納入状況を確認する</small></span><span class="list-arrow" aria-hidden="true">›</span></a></div></section>
   <% const withdrawals = typeof withdrawalApplications !== 'undefined' ? withdrawalApplications : []; %>
   <div class="management-tabs leader-tabs" role="tablist"><button type="button" role="tab" data-leader-tab="applications">参加申請<% if (applications.length) { %><span class="tab-count"><%= applications.length %></span><% } %></button><button type="button" role="tab" data-leader-tab="withdrawals">退会申請<% if (withdrawals.length) { %><span class="tab-count"><%= withdrawals.length %></span><% } %></button><button type="button" role="tab" data-leader-tab="members">班のメンバー</button></div>
   <section class="content-card management-card" data-leader-panel="applications"><h2>参加申請</h2><% if (!applications.length) { %><p class="help-text">未承認の申請はありません。</p><% } %><%- include('partials/join-application-list', { decisionPath: 'leader' }) %></section>

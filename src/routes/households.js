@@ -13,6 +13,7 @@ import crypto from 'node:crypto';
 import { loadLeaderHouseholdDeletion, deleteLeaderHousehold } from '../services/leaderHouseholdDeletionService.js';
 import { loadJoinFormValues } from '../services/joinFormValuesService.js';
 import { removeLinkedHouseholdMember } from '../services/householdMemberRemovalService.js';
+import { AssociationFeePayment } from '../models/associationFeePayment.js';
 
 export const householdsRouter = express.Router();
 householdsRouter.use(requireLogin);
@@ -206,6 +207,97 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
 
 const loadLeaderDistrictIds = async (associationId, userId) => AnnualLeaderAssignment.find({ association: associationId, representative: userId, fiscalYear: currentFiscalYear(), cancelledAt: null }).distinct('districtGroup');
 
+householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
+  try {
+    const fiscalYear = Number(req.query.year || currentFiscalYear());
+    if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200) throw fail('年度を確認してください。');
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
+    const [association, districtGroups, households, payments, memberships] = await Promise.all([
+      NeighborhoodAssociation.findById(req.params.associationId).lean(),
+      DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
+      Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').populate('districtGroup', 'name').sort({ districtLabel: 1, displayName: 1 }).lean(),
+      AssociationFeePayment.find({ association: req.params.associationId, fiscalYear }).lean(),
+      AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active' }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
+    ]);
+    const paymentByHousehold = new Map(payments.map((item) => [String(item.household), item]));
+    const [districtHouseholds, representativeMembers] = await Promise.all([
+      Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, representative: { $exists: true } }).select('representative').lean(),
+      HouseholdMember.find({ association: req.params.associationId, household: { $in: memberships.map((item) => item.household?._id).filter(Boolean) }, isRepresentative: true, user: { $exists: true } }).select('household user').lean()
+    ]);
+    const districtHeadIds = new Set(districtHouseholds.map((item) => String(item.representative)));
+    representativeMembers.forEach((item) => districtHeadIds.add(String(item.user)));
+    const leaderMembers = memberships.filter((item) => item.user && districtHeadIds.has(String(item.user._id)));
+    return res.render('leader-fees', { title: `${fiscalYear}年度 町内会会費管理`, association, fiscalYear, districtGroups, households: households.map((household) => ({ ...household, representative: household.representative || household.feeRepresentative, payment: paymentByHousehold.get(String(household._id)) })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers });
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/fees/households', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    const districtGroup = String(districtIds[0]);
+    const districtLabel = String(req.body.districtLabel || '').trim();
+    const displayName = String(req.body.displayName || '').trim();
+    if (!districtLabel || !displayName) throw fail('班区分と世帯名を入力してください。');
+    await Household.create({ association: req.params.associationId, displayName, districtGroup, districtLabel, phone: String(req.body.phone || '').trim(), email: String(req.body.email || '').trim() });
+    req.session.notice = '班の世帯台帳に追加しました。';
+    const fiscalYear = Number(req.body.fiscalYear || currentFiscalYear());
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${fiscalYear}`);
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/fees/:householdId/toggle', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const fiscalYear = Number(req.body.fiscalYear || currentFiscalYear());
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true });
+    if (!household) throw fail('担当班の世帯を確認できません。', 403);
+    const paid = req.body.paid === 'on';
+    await AssociationFeePayment.findOneAndUpdate({ association: req.params.associationId, household: household._id, fiscalYear }, { $set: { paid, paidAt: paid ? new Date() : null, checkedBy: req.user._id } }, { upsert: true, setDefaultsOnInsert: true });
+    req.session.notice = paid ? '会費を納入済みにしました。' : '未納に戻しました。';
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${fiscalYear}`);
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/fees/:householdId/update', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true });
+    if (!household) throw fail('担当班の世帯を確認できません。', 403);
+    const districtLabel = String(req.body.districtLabel || '').trim(), displayName = String(req.body.displayName || '').trim();
+    if (!districtLabel || !displayName) throw fail('班区分と世帯名を入力してください。');
+    household.districtLabel = districtLabel; household.displayName = displayName;
+    household.phone = String(req.body.phone || '').trim(); household.email = String(req.body.email || '').trim();
+    await household.save();
+    req.session.notice = '世帯情報を更新しました。';
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/fees/:householdId/delete', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true });
+    if (!household) throw fail('担当班の世帯を確認できません。', 403);
+    household.active = false; household.deletedAt = new Date(); household.deletedBy = req.user._id; await household.save();
+    req.session.notice = '世帯を一覧から削除しました。';
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, districtGroup: { $in: districtIds }, status: 'active' });
+    const household = await Household.findOne({ _id: req.body.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, feeRepresentative: { $exists: false } });
+    if (!membership || !household) throw fail('会員または世帯を確認できません。', 403);
+    membership.household = household._id; await membership.save();
+    household.feeRepresentative = membership.user; await household.save();
+    req.session.notice = '会員と世帯を紐付けました。';
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+  } catch (error) { return next(error); }
+});
+
 householdsRouter.get('/:associationId/leader/households/:householdId/delete', async (req, res, next) => {
   try {
     const details = await loadLeaderHouseholdDeletion({ associationId: req.params.associationId, householdId: req.params.householdId, actorId: req.user._id });
@@ -237,7 +329,7 @@ householdsRouter.get('/:associationId/leader', async (req, res, next) => {
       JoinApplication.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending' }).populate('applicant', 'displayname username email').populate('invitedBy', 'displayname username email').populate('districtGroup', 'name').populate('household').sort({ createdAt: 1 }).lean(),
       AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active', household: { $exists: true } }).select('household').lean()
     ]);
-    const households = await Household.find({ _id: { $in: memberships.map((item) => item.household) }, association: req.params.associationId, active: true }).populate('representative', 'displayname username email').populate('districtGroup', 'name').sort('displayName').lean();
+    const households = (await Household.find({ _id: { $in: memberships.map((item) => item.household) }, association: req.params.associationId, active: true }).populate('representative', 'displayname username email').populate('districtGroup', 'name').sort('displayName').lean()).map((household) => ({ ...household, address: household.address || {} }));
     const members = await HouseholdMember.find({ household: { $in: households.map((item) => item._id) }, endsAt: null }).sort({ birthDate: 1 }).lean();
     const withdrawalApplications = await WithdrawalApplication.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending' }).populate('requestedBy', 'displayname username email').populate('household', 'displayName').populate('districtGroup', 'name').populate('successor', 'displayname username').sort({ createdAt: 1 }).lean();
     const membersByHousehold = Object.groupBy ? Object.groupBy(members, (item) => String(item.household)) : members.reduce((result, item) => ((result[String(item.household)] ||= []).push(item), result), {});

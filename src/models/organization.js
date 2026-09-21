@@ -22,18 +22,22 @@ const householdSchema = new mongoose.Schema({
   association: tenantField,
   displayName: { type: String, required: true, trim: true },
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup', required: true, index: true },
-  representative: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  // 未加入世帯も班長が台帳へ登録できるよう、会員登録前は代表者を持たない。
+  representative: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   address: {
-    postalCode: { type: String, required: true },
-    street: { type: String, required: true },
+    postalCode: String,
+    street: String,
     building: String
   },
   phone: String,
+  email: { type: String, trim: true, lowercase: true },
+  districtLabel: { type: String, trim: true },
+  feeRepresentative: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   active: { type: Boolean, default: true },
   deletedAt: Date,
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true, collection: 'households' });
-householdSchema.index({ association: 1, representative: 1 }, { unique: true });
+householdSchema.index({ association: 1, representative: 1 }, { unique: true, partialFilterExpression: { representative: { $type: 'objectId' } } });
 
 const householdMemberSchema = new mongoose.Schema({
   association: tenantField,

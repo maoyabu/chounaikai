@@ -33,7 +33,8 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   symbolImage: { url: String, publicId: String },
   financePublic: { type: Boolean, default: false },
   financeFiscalStartMonth: { type: Number, default: 4, min: 1, max: 12 },
-  financePaymentTypes: { type: [String], default: ['現金', '銀行引き落とし', 'クレジットカード'] }
+  financePaymentTypes: { type: [String], default: ['現金', '銀行引き落とし', 'クレジットカード'] },
+  annualAssociationFee: { type: Number, default: 0, min: 0 }
   ,financePaymentMethods: { type: [{ name: String, order: Number, active: Boolean }], default: [] }
 }, { timestamps: true, collection: 'neighborhood_associations' });
 
