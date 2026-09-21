@@ -7,6 +7,7 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { DistrictGroup } from '../models/organization.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { publishAnnouncement, confirmAnnouncement, loadRecipientAnnouncement, remindAnnouncement, requireDistrictMember, isCurrentDistrictLeader, summarizeAnnouncementResponses } from '../services/officerAnnouncementService.js';
+import { repairMojibakeFilename } from '../services/announcementAttachmentService.js';
 
 export const districtMessagesRouter = express.Router();
 districtMessagesRouter.use(requireLogin);
@@ -29,6 +30,17 @@ const sentAnnouncement = async (associationId, announcementId, userId, districtG
   if (!announcement) throw fail('連絡を確認できません。');
   return announcement;
 };
+const residentAnnouncementForDistrict = async (associationId, announcementId, districtGroup, userId) => {
+  if (!mongoose.isValidObjectId(announcementId)) throw fail('連絡を確認できません。');
+  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId, $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }).lean();
+  if (!announcement) throw fail('連絡を確認できません。');
+  if (announcement.audience === 'leaders') throw fail('この連絡は班長向けの連絡メニューで確認してください。', 403);
+  const membershipIds = (await AssociationMembership.find({ association: associationId, districtGroup, status: 'active' }).select('user').lean()).map(item => item.user);
+  const receipt = await OfficerAnnouncementReceipt.findOne({ announcement: announcement._id, recipient: userId }).lean();
+  // 全住人宛ては、古いデータや受信票の欠落があっても班長が確認できるようにする。
+  if (!receipt && announcement.audience !== 'all') throw fail('この連絡を確認できません。', 403);
+  return { announcement, membershipIds };
+};
 
 districtMessagesRouter.get('/:associationId/district-messages', async (req, res, next) => {
   try {
@@ -42,6 +54,41 @@ districtMessagesRouter.get('/:associationId/district-messages', async (req, res,
       unreadCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id) && !receipt.readAt).length }));
     const unreadCount = myReceipts.filter(item => item.announcement?.channel === 'district' && String(item.announcement.districtGroup) === String(districtGroup._id)).length;
     return res.render('district-messages', { title: `${districtGroup.name} 班内の連絡`, association, districtGroup, isLeader, announcements: rows, unreadCount });
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.get('/:associationId/district-messages/officer-announcements', async (req, res, next) => {
+  try {
+    const { association, districtGroup, isLeader } = await context(req.params.associationId, req.user._id);
+    if (!isLeader) throw fail('班長のみ確認できます。', 403);
+    const memberIds = (await AssociationMembership.find({ association: association._id, districtGroup: districtGroup._id, status: 'active' }).select('user').lean()).map(item => item.user);
+    const receipts = await OfficerAnnouncementReceipt.find({ association: association._id, recipient: { $in: memberIds } }).select('announcement readAt').lean();
+    const announcementIds = [...new Set(receipts.map(item => String(item.announcement)))];
+    const announcements = await OfficerAnnouncement.find({ association: association._id, audience: { $ne: 'leaders' }, $and: [{ $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }], $or: [{ audience: 'all' }, { _id: { $in: announcementIds } }] }).sort({ createdAt: -1 }).limit(50).lean();
+    const rows = announcements.map(item => ({ ...item, recipientCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id)).length, unreadCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id) && !receipt.readAt).length }));
+    return res.render('district-officer-announcements', { title: `${districtGroup.name} 役員から住人への連絡`, association, districtGroup, announcements: rows });
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.get('/:associationId/district-messages/officer-announcements/:announcementId', async (req, res, next) => {
+  try {
+    const { association, districtGroup, isLeader } = await context(req.params.associationId, req.user._id);
+    if (!isLeader) throw fail('班長のみ確認できます。', 403);
+    const { announcement, membershipIds } = await residentAnnouncementForDistrict(association._id, req.params.announcementId, districtGroup._id, req.user._id);
+    announcement.attachments = (announcement.attachments || []).map(file => ({ ...file, originalName: repairMojibakeFilename(file.originalName) }));
+    const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id, recipient: { $in: membershipIds } }).populate('recipient', 'displayname username').sort({ readAt: 1 }).lean();
+    return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts, responseSummary: summarizeAnnouncementResponses(announcement, receipts), leaderAnnouncementMode: true, leaderMessageBase: `/associations/${association._id}/district-messages/officer-announcements` });
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.post('/:associationId/district-messages/officer-announcements/:announcementId/remind', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const { association, districtGroup, isLeader } = await context(req.params.associationId, req.user._id);
+    if (!isLeader) throw fail('班長のみ再通知できます。', 403);
+    await residentAnnouncementForDistrict(association._id, req.params.announcementId, districtGroup._id, req.user._id);
+    const count = await remindAnnouncement({ associationId: association._id, announcementId: req.params.announcementId, userId: req.user._id, recipientId: req.body.recipientId || null, channel: 'district_leader' });
+    req.session.notice = `${count}人に再通知しました。`;
+    return res.redirect(`${base(association._id)}/officer-announcements/${req.params.announcementId}`);
   } catch (error) { return next(error); }
 });
 

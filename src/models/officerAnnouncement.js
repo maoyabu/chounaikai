@@ -14,6 +14,15 @@ const announcementSchema = new mongoose.Schema({
   urgency: { type: Number, min: 1, max: 5, required: true },
   title: { type: String, required: true, trim: true, maxlength: 120 },
   body: { type: String, required: true, maxlength: 5000 },
+  attachments: [{
+    url: { type: String, required: true },
+    publicId: { type: String, required: true },
+    originalName: { type: String, required: true, maxlength: 255 },
+    mimeType: { type: String, required: true, maxlength: 120 },
+    bytes: { type: Number, required: true, min: 1 },
+    resourceType: { type: String, enum: ['image', 'raw'], default: 'raw' },
+    expiresAt: { type: Date, required: true, index: true }
+  }],
   responseMode: { type: String, enum: ['none', 'single', 'multiple'], required: true, default: 'none' },
   options: { type: [String], default: [] }
 }, { timestamps: true, collection: 'officer_announcements' });

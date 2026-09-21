@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { loadConfig } from './config/env.js';
 import { connectDatabase } from './db/connect.js';
 import { createApp } from './app.js';
+import { deleteExpiredAnnouncementAttachments } from './services/announcementAttachmentService.js';
 
 const config = loadConfig();
 const app = createApp(config);
@@ -11,6 +12,14 @@ mongoose.connection.on('disconnected', () => console.error('MongoDB disconnected
 try {
   await connectDatabase(config.mongoUri, config.nodeEnv);
   console.log('MongoDB connected.');
+  const cleanupExpiredAttachments = async () => {
+    try {
+      const count = await deleteExpiredAnnouncementAttachments();
+      if (count) console.log(`Deleted ${count} expired announcement attachment(s).`);
+    } catch (error) { console.error('Expired announcement attachment cleanup failed:', error.message); }
+  };
+  await cleanupExpiredAttachments();
+  setInterval(cleanupExpiredAttachments, 60 * 60 * 1000).unref();
 } catch (error) {
   console.error('MongoDB connection failed:', error.message);
   if (config.nodeEnv === 'production') {

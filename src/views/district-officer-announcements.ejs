@@ -1,0 +1,8 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell communication-theme question-box-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/district-messages">← 班内の連絡へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %> ・ <%= districtGroup.name %></p><h1>役員から住人への連絡</h1></div></section>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2>受信した連絡</h2></div>
+    <% if (!announcements.length) { %><div class="admin-empty"><p>役員からの連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach(item => { %><a class="question-home-link" href="/associations/<%= association._id %>/district-messages/officer-announcements/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %> ・ <%= item.audience === 'leaders' ? '班長宛て' : '全住人宛て' %></small></span><span class="status-badge <%= item.unreadCount ? 'status-pending' : '' %>">未確認 <%= item.unreadCount %> / <%= item.recipientCount %>人</span><span class="list-arrow">›</span></a><% }) %></div><% } %>
+  </section>
+</main><%- include('partials/foot') %>

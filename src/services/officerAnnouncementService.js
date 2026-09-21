@@ -8,6 +8,7 @@ import { Notification } from '../models/notification.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { loadQuestionBoxAccess } from './questionBoxService.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
+import { uploadAnnouncementAttachment, deleteAnnouncementAttachment } from './announcementAttachmentService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const fiscalYear = (date = new Date()) => date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
@@ -28,7 +29,7 @@ export const requireDistrictMember = async (associationId, userId) => {
 };
 export const isCurrentDistrictLeader = async (associationId, districtGroup, userId) => Boolean(await AnnualLeaderAssignment.exists({ association: associationId, districtGroup, representative: userId, fiscalYear: fiscalYear(), cancelledAt: null }));
 
-export const publishAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], urgency, title, body, responseMode, options = [], associationGroupId }) => {
+export const publishAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
   const districtMembership = channel === 'district' ? await requireDistrictMember(associationId, userId) : null;
   const groupMembership = channel === 'association_group' ? await AssociationGroupMembership.findOne({ association: associationId, group: associationGroupId, user: userId, status: 'active' }) : null;
   if (!districtMembership && !groupMembership) await requireAnnouncementOfficer(associationId, userId);
@@ -36,6 +37,8 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
   const level = Number(urgency);
   if (!Number.isInteger(level) || level < 1 || level > 5) throw fail('緊急度は★1〜★5から選択してください。');
   if (!['none', 'single', 'multiple'].includes(responseMode)) throw fail('回答方法を選択してください。');
+  const retentionDays = Number(attachmentRetentionDays);
+  if (files?.length && (![7, 30, 90, 180, 365].includes(retentionDays))) throw fail('添付資料の保存期限を選択してください。');
   const choices = (Array.isArray(options) ? options : [options]).map(value => String(value ?? '').trim()).filter(Boolean);
   if (responseMode === 'none' && choices.length) throw fail('回答なしの場合、選択肢は設定できません。');
   if (responseMode !== 'none' && (choices.length < 2 || choices.length > 5 || choices.some(value => value.length > 100) || new Set(choices).size !== choices.length)) throw fail('選択肢は重複しない2〜5件、各100文字以内で入力してください。');
@@ -97,20 +100,28 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
   if (audience === 'officer_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の役員から送信先を選択してください。');
   if (audience === 'district_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の班員から送信先を選択してください。');
   if (!recipients.length) throw fail('送信できる対象者がいません。');
-  const announcement = await OfficerAnnouncement.create({ association: associationId, sender: userId, channel, audience, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
-    title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices });
+  const uploaded = [];
   try {
-    await OfficerAnnouncementReceipt.insertMany(recipients.map(recipient => ({ announcement: announcement._id, association: associationId, recipient })));
+    const expiresAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
+    for (const file of (files || [])) uploaded.push({ ...(await uploadAnnouncementAttachment(file, associationId)), expiresAt });
+    const announcement = await OfficerAnnouncement.create({ association: associationId, sender: userId, channel, audience, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
+      title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices, attachments: uploaded });
+    try {
+      await OfficerAnnouncementReceipt.insertMany(recipients.map(recipient => ({ announcement: announcement._id, association: associationId, recipient })));
+    } catch (error) {
+      await OfficerAnnouncementReceipt.deleteMany({ announcement: announcement._id });
+      await OfficerAnnouncement.deleteOne({ _id: announcement._id });
+      throw error;
+    }
+    try {
+      await Notification.insertMany(recipients.map(recipient => ({ association: associationId, recipient, type: channel === 'district' ? 'district_message' : channel === 'officer' ? 'officer_network' : 'officer_announcement',
+        title: `${channel === 'district' ? '班内の連絡' : channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}：${announcement.title}`, body: `緊急度 ${'★'.repeat(level)}${level === 5 ? ' 緊急' : ''} の連絡が届きました。`, relatedType: 'OfficerAnnouncement', relatedId: announcement._id })));
+    } catch (error) { console.error('Officer announcement notification failed', error); }
+    return { announcement, recipientCount: recipients.length };
   } catch (error) {
-    await OfficerAnnouncementReceipt.deleteMany({ announcement: announcement._id });
-    await OfficerAnnouncement.deleteOne({ _id: announcement._id });
+    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId)));
     throw error;
   }
-  try {
-    await Notification.insertMany(recipients.map(recipient => ({ association: associationId, recipient, type: channel === 'district' ? 'district_message' : channel === 'officer' ? 'officer_network' : 'officer_announcement',
-      title: `${channel === 'district' ? '班内の連絡' : channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}：${announcement.title}`, body: `緊急度 ${'★'.repeat(level)}${level === 5 ? ' 緊急' : ''} の連絡が届きました。`, relatedType: 'OfficerAnnouncement', relatedId: announcement._id })));
-  } catch (error) { console.error('Officer announcement notification failed', error); }
-  return { announcement, recipientCount: recipients.length };
 };
 
 export const loadRecipientAnnouncement = async ({ associationId, announcementId, userId, channel }) => {
@@ -141,16 +152,29 @@ export const confirmAnnouncement = async ({ associationId, announcementId, userI
 
 export const remindAnnouncement = async ({ associationId, announcementId, userId, recipientId, channel }) => {
   if (channel === 'district') await requireDistrictMember(associationId, userId);
+  else if (channel === 'district_leader') {
+    const membership = await requireDistrictMember(associationId, userId);
+    if (!await isCurrentDistrictLeader(associationId, membership.districtGroup, userId)) throw fail('班長のみ再通知できます。', 403);
+  }
   else await requireAnnouncementOfficer(associationId, userId);
   if (!mongoose.isValidObjectId(announcementId) || (recipientId && !mongoose.isValidObjectId(recipientId))) throw fail('連絡先を確認できません。', 404);
   const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId }).lean();
   if (!announcement) throw fail('連絡を確認できません。', 404);
-  if (channel && (announcement.channel || 'resident') !== channel) throw fail('連絡を確認できません。', 404);
+  const expectedChannel = channel === 'district_leader' ? 'resident' : channel;
+  if (expectedChannel && (announcement.channel || 'resident') !== expectedChannel) throw fail('連絡を確認できません。', 404);
   if (channel === 'district') {
     const membership = await requireDistrictMember(associationId, userId);
     if (String(announcement.sender) !== String(userId) || String(announcement.districtGroup) !== String(membership.districtGroup)) throw fail('送信者のみ再通知できます。', 403);
   }
-  const query = { announcement: announcementId, association: associationId, readAt: null, ...(recipientId ? { recipient: recipientId } : {}) };
+  let districtLeaderMemberIds;
+  if (channel === 'district_leader') {
+    const membership = await requireDistrictMember(associationId, userId);
+    districtLeaderMemberIds = await AssociationMembership.find({ association: associationId, districtGroup: membership.districtGroup, status: 'active' }).distinct('user');
+    if (!districtLeaderMemberIds.some(id => String(id) === String(userId))) throw fail('班の送信先を確認できません。', 403);
+    if (recipientId && !districtLeaderMemberIds.some(id => String(id) === String(recipientId))) throw fail('班の送信先を確認できません。', 403);
+  }
+  const query = { announcement: announcementId, association: associationId, readAt: null,
+    ...(districtLeaderMemberIds ? { recipient: recipientId || { $in: districtLeaderMemberIds } } : recipientId ? { recipient: recipientId } : {}) };
   const unread = await OfficerAnnouncementReceipt.find(query).select('_id recipient').lean();
   if (!unread.length) throw fail('未確認の送信先がありません。', 409);
   const recipients = [];
