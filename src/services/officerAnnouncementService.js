@@ -22,6 +22,17 @@ export const requireAnnouncementOfficer = async (associationId, userId) => {
   if (!access.canAnswer) throw fail('役員のみ連絡を管理できます。', 403);
   return access.association;
 };
+
+export const updateAnnouncementVisibility = async ({ associationId, announcementId, userId, muted, title, body }) => {
+  if (!mongoose.isValidObjectId(announcementId)) throw fail('連絡を確認できません。', 404);
+  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId }).select('sender mutedAt').lean();
+  if (!announcement) throw fail('連絡を確認できません。', 404);
+  if (String(announcement.sender) !== String(userId)) throw fail('投稿者本人だけが変更できます。', 403);
+  const set = muted ? { mutedAt: new Date(), mutedBy: userId } : { editedAt: new Date() };
+  if (title !== undefined) set.title = requiredText(title, 120, 'タイトル');
+  if (body !== undefined) set.body = requiredText(body, 5000, '内容');
+  await OfficerAnnouncement.updateOne({ _id: announcementId, association: associationId, sender: userId }, { $set: set, ...(muted ? {} : { $unset: { mutedAt: 1, mutedBy: 1 } }) });
+};
 export const requireDistrictMember = async (associationId, userId) => {
   const membership = await AssociationMembership.findOne({ association: associationId, user: userId, status: 'active' }).select('districtGroup').lean();
   if (!membership?.districtGroup) throw fail('班への参加を確認できません。', 403);
@@ -129,7 +140,7 @@ export const loadRecipientAnnouncement = async ({ associationId, announcementId,
   await loadQuestionBoxAccess({ associationId, userId });
   const receipt = await OfficerAnnouncementReceipt.findOne({ announcement: announcementId, association: associationId, recipient: userId }).lean();
   if (!receipt) throw fail('この連絡の送信対象ではありません。', 403);
-  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId }).lean();
+  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId, mutedAt: { $exists: false } }).lean();
   if (!announcement) throw fail('連絡を確認できません。', 404);
   if (channel && (announcement.channel || 'resident') !== channel) throw fail('連絡を確認できません。', 404);
   return { announcement, receipt };

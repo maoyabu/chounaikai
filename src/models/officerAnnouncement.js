@@ -24,7 +24,10 @@ const announcementSchema = new mongoose.Schema({
     expiresAt: { type: Date, required: true, index: true }
   }],
   responseMode: { type: String, enum: ['none', 'single', 'multiple'], required: true, default: 'none' },
-  options: { type: [String], default: [] }
+  options: { type: [String], default: [] },
+  mutedAt: Date,
+  mutedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  editedAt: Date
 }, { timestamps: true, collection: 'officer_announcements' });
 announcementSchema.index({ association: 1, createdAt: -1 });
 

@@ -928,6 +928,51 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 700px) { .finance-summary-grid, .finance-dashboard-links { grid-template-columns: 1fr; } .finance-dashboard-links h2 { grid-column: auto; } .finance-filter { align-items: stretch; flex-direction: column; } .finance-filter input, .finance-filter select, .finance-filter button { width: 100%; } }
 @media (max-width: 800px) { .officer-menu-layout { grid-template-columns: 1fr; } }
 .leader-fees-heading { align-items: center; }
+
+/* 会計エリアはレッド系で統一 */
+.finance-theme,
+.finance-menu-link,
+.finance-manage-link,
+.finance-shell {
+  --finance-red: #c43d4b;
+  --finance-red-dark: #982d3a;
+  --finance-red-pale: #fff0f1;
+  --finance-red-line: #efc8cc;
+}
+.finance-report-home .section-heading h2,
+.finance-menu-link strong,
+.finance-manage-link strong,
+.finance-shell h1 { color: var(--finance-red-dark); }
+.finance-report-home .question-home-link,
+.finance-menu-link,
+.finance-manage-link { border-left: 4px solid var(--finance-red); }
+.finance-report-home .question-home-link:hover,
+.finance-menu-link:hover,
+.finance-manage-link:hover,
+.finance-menu-link:focus-visible,
+.finance-manage-link:focus-visible { background: var(--finance-red-pale); }
+.finance-report-home .list-arrow,
+.finance-menu-link .list-arrow,
+.finance-manage-link > span:last-child { color: var(--finance-red); }
+.finance-shell .button-primary,
+.finance-shell .finance-budget-tabs button.is-active { background: var(--finance-red); }
+.finance-shell .button-primary:hover { background: var(--finance-red-dark); }
+.finance-shell .back-link,
+.finance-shell .finance-income { color: var(--finance-red); }
+.finance-shell .finance-budget-header,
+.finance-shell .finance-payment-header,
+.finance-shell .finance-public-entry-head { background: var(--finance-red-dark); }
+.finance-shell .finance-budget-row,
+.finance-shell .finance-payment-row { background: var(--finance-red-pale); border-bottom-color: var(--finance-red-line); }
+.finance-shell .finance-toggle input:checked + span { background: var(--finance-red); }
+.finance-shell .finance-toggle input:focus-visible + span { outline-color: rgba(196,61,75,.28); }
+.finance-shell .finance-annual-table thead th { background: var(--finance-red-dark); }
+.finance-shell .finance-annual-row:nth-child(even),
+.finance-shell .finance-public-entry-row:nth-child(even) { background: var(--finance-red-pale); }
+.finance-shell .finance-annual-income a,
+.finance-shell .finance-annual-expense a { color: var(--finance-red); }
+.finance-report-home .section-heading { background: var(--finance-red-pale); }
+.finance-report-home .question-home-link { border-left: 0; }
 .leader-fees-heading h1 { display: inline; margin-right: .8rem; }
 .leader-fees-heading .eyebrow { display: inline; }
 .leader-fees-heading p:not(.eyebrow) { margin-top: .75rem; }

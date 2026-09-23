@@ -4,7 +4,10 @@ const messageSchema = new mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   kind: { type: String, enum: ['resident', 'officer'], required: true },
   body: { type: String, required: true, maxlength: 3000 },
-  createdAt: { type: Date, required: true, default: Date.now }
+  createdAt: { type: Date, required: true, default: Date.now },
+  editedAt: Date,
+  mutedAt: Date,
+  mutedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { _id: true });
 
 const schema = new mongoose.Schema({

@@ -6,7 +6,7 @@ import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { DistrictGroup } from '../models/organization.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
-import { publishAnnouncement, confirmAnnouncement, loadRecipientAnnouncement, remindAnnouncement, requireDistrictMember, isCurrentDistrictLeader, summarizeAnnouncementResponses } from '../services/officerAnnouncementService.js';
+import { publishAnnouncement, confirmAnnouncement, loadRecipientAnnouncement, remindAnnouncement, requireDistrictMember, isCurrentDistrictLeader, summarizeAnnouncementResponses, updateAnnouncementVisibility } from '../services/officerAnnouncementService.js';
 import { repairMojibakeFilename } from '../services/announcementAttachmentService.js';
 
 export const districtMessagesRouter = express.Router();
@@ -32,7 +32,7 @@ const sentAnnouncement = async (associationId, announcementId, userId, districtG
 };
 const residentAnnouncementForDistrict = async (associationId, announcementId, districtGroup, userId) => {
   if (!mongoose.isValidObjectId(announcementId)) throw fail('連絡を確認できません。');
-  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId, $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }).lean();
+  const announcement = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId, mutedAt: { $exists: false }, $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }).lean();
   if (!announcement) throw fail('連絡を確認できません。');
   if (announcement.audience === 'leaders') throw fail('この連絡は班長向けの連絡メニューで確認してください。', 403);
   const membershipIds = (await AssociationMembership.find({ association: associationId, districtGroup, status: 'active' }).select('user').lean()).map(item => item.user);
@@ -45,7 +45,7 @@ const residentAnnouncementForDistrict = async (associationId, announcementId, di
 districtMessagesRouter.get('/:associationId/district-messages', async (req, res, next) => {
   try {
     const { association, districtGroup, isLeader } = await context(req.params.associationId, req.user._id);
-    const announcements = await OfficerAnnouncement.find({ association: association._id, channel: 'district', districtGroup: districtGroup._id, sender: req.user._id }).sort({ createdAt: -1 }).limit(50).lean();
+    const announcements = await OfficerAnnouncement.find({ association: association._id, channel: 'district', districtGroup: districtGroup._id, sender: req.user._id }).populate('sender', 'displayname username').sort({ createdAt: -1 }).limit(50).lean();
     const [receipts, myReceipts] = await Promise.all([
       OfficerAnnouncementReceipt.find({ announcement: { $in: announcements.map(item => item._id) } }).select('announcement readAt').lean(),
       OfficerAnnouncementReceipt.find({ association: association._id, recipient: req.user._id, readAt: null }).populate('announcement', 'channel districtGroup').lean()
@@ -53,7 +53,7 @@ districtMessagesRouter.get('/:associationId/district-messages', async (req, res,
     const rows = announcements.map(item => ({ ...item, recipientCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id)).length,
       unreadCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id) && !receipt.readAt).length }));
     const unreadCount = myReceipts.filter(item => item.announcement?.channel === 'district' && String(item.announcement.districtGroup) === String(districtGroup._id)).length;
-    return res.render('district-messages', { title: `${districtGroup.name} 班内の連絡`, association, districtGroup, isLeader, announcements: rows, unreadCount });
+    return res.render('district-messages', { title: `${districtGroup.name} 班内の連絡`, association, districtGroup, isLeader, announcements: rows.filter(item => !item.mutedAt), mutedAnnouncements: rows.filter(item => item.mutedAt), unreadCount });
   } catch (error) { return next(error); }
 });
 
@@ -64,7 +64,7 @@ districtMessagesRouter.get('/:associationId/district-messages/officer-announceme
     const memberIds = (await AssociationMembership.find({ association: association._id, districtGroup: districtGroup._id, status: 'active' }).select('user').lean()).map(item => item.user);
     const receipts = await OfficerAnnouncementReceipt.find({ association: association._id, recipient: { $in: memberIds } }).select('announcement readAt').lean();
     const announcementIds = [...new Set(receipts.map(item => String(item.announcement)))];
-    const announcements = await OfficerAnnouncement.find({ association: association._id, audience: { $ne: 'leaders' }, $and: [{ $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }], $or: [{ audience: 'all' }, { _id: { $in: announcementIds } }] }).sort({ createdAt: -1 }).limit(50).lean();
+    const announcements = await OfficerAnnouncement.find({ association: association._id, mutedAt: { $exists: false }, audience: { $ne: 'leaders' }, $and: [{ $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }], $or: [{ audience: 'all' }, { _id: { $in: announcementIds } }] }).sort({ createdAt: -1 }).limit(50).lean();
     const rows = announcements.map(item => ({ ...item, recipientCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id)).length, unreadCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id) && !receipt.readAt).length }));
     return res.render('district-officer-announcements', { title: `${districtGroup.name} 役員から住人への連絡`, association, districtGroup, announcements: rows });
   } catch (error) { return next(error); }
@@ -115,7 +115,7 @@ districtMessagesRouter.post('/:associationId/district-messages', verifyCsrfToken
 districtMessagesRouter.get('/:associationId/district-messages/inbox', async (req, res, next) => {
   try {
     const { association, districtGroup } = await context(req.params.associationId, req.user._id);
-    const receipts = await OfficerAnnouncementReceipt.find({ association: association._id, recipient: req.user._id }).populate('announcement').sort({ createdAt: -1 }).lean();
+    const receipts = await OfficerAnnouncementReceipt.find({ association: association._id, recipient: req.user._id }).populate({ path: 'announcement', match: { mutedAt: { $exists: false } } }).sort({ createdAt: -1 }).lean();
     return res.render('resident-announcements', { title: '届いた班内の連絡', association,
       receipts: receipts.filter(item => item.announcement?.channel === 'district' && String(item.announcement.districtGroup) === String(districtGroup._id)), districtMode: true });
   } catch (error) { return next(error); }
@@ -148,6 +148,33 @@ districtMessagesRouter.get('/:associationId/district-messages/:announcementId', 
     const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id }).populate('recipient', 'displayname username').sort({ readAt: 1 }).lean();
     return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts,
       responseSummary: summarizeAnnouncementResponses(announcement, receipts), districtMode: true });
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.post('/:associationId/district-messages/:announcementId/edit', verifyCsrfToken, async (req, res, next) => {
+  try {
+    await context(req.params.associationId, req.user._id);
+    await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, title: req.body.title, body: req.body.body });
+    req.session.notice = '連絡を編集しました。';
+    return res.redirect(`${base(req.params.associationId)}/${req.params.announcementId}`);
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.post('/:associationId/district-messages/:announcementId/mute', verifyCsrfToken, async (req, res, next) => {
+  try {
+    await context(req.params.associationId, req.user._id);
+    await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: true });
+    req.session.notice = '連絡をミュートしました。';
+    return res.redirect(base(req.params.associationId));
+  } catch (error) { return next(error); }
+});
+
+districtMessagesRouter.post('/:associationId/district-messages/:announcementId/unmute', verifyCsrfToken, async (req, res, next) => {
+  try {
+    await context(req.params.associationId, req.user._id);
+    await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: false });
+    req.session.notice = '連絡を表示に戻しました。';
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 

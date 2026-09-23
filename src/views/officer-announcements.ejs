@@ -9,5 +9,6 @@
       <a class="question-home-link" href="/associations/<%= association._id %>/announcements/officer/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %> ・ <%= item.audience === 'leaders' ? '班長' : '全住人' %> ・ 緊急度 <%= '★'.repeat(item.urgency) %><%= item.urgency === 5 ? ' 緊急' : '' %></small></span><span class="question-home-counts"><span class="status-badge <%= item.unreadCount ? 'status-pending' : '' %>">未確認 <%= item.unreadCount %> / <%= item.recipientCount %>人</span></span><span class="list-arrow" aria-hidden="true">›</span></a>
     <% }) %></div><% } %>
   </section>
+  <% if (mutedAnnouncements?.length) { %><section class="admin-section question-home-section muted-messages"><div class="section-heading"><h2>非表示のメッセージ</h2></div><div class="question-home-list"><% mutedAnnouncements.forEach((item) => { %><div class="question-home-link"><span><strong><%= item.title %></strong><small>ミュート済み：<%= new Date(item.mutedAt).toLocaleString('ja-JP') %></small></span><form action="/associations/<%= association._id %>/announcements/officer/<%= item._id %>/unmute" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small">表示に戻す</button></form></div><% }) %></div></section><% } %>
 </main>
 <%- include('partials/foot') %>
