@@ -6,6 +6,7 @@ import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { Finance } from '../models/finance.js';
 import { FinanceBudget } from '../models/financeBudget.js';
+import { Department } from '../models/organization.js';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
 import ExcelJS from 'exceljs';
@@ -193,9 +194,9 @@ associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', as
 
 associationFinanceRouter.get('/:associationId/finance/settings', async (req, res) => {
   const { association, groupId, year } = req.financeContext;
-  const budgets = await FinanceBudget.find({ group: groupId, year: String(req.query.year || year) }).sort({ cf: 1, display_order: 1 }).lean();
+  const [budgets, departments] = await Promise.all([FinanceBudget.find({ group: groupId, year: String(req.query.year || year) }).sort({ cf: 1, display_order: 1 }).lean(), Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean()]);
   const paymentMethods = association.financePaymentMethods?.length ? association.financePaymentMethods : (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1, active: true }));
-  return res.render('association-finance-settings', { title: `${association.name} 会計設定`, association, budgets, paymentMethods, year: Number(req.query.year || year) });
+  return res.render('association-finance-settings', { title: `${association.name} 会計設定`, association, budgets, departments, paymentMethods, year: Number(req.query.year || year) });
 });
 
 associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToken, async (req, res, next) => {
@@ -231,7 +232,7 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
     const rows = Array.isArray(req.body.itemName) ? req.body.itemName : [req.body.itemName];
     const submittedTypes = [...new Set((Array.isArray(req.body.itemCf) ? req.body.itemCf : [req.body.itemCf]).filter(Boolean))];
     await FinanceBudget.deleteMany({ group: groupId, year: String(req.body.year || year), cf: { $in: submittedTypes } });
-    await FinanceBudget.insertMany(rows.filter(Boolean).map((name, index) => ({ group: groupId, year: String(req.body.year || year), cf: Array.isArray(req.body.itemCf) ? req.body.itemCf[index] : req.body.itemCf, expense_item: (Array.isArray(req.body.itemCf) ? req.body.itemCf[index] : req.body.itemCf) === '支出' ? name : undefined, income_item: (Array.isArray(req.body.itemCf) ? req.body.itemCf[index] : req.body.itemCf) === '収入' ? name : undefined, budget: Number(Array.isArray(req.body.itemBudget) ? req.body.itemBudget[index] : req.body.itemBudget) || 0, display_order: Number(Array.isArray(req.body.itemOrder) ? req.body.itemOrder[index] : req.body.itemOrder) || index + 1 })));
+    await FinanceBudget.insertMany(rows.filter(Boolean).map((name, index) => { const cf = Array.isArray(req.body.itemCf) ? req.body.itemCf[index] : req.body.itemCf; const value = (key) => Array.isArray(req.body[key]) ? req.body[key][index] : req.body[key]; return { group: groupId, year: String(req.body.year || year), cf, expense_item: cf === '支出' ? name : undefined, income_item: cf === '収入' ? name : undefined, income_category: cf === '収入' ? String(value('itemCategory') || '').trim() : undefined, expense_department: cf === '支出' ? String(value('itemDepartment') || '').trim() : undefined, expense_department_name: cf === '支出' ? String(value('itemDepartmentName') || '').trim() : undefined, budget: Number(String(value('itemBudget') || '').replace(/,/g, '')) || 0, display_order: Number(value('itemOrder')) || index + 1 }; }));
     return res.redirect(`/associations/${association._id}/finance/settings`);
   } catch (error) { return next(error); }
 });

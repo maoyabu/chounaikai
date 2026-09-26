@@ -883,7 +883,7 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 700px) { .finance-entry-form > label:has(input[name="date"]), .finance-entry-form > label:has(select[name="payment_type"]), .finance-entry-form > label:has(input[name="receiptNo"]), .finance-entry-form .finance-amount-label { width: 100%; } .finance-entry-category-inline, .finance-entry-inline { grid-template-columns: 1fr; } }
 .finance-budget-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 12rem; gap: .6rem; align-items: center; }
 .finance-budget-table { overflow-x: auto; }
-.finance-budget-header, .finance-budget-row { display: grid; grid-template-columns: 2rem 5rem minmax(240px, 2fr) minmax(120px, 1fr) 5rem; gap: .6rem; align-items: center; }
+.finance-budget-header, .finance-budget-row { display: grid; grid-template-columns: 2rem 5rem minmax(150px, 1fr) minmax(200px, 1.5fr) minmax(120px, 1fr) 5rem; gap: .6rem; align-items: center; }
 .finance-budget-header span:nth-child(1) { grid-column: 2; }
 .finance-budget-header span:nth-child(2) { grid-column: 3; }
 .finance-budget-header span:nth-child(3) { grid-column: 4; }
@@ -929,7 +929,7 @@ h1, h2, h3, h4, h5, h6,
 .finance-payment-row { padding: .6rem .75rem; border-bottom: 1px solid #d6e2ec; background: #eef5fb; }
 .finance-payment-row input[type="text"], .finance-payment-row input[type="number"], .finance-payment-row input:not([type]) { min-width: 0; padding: .65rem .75rem; border: 1px solid #bdcac3; border-radius: .55rem; font: inherit; }
 @media (max-width: 700px) { .finance-payment-header { display: none; } .finance-payment-row { grid-template-columns: 2rem 2rem minmax(120px, 1fr) 4rem 4rem; padding: .5rem; } }
-@media (max-width: 700px) { .finance-budget-header { display: none; } .finance-budget-row { grid-template-columns: 2rem 5rem minmax(150px, 1fr) 8rem 4rem; padding: .5rem; } .finance-budget-copy { align-items: stretch; flex-direction: column; } .finance-budget-copy label { justify-content: space-between; } .finance-budget-copy select { flex: 1; } }
+@media (max-width: 700px) { .finance-budget-header { display: none; } .finance-budget-row { grid-template-columns: 2rem 5rem minmax(120px, 1fr) minmax(150px, 1fr) 8rem 4rem; padding: .5rem; } .finance-budget-copy { align-items: stretch; flex-direction: column; } .finance-budget-copy label { justify-content: space-between; } .finance-budget-copy select { flex: 1; } }
 @media (max-width: 700px) { .finance-summary-grid, .finance-dashboard-links { grid-template-columns: 1fr; } .finance-dashboard-links h2 { grid-column: auto; } .finance-filter { align-items: stretch; flex-direction: column; } .finance-filter input, .finance-filter select, .finance-filter button { width: 100%; } }
 @media (max-width: 800px) { .officer-menu-layout { grid-template-columns: 1fr; } }
 .leader-fees-heading { align-items: center; }
