@@ -1110,6 +1110,10 @@ h1, h2, h3, h4, h5, h6,
 .finance-budget-detail-trigger { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .finance-detail-view-dialog { width: min(600px, calc(100% - 2rem)); max-height: 85vh; overflow: auto; border: 0; border-radius: .8rem; padding: 1.25rem; }
 .finance-detail-view-dialog::backdrop { background: rgba(0,0,0,.45); }
+.finance-detail-view-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: .65rem; border-bottom: 1px solid #d8dfda; margin-bottom: .25rem; }
+.finance-detail-view-heading h2 { margin: 0; }
+.finance-detail-view-close { flex: 0 0 auto; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 50%; background: transparent; color: var(--ink); font-size: 1.8rem; line-height: 1; cursor: pointer; }
+.finance-detail-view-close:hover { background: #f0f2f0; }
 .finance-detail-view-item { padding: .85rem 0; border-bottom: 1px solid #d8dfda; }
 .finance-detail-view-row { padding: .8rem 0; }
 .finance-detail-view-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
