@@ -4,7 +4,7 @@ const financeSchema = new mongoose.Schema({
   date: { type: Date, required: true }, month: Number, day: Number,
   cf: { type: String, required: true }, income_item: String, expense_item: String,
   content: String, sub_tag: String, amount: { type: Number, required: true },
-  payment_type: { type: String, required: true }, receiptNo: String, memo: String,
+  payment_type: { type: String }, receiptNo: String, memo: String,
   corrected: { storeName: String, amount: String, date: String },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },
