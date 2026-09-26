@@ -209,6 +209,22 @@ associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToke
   } catch (error) { return next(error); }
 });
 
+associationFinanceRouter.post('/:associationId/finance/settings/budgets/copy', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const { association, groupId, year: currentYear } = req.financeContext;
+    const targetYear = String(req.body.targetYear || currentYear);
+    const sourceYear = String(req.body.sourceYear || '');
+    if (!/^\d{4}$/.test(sourceYear) || sourceYear === targetYear) return res.status(400).json({ message: 'コピー元とコピー先の年度を正しく選択してください。' });
+    const source = await FinanceBudget.find({ group: groupId, year: sourceYear }).sort({ cf: 1, display_order: 1 }).lean();
+    if (!source.length) return res.status(404).json({ message: 'コピー元年度に予算項目が登録されていません。' });
+    const hasTarget = await FinanceBudget.exists({ group: groupId, year: targetYear });
+    if (hasTarget && req.body.overwrite !== '1') return res.status(409).json({ message: `${targetYear}年度には既に予算項目が登録されています。上書きしてコピーしますか？` });
+    if (hasTarget) await FinanceBudget.deleteMany({ group: groupId, year: targetYear });
+    await FinanceBudget.insertMany(source.map(({ _id, ...item }) => ({ ...item, year: targetYear })));
+    return res.json({ redirect: `/associations/${association._id}/finance/settings?year=${targetYear}` });
+  } catch (error) { return next(error); }
+});
+
 associationFinanceRouter.post('/:associationId/finance/settings/budgets', verifyCsrfToken, async (req, res, next) => {
   try {
     const { association, groupId, year } = req.financeContext;
