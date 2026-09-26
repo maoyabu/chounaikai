@@ -176,7 +176,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/export', async (re
 
 associationFinanceRouter.get('/:associationId/finance/entries/new', async (req, res) => {
   const { association, groupId, year } = req.financeContext;
-  const budgets = await FinanceBudget.find({ group: groupId, year: String(req.query.year || year) }).sort({ cf: 1, display_order: 1 }).lean();
+  const budgets = await FinanceBudget.find({ group: groupId }).sort({ year: 1, cf: 1, display_order: 1 }).lean();
   const paymentMethods = association.financePaymentMethods?.filter((item) => item.active !== false).sort((a, b) => (a.order || 0) - (b.order || 0)) || (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1, active: true }));
   return res.render('association-finance-entry', { title: '会計を入力', association, entry: null, year: Number(req.query.year || year), budgets, paymentMethods });
 });
@@ -186,7 +186,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', as
     const { association, groupId, year } = req.financeContext;
     const entry = await Finance.findOne({ _id: req.params.entryId, group: groupId }).lean();
     if (!entry) return res.status(404).render('error', { title: '会計データが見つかりません', message: '編集対象の会計データが見つかりません。' });
-    const budgets = await FinanceBudget.find({ group: groupId, year: String(year) }).sort({ cf: 1, display_order: 1 }).lean();
+    const budgets = await FinanceBudget.find({ group: groupId }).sort({ year: 1, cf: 1, display_order: 1 }).lean();
     const paymentMethods = association.financePaymentMethods?.filter((item) => item.active !== false) || (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1 }));
     return res.render('association-finance-entry', { title: '会計を編集', association, year, budgets, paymentMethods, entry });
   } catch (error) { return next(error); }
@@ -243,17 +243,17 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
 
 associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken, async (req, res, next) => {
   try {
-    const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 });
+    const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 });
     const inputterName = req.user.displayname || req.user.username || '';
-    await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: req.body.payment_type, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
+    await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
     return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance/entries`);
   } catch (error) { return next(error); }
 });
 
 associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update', verifyCsrfToken, async (req, res, next) => {
   try {
-    const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); const inputterName = req.user.displayname || req.user.username || '';
-    await Finance.updateOne({ _id: req.params.entryId, group: groupId }, { $set: { date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: req.body.payment_type, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName } });
+    const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 }); const inputterName = req.user.displayname || req.user.username || '';
+    await Finance.updateOne({ _id: req.params.entryId, group: groupId }, { $set: { date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName } });
     return res.redirect(`/associations/${association._id}/finance/entries`);
   } catch (error) { return next(error); }
 });
