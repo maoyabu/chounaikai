@@ -99,11 +99,13 @@ associationFinanceRouter.get('/:associationId/finance/annual', async (req, res, 
     const start = new Date(year, startMonth - 1, 1);
     const end = new Date(year + 1, startMonth - 1, 1);
     const [entries, budgets] = await Promise.all([Finance.find({ group: groupId, date: { $gte: start, $lt: end } }).lean(), FinanceBudget.find({ group: groupId, year: String(year) }).sort({ cf: 1, display_order: 1 }).lean()]);
-    const makeRow = (name, cf, budget = 0) => ({ name, cf, budget: Number(budget) || 0, months: months.map((month) => entries.filter((entry) => entry.cf === cf && new Date(entry.date).getMonth() + 1 === month && (name === '収入' || name === '支出' || (entry.expense_item || entry.income_item || '未分類') === name)).reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0)) });
+    const makeRow = (name, cf, budget = 0, details = []) => ({ name, cf, budget: Number(budget) || 0, details, months: months.map((month) => entries.filter((entry) => entry.cf === cf && new Date(entry.date).getMonth() + 1 === month && (name === '収入' || name === '支出' || (entry.expense_item || entry.income_item || '未分類') === name)).reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0)) });
     const income = makeRow('収入', '収入', budgets.filter((item) => item.cf === '収入').reduce((sum, item) => sum + Number(item.budget || 0), 0));
     const expense = makeRow('支出', '支出', budgets.filter((item) => item.cf === '支出').reduce((sum, item) => sum + Number(item.budget || 0), 0));
     const incomeRows = [income]; const expenseRows = [expense];
-    budgets.forEach((item) => { const name = item.expense_item || item.income_item || '未分類'; (item.cf === '支出' ? expenseRows : incomeRows).push(makeRow(name, item.cf, item.budget)); });
+    budgets.forEach((item) => { const name = item.expense_item || item.income_item || '未分類'; (item.cf === '支出' ? expenseRows : incomeRows).push(makeRow(name, item.cf, item.budget, item.details || [])); });
+    income.details = budgets.filter(item => item.cf === '収入' && item.details?.length).flatMap(item => [{ name: item.expense_item || item.income_item || '未分類', details: item.details }]);
+    expense.details = budgets.filter(item => item.cf === '支出' && item.details?.length).flatMap(item => [{ name: item.expense_item || item.income_item || '未分類', details: item.details }]);
     const totalRow = { name: '収支', cf: '収支', budget: income.budget - expense.budget, months: income.months.map((value, index) => value - expense.months[index]) };
     return res.render('association-finance-annual', { title: `${association.name} 年度集計`, association, year, fiscalYears, months, incomeRows, expenseRows, totalRow, publicMode: req.financeContext.publicAccess });
   } catch (error) { return next(error); }
