@@ -60,7 +60,7 @@ associationFinanceRouter.get('/:associationId/finance', async (req, res, next) =
     const end = new Date(year + 1, (association.financeFiscalStartMonth || 4) - 1, 1);
     const rows = await Finance.aggregate([{ $match: { group: new mongoose.Types.ObjectId(groupId), date: { $gte: start, $lt: end } } }, { $group: { _id: { cf: '$cf', item: { $ifNull: ['$expense_item', '$income_item'] } }, total: { $sum: '$amount' } } }]);
     const actual = new Map(rows.map((row) => [`${row._id.cf}:${row._id.item || '未分類'}`, row.total]));
-    const budgetItems = budgets.map((item) => { const name = item.expense_item || item.income_item || '未分類'; const value = actual.get(`${item.cf}:${name}`) || 0; return { ...item, name, actual: value, rate: item.budget ? Math.round(value / item.budget * 1000) / 10 : 0 }; });
+    const budgetItems = budgets.map((item) => { const name = item.expense_item || item.income_item || '未分類'; const value = actual.get(`${item.cf}:${name}`) || 0; return { ...item, name, actual: value, rate: item.budget ? Math.round(value / item.budget * 1000) / 10 : (value > 0 ? 100 : 0) }; });
     const totalBudget = budgets.reduce((sum, item) => sum + (Number(item.budget) || 0), 0);
     const budgetTotals = budgets.reduce((result, item) => { result[item.cf] = (result[item.cf] || 0) + (Number(item.budget) || 0); return result; }, {});
     const totals = rows.reduce((result, row) => { result[row._id.cf] = (result[row._id.cf] || 0) + row.total; return result; }, {});
