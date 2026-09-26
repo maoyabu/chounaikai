@@ -265,7 +265,8 @@ associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken
   try {
     const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 });
     const inputterName = req.user.displayname || req.user.username || '';
-    await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
+    const selectedTags = cf === '支出' ? String(req.body.selectedTags || '').split(',').map(name => name.trim()).filter(Boolean).map(name => ({ name })) : [];
+    await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
     return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance/entries`);
   } catch (error) { return next(error); }
 });

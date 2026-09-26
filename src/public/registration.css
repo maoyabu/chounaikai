@@ -858,6 +858,9 @@ h1, h2, h3, h4, h5, h6,
 .finance-entry-actions { display: flex; justify-content: flex-end; gap: .35rem; }
 .finance-entry-actions form { margin: 0; }
 .finance-progress { display: grid; gap: .3rem; margin: .8rem 0; }
+.finance-entry-tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .4rem; }
+.finance-entry-tag { padding: .45rem .75rem; border: 1px solid #bdcac3; border-radius: 999px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
+.finance-entry-tag.is-selected { border-color: var(--finance-red); background: #fbe9eb; color: var(--finance-red-dark); }
 .finance-progress > div { display: flex; justify-content: space-between; gap: 1rem; }
 .finance-progress small, .finance-entry-list small { display: block; color: var(--muted); }
 .finance-progress progress { width: 100%; accent-color: var(--green); }
