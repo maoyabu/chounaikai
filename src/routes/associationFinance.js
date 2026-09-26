@@ -198,7 +198,7 @@ associationFinanceRouter.get('/:associationId/finance/settings', async (req, res
   const departmentNames = new Map(departments.map(department => [String(department._id), department.name]));
   budgets.forEach(item => { if (!item.expense_department_name && item.expense_department) item.expense_department_name = departmentNames.get(String(item.expense_department)) || item.expense_department; });
   const paymentMethods = association.financePaymentMethods?.length ? association.financePaymentMethods : (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1, active: true }));
-  return res.render('association-finance-settings', { title: `${association.name} 会計設定`, association, budgets, departments, paymentMethods, year: Number(req.query.year || year) });
+  return res.render('association-finance-settings', { title: `${association.name} 会計設定`, association, budgets, departments, paymentMethods, year: Number(req.query.year || year), budgetTab: req.query.tab === '支出' ? '支出' : '収入' });
 });
 
 associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToken, async (req, res, next) => {
@@ -236,7 +236,8 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
     await FinanceBudget.deleteMany({ group: groupId, year: String(req.body.year || year), cf: { $in: submittedTypes } });
     const typeIndexes = { 収入: 0, 支出: 0 };
     await FinanceBudget.insertMany(rows.filter(Boolean).map((name, index) => { const cf = Array.isArray(req.body.itemCf) ? req.body.itemCf[index] : req.body.itemCf; const typeIndex = typeIndexes[cf] || 0; typeIndexes[cf] = typeIndex + 1; const value = (key, local = false) => { const raw = req.body[key]; if (!Array.isArray(raw)) return raw; return raw[local ? typeIndex : index]; }; const department = String(value('itemDepartment', true) || '').trim(); return { group: groupId, year: String(req.body.year || year), cf, expense_item: cf === '支出' ? name : undefined, income_item: cf === '収入' ? name : undefined, income_category: cf === '収入' ? String(value('itemCategory', true) || '').trim() : undefined, expense_department: cf === '支出' ? department : undefined, expense_department_name: cf === '支出' ? department : undefined, budget: Number(String(value('itemBudget') || '').replace(/,/g, '')) || 0, display_order: Number(value('itemOrder')) || index + 1 }; }));
-    return res.redirect(`/associations/${association._id}/finance/settings?year=${encodeURIComponent(String(req.body.year || year))}`);
+    const tab = req.body.budgetTab === '支出' ? '支出' : '収入';
+    return res.redirect(`/associations/${association._id}/finance/settings?year=${encodeURIComponent(String(req.body.year || year))}&tab=${encodeURIComponent(tab)}`);
   } catch (error) { return next(error); }
 });
 
