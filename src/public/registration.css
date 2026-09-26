@@ -884,10 +884,12 @@ h1, h2, h3, h4, h5, h6,
 .finance-budget-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 12rem; gap: .6rem; align-items: center; }
 .finance-budget-table { overflow-x: auto; }
 .finance-budget-header, .finance-budget-row { display: grid; grid-template-columns: 2rem 5rem minmax(150px, 1fr) minmax(200px, 1.5fr) minmax(120px, 1fr) 5rem; gap: .6rem; align-items: center; }
-.finance-budget-header span:nth-child(1) { grid-column: 2; }
-.finance-budget-header span:nth-child(2) { grid-column: 3; }
-.finance-budget-header span:nth-child(3) { grid-column: 4; }
-.finance-budget-header span:nth-child(4) { grid-column: 5; }
+.finance-budget-header span:nth-child(1) { grid-column: 1; }
+.finance-budget-header span:nth-child(2) { grid-column: 2; }
+.finance-budget-header span:nth-child(3) { grid-column: 3; }
+.finance-budget-header span:nth-child(4) { grid-column: 4; }
+.finance-budget-header span:nth-child(5) { grid-column: 5; }
+.finance-budget-header span:nth-child(6) { grid-column: 6; }
 .finance-budget-header { padding: .65rem .75rem; background: #347fa8; color: #fff; font-weight: 800; text-align: center; }
 .finance-budget-row { padding: .6rem .75rem; background: #eef5fb; border-bottom: 1px solid #d6e2ec; }
 .finance-budget-row input { font-size: .9rem; }
