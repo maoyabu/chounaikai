@@ -2,7 +2,7 @@
 <% const editing = Boolean(entry); const selectedItem = entry?.expense_item || entry?.income_item || ''; %>
 <main class="page-shell page-narrow finance-shell">
   <a class="back-link" href="/associations/<%= association._id %>/finance">← 会計管理トップへ戻る</a>
-  <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= editing ? '会計を編集' : '会計を入力' %></h1><p><%= year %>年度</p></div></div>
+  <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= editing ? '会計を編集' : '会計を入力' %></h1><p><span id="finance-entry-fiscal-year"><%= year %></span>年度</p></div></div>
   <form class="form-card form-stack finance-entry-form" action="<%= editing ? `/associations/${association._id}/finance/entries/${entry._id}/update` : `/associations/${association._id}/finance/entries` %>" method="post">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <label>使用日<input type="date" name="date" value="<%= entry?.date ? new Date(entry.date).toISOString().slice(0,10) : '' %>" required></label>
@@ -45,7 +45,13 @@
   const payment = form.querySelector('[name="payment_type"]');
   const amount = form.querySelector('[name="amount"]');
   let initialItem = item.dataset.selected;
-  const selectedYear = () => date.value ? date.value.slice(0, 4) : String(<%= year %>);
+  const fiscalStartMonth = <%= Number(association.financeFiscalStartMonth) || 4 %>;
+  const yearLabel = document.getElementById('finance-entry-fiscal-year');
+  const selectedYear = () => {
+    if (!date.value) return String(<%= year %>);
+    const [calendarYear, month] = date.value.split('-').map(Number);
+    return String(calendarYear - (month < fiscalStartMonth ? 1 : 0));
+  };
   const renderTags = () => {
     const details = JSON.parse(item.selectedOptions[0]?.dataset.details || '[]');
     const names = [...new Set(details.map(detail => [String(detail.name || '').trim(), String(detail.content || '').trim()].filter(Boolean).join('：')).filter(Boolean))];
@@ -65,6 +71,7 @@
   };
   tagText.addEventListener('input', () => tagButtons.querySelectorAll('.finance-entry-tag').forEach(button => button.classList.toggle('is-selected', button.textContent === tagText.value)));
   const refresh = () => {
+    yearLabel.textContent = selectedYear();
     itemLabel.textContent = cf.value === '収入' ? '収入区分' : '支出区分';
     const available = budgets.filter(row => row.cf === cf.value && row.year === selectedYear());
     item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; option.dataset.details = JSON.stringify(row.details || []); return option; }));

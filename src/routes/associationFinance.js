@@ -194,7 +194,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', as
     const paymentMethods = association.financePaymentMethods?.length
       ? association.financePaymentMethods.filter((item) => item.active !== false)
       : (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1 }));
-    const entryYear = new Date(entry.date).getUTCFullYear();
+    const entryYear = fiscalYear(entry.date, association.financeFiscalStartMonth || 4);
     return res.render('association-finance-entry', { title: '会計を編集', association, year: entryYear, budgets, paymentMethods, entry });
   } catch (error) { return next(error); }
 });
