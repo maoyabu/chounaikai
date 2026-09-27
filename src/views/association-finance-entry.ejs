@@ -45,7 +45,7 @@
   const payment = form.querySelector('[name="payment_type"]');
   const amount = form.querySelector('[name="amount"]');
   let initialItem = item.dataset.selected;
-  const selectedYear = () => date.value ? String(new Date(`${date.value}T00:00:00`).getFullYear()) : null;
+  const selectedYear = () => date.value ? date.value.slice(0, 4) : String(<%= year %>);
   const renderTags = () => {
     const details = JSON.parse(item.selectedOptions[0]?.dataset.details || '[]');
     const names = [...new Set(details.map(detail => [String(detail.name || '').trim(), String(detail.content || '').trim()].filter(Boolean).join('：')).filter(Boolean))];
@@ -66,7 +66,7 @@
   tagText.addEventListener('input', () => tagButtons.querySelectorAll('.finance-entry-tag').forEach(button => button.classList.toggle('is-selected', button.textContent === tagText.value)));
   const refresh = () => {
     itemLabel.textContent = cf.value === '収入' ? '収入区分' : '支出区分';
-    const available = budgets.filter(row => row.cf === cf.value && (!selectedYear() || row.year === selectedYear()));
+    const available = budgets.filter(row => row.cf === cf.value && row.year === selectedYear());
     item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; option.dataset.details = JSON.stringify(row.details || []); return option; }));
     if (available.some(row => row.name === initialItem)) item.value = initialItem;
     initialItem = '';

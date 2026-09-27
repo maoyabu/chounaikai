@@ -185,12 +185,13 @@ associationFinanceRouter.get('/:associationId/finance/entries/new', async (req, 
 
 associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', async (req, res, next) => {
   try {
-    const { association, groupId, year } = req.financeContext;
+    const { association, groupId } = req.financeContext;
     const entry = await Finance.findOne({ _id: req.params.entryId, group: groupId }).lean();
     if (!entry) return res.status(404).render('error', { title: '会計データが見つかりません', message: '編集対象の会計データが見つかりません。' });
     const budgets = await FinanceBudget.find({ group: groupId }).sort({ year: 1, cf: 1, display_order: 1 }).lean();
     const paymentMethods = association.financePaymentMethods?.filter((item) => item.active !== false) || (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1 }));
-    return res.render('association-finance-entry', { title: '会計を編集', association, year, budgets, paymentMethods, entry });
+    const entryYear = new Date(entry.date).getUTCFullYear();
+    return res.render('association-finance-entry', { title: '会計を編集', association, year: entryYear, budgets, paymentMethods, entry });
   } catch (error) { return next(error); }
 });
 
@@ -219,13 +220,22 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets/copy', v
     const { association, groupId, year: currentYear } = req.financeContext;
     const targetYear = String(req.body.targetYear || currentYear);
     const sourceYear = String(req.body.sourceYear || '');
-    if (!/^\d{4}$/.test(sourceYear) || sourceYear === targetYear) return res.status(400).json({ message: 'コピー元とコピー先の年度を正しく選択してください。' });
+    if (!/^\d{4}$/.test(sourceYear) || !/^\d{4}$/.test(targetYear) || sourceYear === targetYear) return res.status(400).json({ message: 'コピー元とコピー先の年度を正しく選択してください。' });
     const source = await FinanceBudget.find({ group: groupId, year: sourceYear }).sort({ cf: 1, display_order: 1 }).lean();
     if (!source.length) return res.status(404).json({ message: 'コピー元年度に予算項目が登録されていません。' });
     const hasTarget = await FinanceBudget.exists({ group: groupId, year: targetYear });
     if (hasTarget && req.body.overwrite !== '1') return res.status(409).json({ message: `${targetYear}年度には既に予算項目が登録されています。上書きしてコピーしますか？` });
     if (hasTarget) await FinanceBudget.deleteMany({ group: groupId, year: targetYear });
-    await FinanceBudget.insertMany(source.map(({ _id, ...item }) => ({ ...item, year: targetYear })));
+    await FinanceBudget.insertMany(source.map(({ _id, details, ...item }) => ({
+      ...item,
+      year: targetYear,
+      details: (details || []).map(detail => ({
+        name: detail.name,
+        content: detail.content,
+        budget: detail.budget,
+        memo: detail.memo
+      }))
+    })));
     return res.json({ redirect: `/associations/${association._id}/finance/settings?year=${targetYear}` });
   } catch (error) { return next(error); }
 });
