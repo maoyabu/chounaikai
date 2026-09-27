@@ -1,4 +1,97 @@
-<%- include('partials/head') %><%- include('partials/header') %><% const editing = Boolean(entry); const selectedItem = entry?.expense_item || entry?.income_item || ''; %>
-<main class="page-shell page-narrow finance-shell"><a class="back-link" href="/associations/<%= association._id %>/finance">← 会計管理トップへ戻る</a><div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= editing ? '会計を編集' : '会計を入力' %></h1><p><%= year %>年度</p></div></div>
-<form class="form-card form-stack finance-entry-form" action="<%= editing ? `/associations/${association._id}/finance/entries/${entry._id}/update` : `/associations/${association._id}/finance/entries` %>" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>使用日<input type="date" name="date" value="<%= entry?.date ? new Date(entry.date).toISOString().slice(0,10) : '' %>" required></label><div class="finance-entry-category-inline"><label>収支区分<select name="cf" id="finance-entry-cf"><option value="支出" <%= entry?.cf === '支出' ? 'selected' : '' %>>支出</option><option value="収入" <%= entry?.cf === '収入' ? 'selected' : '' %>>収入</option></select></label><label><span id="finance-entry-item-label"><%= entry?.cf === '収入' ? '収入区分' : '支出区分' %></span><select name="item" id="finance-entry-item" data-selected="<%= selectedItem %>" required></select></label></div><div id="finance-entry-tags-label" class="finance-entry-tag-field" hidden><span class="finance-entry-tag-label">タグ</span><div id="finance-entry-tags" class="finance-entry-tags"></div><input type="hidden" name="selectedTags" id="finance-entry-selected-tags" value="<%= (entry?.tags || []).map(tag => tag.name).join(',') %>"></div><label>内容<textarea name="content" rows="5" required><%= entry?.content || '' %></textarea></label><label class="finance-amount-label">金額<input class="finance-entry-amount" type="text" name="amount" value="<%= entry?.amount ? Number(entry.amount).toLocaleString('ja-JP') : '' %>" inputmode="numeric" required></label><div class="finance-entry-inline"><label>支払い種別<select name="payment_type"><option value="">選択してください</option><% paymentMethods.forEach((method) => { %><option value="<%= method.name %>" <%= entry?.payment_type === method.name ? 'selected' : '' %>><%= method.name %></option><% }) %></select></label><label>領収書番号<input name="receiptNo" value="<%= entry?.receiptNo || '' %>"></label></div><div class="finance-entry-inline"><label>入力者<input value="<%= entry?.inputterName || currentUser.displayname || currentUser.username %>" readonly></label><label>使用者<input name="usedBy" value="<%= entry?.usedBy || '' %>" placeholder="未入力の場合は入力者"></label></div><label>メモ<textarea name="memo" rows="3"><%= entry?.memo || '' %></textarea></label><div class="form-actions"><% if (!editing) { %><button class="button button-primary" name="continue" value="1">保存して続けて入力</button><% } %><button class="button button-primary"><%= editing ? '更新' : '保存' %></button></div></form></main>
-<script>(()=>{const budgets=<%- JSON.stringify(budgets.map(item=>({year:String(item.year),cf:item.cf,name:item.expense_item||item.income_item||'',details:item.details||[]})).filter(item=>item.name)) %>,date=document.querySelector('input[name="date"]'),cf=document.getElementById('finance-entry-cf'),item=document.getElementById('finance-entry-item'),label=document.getElementById('finance-entry-item-label'),selected=item.dataset.selected,tagsLabel=document.getElementById('finance-entry-tags-label'),tagsBox=document.getElementById('finance-entry-tags'),tagsInput=document.getElementById('finance-entry-selected-tags');let selectedTags=(tagsInput.value||'').split(',').filter(Boolean);const renderTags=details=>{tagsBox.replaceChildren();details.forEach(detail=>{const name=detail.name?.trim();if(!name)return;const button=document.createElement('button');button.type='button';button.className='finance-entry-tag'+(selectedTags.includes(name)?' is-selected':'');button.textContent=name;button.addEventListener('click',()=>{selectedTags=selectedTags.includes(name)?selectedTags.filter(tag=>tag!==name):[...selectedTags,name];tagsInput.value=selectedTags.join(',');button.classList.toggle('is-selected',selectedTags.includes(name))});tagsBox.append(button)})};const refresh=()=>{const entryYear=date.value?String(new Date(`${date.value}T00:00:00`).getFullYear()):null;label.textContent=cf.value==='収入'?'収入区分':'支出区分';const available=budgets.filter(row=>row.cf===cf.value&&(!entryYear||row.year===entryYear));item.replaceChildren(...available.map(row=>{const option=document.createElement('option');option.value=row.name;option.textContent=row.name;option.selected=row.name===selected;return option}));const chosen=available.find(row=>row.name===item.value)||available.find(row=>row.name===selected);selected='';const expense=cf.value==='支出';tagsLabel.hidden=!expense;tagsLabel.style.display=expense?"":"none";renderTags(expense?(chosen?.details||[]):[])};cf.addEventListener('change',()=>{selectedTags=[];tagsInput.value='';refresh()});date.addEventListener('change',()=>{selectedTags=[];tagsInput.value='';refresh()});item.addEventListener('change',()=>{const row=budgets.find(value=>value.cf===cf.value&&value.name===item.value&&(!date.value||value.year===String(new Date(`${date.value}T00:00:00`).getFullYear())));selectedTags=[];tagsInput.value='';renderTags(row?.details||[])});refresh();const payment=document.querySelector('select[name="payment_type"]'),paymentLabel=payment?.closest('label'),updatePayment=()=>{const income=cf.value==='収入';if(paymentLabel)paymentLabel.hidden=income;if(payment){payment.required=!income;payment.disabled=income;if(income)payment.value=''}};cf.addEventListener('change',updatePayment);updatePayment();const amount=document.querySelector('.finance-entry-amount');amount?.addEventListener('input',()=>{const value=amount.value.replace(/[^0-9]/g,'');amount.value=value?Number(value).toLocaleString('ja-JP'):''});document.querySelector('.finance-entry-form')?.addEventListener('submit',()=>{amount.value=amount.value.replace(/,/g,'')})})();</script><%- include('partials/foot') %>
+<%- include('partials/head') %><%- include('partials/header') %>
+<% const editing = Boolean(entry); const selectedItem = entry?.expense_item || entry?.income_item || ''; %>
+<main class="page-shell page-narrow finance-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/finance">← 会計管理トップへ戻る</a>
+  <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= editing ? '会計を編集' : '会計を入力' %></h1><p><%= year %>年度</p></div></div>
+  <form class="form-card form-stack finance-entry-form" action="<%= editing ? `/associations/${association._id}/finance/entries/${entry._id}/update` : `/associations/${association._id}/finance/entries` %>" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>使用日<input type="date" name="date" value="<%= entry?.date ? new Date(entry.date).toISOString().slice(0,10) : '' %>" required></label>
+    <div class="finance-entry-category-inline">
+      <label>収支区分<select name="cf" id="finance-entry-cf"><option value="支出" <%= entry?.cf === '支出' ? 'selected' : '' %>>支出</option><option value="収入" <%= entry?.cf === '収入' ? 'selected' : '' %>>収入</option></select></label>
+      <label><span id="finance-entry-item-label"><%= entry?.cf === '収入' ? '収入区分' : '支出区分' %></span><select name="item" id="finance-entry-item" data-selected="<%= selectedItem %>" required></select></label>
+    </div>
+    <div id="finance-entry-tags-field" class="finance-entry-tag-field" <%= entry?.cf === '収入' ? 'hidden' : '' %>>
+      <label for="finance-entry-tag-input">タグ</label>
+      <input id="finance-entry-tag-input" name="tagText" list="finance-entry-tag-options" placeholder="タグを選択または入力" autocomplete="off">
+      <datalist id="finance-entry-tag-options"></datalist>
+      <div id="finance-entry-tags" class="finance-entry-tags"></div>
+      <input type="hidden" name="selectedTags" id="finance-entry-selected-tags" value="<%= (entry?.tags || []).map(tag => tag.name).join(',') %>">
+    </div>
+    <label>内容<textarea name="content" rows="5" required><%= entry?.content || '' %></textarea></label>
+    <label class="finance-amount-label">金額<input class="finance-entry-amount" type="text" name="amount" value="<%= entry?.amount ? Number(entry.amount).toLocaleString('ja-JP') : '' %>" inputmode="numeric" required></label>
+    <div class="finance-entry-inline">
+      <label>支払い種別<select name="payment_type"><option value="">選択してください</option><% paymentMethods.forEach(method => { %><option value="<%= method.name %>" <%= entry?.payment_type === method.name ? 'selected' : '' %>><%= method.name %></option><% }) %></select></label>
+      <label>領収書番号<input name="receiptNo" value="<%= entry?.receiptNo || '' %>"></label>
+    </div>
+    <div class="finance-entry-inline">
+      <label>入力者<input value="<%= entry?.inputterName || currentUser.displayname || currentUser.username %>" readonly></label>
+      <label>使用者<input name="usedBy" value="<%= entry?.usedBy || '' %>" placeholder="未入力の場合は入力者"></label>
+    </div>
+    <label>メモ<textarea name="memo" rows="3"><%= entry?.memo || '' %></textarea></label>
+    <div class="form-actions"><% if (!editing) { %><button class="button button-primary" name="continue" value="1">保存して続けて入力</button><% } %><button class="button button-primary"><%= editing ? '更新' : '保存' %></button></div>
+  </form>
+</main>
+<script>
+(() => {
+  const budgets = <%- JSON.stringify(budgets.map(row => ({ year: String(row.year), cf: row.cf, name: row.expense_item || row.income_item || '', details: row.details || [] })).filter(row => row.name)) %>;
+  const form = document.querySelector('.finance-entry-form');
+  const date = form.querySelector('[name="date"]');
+  const cf = form.querySelector('[name="cf"]');
+  const item = form.querySelector('[name="item"]');
+  const itemLabel = document.getElementById('finance-entry-item-label');
+  const tagField = document.getElementById('finance-entry-tags-field');
+  const tagText = document.getElementById('finance-entry-tag-input');
+  const tagOptions = document.getElementById('finance-entry-tag-options');
+  const tagButtons = document.getElementById('finance-entry-tags');
+  const selectedTagsInput = document.getElementById('finance-entry-selected-tags');
+  const payment = form.querySelector('[name="payment_type"]');
+  const amount = form.querySelector('[name="amount"]');
+  let initialItem = item.dataset.selected;
+  let selectedTags = (selectedTagsInput.value || '').split(',').filter(Boolean);
+
+  const selectedYear = () => date.value ? String(new Date(`${date.value}T00:00:00`).getFullYear()) : null;
+  const currentBudget = () => budgets.find(row => row.cf === '支出' && row.year === selectedYear() && row.name === item.value);
+  const renderTags = () => {
+    const names = [...new Set((currentBudget()?.details || []).map(detail => String(detail.name || '').trim()).filter(Boolean))];
+    tagOptions.replaceChildren(...names.map(name => { const option = document.createElement('option'); option.value = name; return option; }));
+    tagButtons.replaceChildren(...names.map(name => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'finance-entry-tag';
+      button.textContent = name;
+      button.classList.toggle('is-selected', selectedTags.includes(name));
+      button.addEventListener('click', () => {
+        selectedTags = selectedTags.includes(name) ? selectedTags.filter(tag => tag !== name) : [...selectedTags, name];
+        selectedTagsInput.value = selectedTags.join(',');
+        button.classList.toggle('is-selected', selectedTags.includes(name));
+      });
+      return button;
+    }));
+  };
+  const refresh = () => {
+    itemLabel.textContent = cf.value === '収入' ? '収入区分' : '支出区分';
+    const available = budgets.filter(row => row.cf === cf.value && (!selectedYear() || row.year === selectedYear()));
+    item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; return option; }));
+    if (available.some(row => row.name === initialItem)) item.value = initialItem;
+    initialItem = '';
+    const expense = cf.value === '支出';
+    tagField.hidden = !expense;
+    tagField.style.display = expense ? 'block' : 'none';
+    tagText.disabled = !expense;
+    selectedTagsInput.disabled = !expense;
+    payment.closest('label').style.display = expense ? '' : 'none';
+    payment.required = expense;
+    payment.disabled = !expense;
+    if (!expense) payment.value = '';
+    renderTags();
+  };
+  const clearTags = () => { selectedTags = []; selectedTagsInput.value = ''; tagText.value = ''; };
+  cf.addEventListener('change', () => { clearTags(); refresh(); });
+  date.addEventListener('change', () => { clearTags(); refresh(); });
+  item.addEventListener('change', () => { clearTags(); renderTags(); });
+  amount.addEventListener('input', () => { const digits = amount.value.replace(/[^0-9]/g, ''); amount.value = digits ? Number(digits).toLocaleString('ja-JP') : ''; });
+  form.addEventListener('submit', () => { amount.value = amount.value.replace(/,/g, ''); });
+  refresh();
+})();
+</script>
+<%- include('partials/foot') %>
