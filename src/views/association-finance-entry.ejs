@@ -12,10 +12,9 @@
     </div>
     <div id="finance-entry-tags-field" class="finance-entry-tag-field" <%= entry?.cf === '収入' ? 'hidden' : '' %>>
       <label for="finance-entry-tag-input">タグ</label>
-      <input id="finance-entry-tag-input" name="tagText" list="finance-entry-tag-options" placeholder="タグを選択または入力" autocomplete="off">
+      <input id="finance-entry-tag-input" name="tagText" list="finance-entry-tag-options" value="<%= entry?.tags?.[0]?.name || '' %>" placeholder="タグを選択または入力" autocomplete="off">
       <datalist id="finance-entry-tag-options"></datalist>
       <div id="finance-entry-tags" class="finance-entry-tags"></div>
-      <input type="hidden" name="selectedTags" id="finance-entry-selected-tags" value="<%= (entry?.tags || []).map(tag => tag.name).join(',') %>">
     </div>
     <label>内容<textarea name="content" rows="5" required><%= entry?.content || '' %></textarea></label>
     <label class="finance-amount-label">金額<input class="finance-entry-amount" type="text" name="amount" value="<%= entry?.amount ? Number(entry.amount).toLocaleString('ja-JP') : '' %>" inputmode="numeric" required></label>
@@ -43,49 +42,45 @@
   const tagText = document.getElementById('finance-entry-tag-input');
   const tagOptions = document.getElementById('finance-entry-tag-options');
   const tagButtons = document.getElementById('finance-entry-tags');
-  const selectedTagsInput = document.getElementById('finance-entry-selected-tags');
   const payment = form.querySelector('[name="payment_type"]');
   const amount = form.querySelector('[name="amount"]');
   let initialItem = item.dataset.selected;
-  let selectedTags = (selectedTagsInput.value || '').split(',').filter(Boolean);
-
   const selectedYear = () => date.value ? String(new Date(`${date.value}T00:00:00`).getFullYear()) : null;
-  const currentBudget = () => budgets.find(row => row.cf === '支出' && row.year === selectedYear() && row.name === item.value);
   const renderTags = () => {
-    const names = [...new Set((currentBudget()?.details || []).map(detail => String(detail.name || '').trim()).filter(Boolean))];
+    const details = JSON.parse(item.selectedOptions[0]?.dataset.details || '[]');
+    const names = [...new Set(details.map(detail => [String(detail.name || '').trim(), String(detail.content || '').trim()].filter(Boolean).join('：')).filter(Boolean))];
     tagOptions.replaceChildren(...names.map(name => { const option = document.createElement('option'); option.value = name; return option; }));
     tagButtons.replaceChildren(...names.map(name => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'finance-entry-tag';
       button.textContent = name;
-      button.classList.toggle('is-selected', selectedTags.includes(name));
+      button.classList.toggle('is-selected', tagText.value === name);
       button.addEventListener('click', () => {
-        selectedTags = selectedTags.includes(name) ? selectedTags.filter(tag => tag !== name) : [...selectedTags, name];
-        selectedTagsInput.value = selectedTags.join(',');
-        button.classList.toggle('is-selected', selectedTags.includes(name));
+        tagText.value = tagText.value === name ? '' : name;
+        tagButtons.querySelectorAll('.finance-entry-tag').forEach(candidate => candidate.classList.toggle('is-selected', candidate.textContent === tagText.value));
       });
       return button;
     }));
   };
+  tagText.addEventListener('input', () => tagButtons.querySelectorAll('.finance-entry-tag').forEach(button => button.classList.toggle('is-selected', button.textContent === tagText.value)));
   const refresh = () => {
     itemLabel.textContent = cf.value === '収入' ? '収入区分' : '支出区分';
     const available = budgets.filter(row => row.cf === cf.value && (!selectedYear() || row.year === selectedYear()));
-    item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; return option; }));
+    item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; option.dataset.details = JSON.stringify(row.details || []); return option; }));
     if (available.some(row => row.name === initialItem)) item.value = initialItem;
     initialItem = '';
     const expense = cf.value === '支出';
     tagField.hidden = !expense;
     tagField.style.display = expense ? 'block' : 'none';
     tagText.disabled = !expense;
-    selectedTagsInput.disabled = !expense;
     payment.closest('label').style.display = expense ? '' : 'none';
     payment.required = expense;
     payment.disabled = !expense;
     if (!expense) payment.value = '';
     renderTags();
   };
-  const clearTags = () => { selectedTags = []; selectedTagsInput.value = ''; tagText.value = ''; };
+  const clearTags = () => { tagText.value = ''; };
   cf.addEventListener('change', () => { clearTags(); refresh(); });
   date.addEventListener('change', () => { clearTags(); refresh(); });
   item.addEventListener('change', () => { clearTags(); renderTags(); });
