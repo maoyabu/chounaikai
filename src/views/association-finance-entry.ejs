@@ -84,8 +84,9 @@
   cf.addEventListener('change', () => { clearTags(); refresh(); });
   date.addEventListener('change', () => { clearTags(); refresh(); });
   item.addEventListener('change', () => { clearTags(); renderTags(); });
-  amount.addEventListener('input', () => { const digits = amount.value.replace(/[^0-9]/g, ''); amount.value = digits ? Number(digits).toLocaleString('ja-JP') : ''; });
-  form.addEventListener('submit', () => { amount.value = amount.value.replace(/,/g, ''); });
+  const normalizeAmount = () => amount.value.normalize('NFKC').replace(/[ ,，]/g, '');
+  amount.addEventListener('blur', () => { const value = normalizeAmount(); if (/^\d+$/.test(value)) amount.value = Number(value).toLocaleString('ja-JP'); });
+  form.addEventListener('submit', () => { amount.value = normalizeAmount(); });
   refresh();
 })();
 </script>
