@@ -106,13 +106,16 @@
   </script>
   <dialog id="add-group-dialog" class="basic-settings-dialog"><form method="post" id="add-group-dialog-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>班名<input name="name" placeholder="例：1" required autofocus></label><div class="form-actions"><button type="button" class="button button-quiet" data-close-group-dialog>キャンセル</button><button class="button button-primary">登録</button></div></form></dialog>
   <script>
-    document.querySelectorAll('.add-group-form').forEach((form) => form.addEventListener('submit', (event) => {
-      event.preventDefault();
+    const openGroupDialog = (form) => {
       const dialog = document.getElementById('add-group-dialog'), modalForm = document.getElementById('add-group-dialog-form');
       modalForm.action = form.action;
       modalForm.querySelector('input[name="name"]').value = '';
       dialog.showModal();
-    }));
+    };
+    document.querySelectorAll('.add-group-form').forEach((form) => {
+      form.querySelector('button[type="submit"], button:not([type])')?.addEventListener('click', (event) => { event.preventDefault(); openGroupDialog(form); });
+      form.addEventListener('submit', (event) => { event.preventDefault(); openGroupDialog(form); });
+    });
     document.querySelector('[data-close-group-dialog]')?.addEventListener('click', () => document.getElementById('add-group-dialog')?.close());
     document.querySelectorAll('form[action$="/delete"]').forEach((form) => form.addEventListener('submit', (event) => {
       if (!window.confirm('この地区または班を削除します。よろしいですか？')) event.preventDefault();
