@@ -8,7 +8,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
   const window = calendarWindow(month, now);
   const [events, districtGroups, households, officers, groups] = await Promise.all([
     visibleEvents([association._id], { publicOnly, now: window.first }),
-    DistrictGroup.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(),
+    DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
     Household.find({ association: association._id, active: true, deletedAt: { $exists: false } }).select('_id districtGroup').lean(),
     AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean(),
     AssociationGroup.find({ association: association._id, status: 'active' }).sort({ name: 1 }).lean()

@@ -403,7 +403,7 @@ webRouter.get('/profile', requireLogin, async (req, res, next) => {
     }, {});
     const registeredAssociationIds = new Set(visibleHouseholds.map((household) => String(household.association._id)));
     const unregisteredMemberships = memberships.filter((membership) => membership.association && !membership.household && !registeredAssociationIds.has(String(membership.association._id)));
-    const districtGroups = await DistrictGroup.find({ association: { $in: unregisteredMemberships.map((membership) => membership.association._id) }, active: true }).sort({ sortOrder: 1, name: 1 }).lean();
+    const districtGroups = await DistrictGroup.find({ association: { $in: unregisteredMemberships.map((membership) => membership.association._id) }, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean();
     const districtsByAssociation = districtGroups.reduce((result, district) => {
       (result[String(district.association)] ||= []).push(district);
       return result;

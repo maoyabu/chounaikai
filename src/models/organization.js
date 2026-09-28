@@ -13,6 +13,8 @@ departmentSchema.index({ association: 1, name: 1 }, { unique: true });
 const districtGroupSchema = new mongoose.Schema({
   association: tenantField,
   name: { type: String, required: true, trim: true },
+  // parentDistrict がない既存レコードは移行後も「地区」として扱う。
+  parentDistrict: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup', index: true },
   sortOrder: { type: Number, default: 0, index: true },
   active: { type: Boolean, default: true }
 }, { timestamps: true, collection: 'district_groups' });

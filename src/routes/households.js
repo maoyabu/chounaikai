@@ -60,7 +60,7 @@ householdsRouter.get('/:associationId/join', async (req, res, next) => {
       NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean(),
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }),
       JoinApplication.findOne({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }),
-      DistrictGroup.find({ association: req.params.associationId, active: true }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: req.params.associationId, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean()
     ]);
     if (!association || membership) throw fail('この町内会には参加申請できません。', 409);
     if (existingApplication) return res.redirect(`/associations/${existingApplication.association}/participation`);
