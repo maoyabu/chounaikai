@@ -258,7 +258,8 @@ const organizationRoutes = [
 const orderTypes = {
   roles: { Model: RoleDefinition, label: '役職', extraFilter: { name: { $ne: '町内会管理者' } } },
   departments: { Model: Department, label: '部会', extraFilter: {} },
-  'district-groups': { Model: DistrictGroup, label: '班', extraFilter: {} }
+  // 基本設定の並び替え対象は地区のみ。配下の班は地区内で管理する。
+  'district-groups': { Model: DistrictGroup, label: '地区', extraFilter: { parentDistrict: { $exists: false } } }
 };
 
 // 地区の配下に作成する班。班名は既存機能との互換性のため「地区名＋班名」で保存する。

@@ -504,23 +504,25 @@ h1, h2, h3, h4, h5, h6,
 .draggable-setting-row.is-drag-over { box-shadow: inset 0 3px 0 var(--green); }
 .drag-save-status { min-height: 1.4em; margin: .65rem 0 0; color: var(--green-dark); font-size: .8rem; font-weight: 700; }
 .drag-save-status.is-error { color: var(--danger); }
-.district-management-list > .district-setting-row { display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: start; gap: 1.25rem; }
-.district-heading { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto; align-items: center; gap: .55rem; min-width: 0; }
+.district-management-list > .district-setting-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-content: initial; gap: .9rem; }
+.district-heading { display: flex; align-items: center; gap: .55rem; min-width: max-content; }
 .district-heading .inline-form { min-width: 0; }
-.district-heading .inline-form input:not([type="hidden"]) { width: 100%; min-width: 0; }
+.district-heading .inline-form input:not([type="hidden"]) { width: 9em; min-width: 9em; max-width: 9em; flex: 0 0 9em; }
 .district-drag-placeholder { color: var(--muted); font-weight: 900; letter-spacing: -.25em; }
-.district-child-groups { display: flex; flex-wrap: nowrap; align-items: center; gap: .55rem; min-width: 0; padding-top: .1rem; overflow-x: auto; white-space: nowrap; }
-.district-group-tag { display: inline-flex; align-items: center; gap: .3rem; min-height: 2.35rem; padding: .25rem .35rem .25rem .85rem; border-radius: 999px; background: var(--green-dark); color: #fff; font-weight: 800; }
-.district-group-tag form:first-child { display: contents; }
-.district-group-tag .tag-label { white-space: nowrap; }
-.district-group-tag .tag-delete { display: grid; place-items: center; width: 1.35rem; height: 1.35rem; padding: 0; border: 2px solid #fff; border-radius: 50%; background: #fff; color: var(--danger); font-weight: 900; line-height: 1; cursor: pointer; }
+.district-child-groups { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start !important; gap: .4rem; min-width: 0; margin: 0 !important; overflow-x: auto; white-space: nowrap; padding-left: .35rem; }
+.district-child-groups .district-group-tag { margin-left: 0; }
+.management-list .district-group-tag { display: inline-flex; align-items: center; flex: 0 0 auto; flex-direction: row; gap: .2rem; height: 2rem; min-height: 2rem; padding: .2rem .25rem .2rem .55rem; border-radius: 999px; background: var(--green-dark); color: #fff; font-size: .82rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+.management-list .district-group-tag form { display: flex; align-items: center; flex-direction: row; flex: 0 0 auto; margin: 0; }
+.management-list .district-group-tag form:first-child { display: contents; }
+.management-list .district-group-tag .tag-label { display: inline-block; white-space: nowrap; line-height: 1; }
+.management-list .district-group-tag .tag-delete { display: grid; place-items: center; flex: 0 0 1.35rem; width: 1.35rem; height: 1.35rem; padding: 0; border: 2px solid #fff; border-radius: 50%; background: #fff; color: var(--danger); font-weight: 900; line-height: 1; cursor: pointer; }
 .add-group-form { flex: 0 0 auto; }
 .add-group-form input { display: none; }
 .basic-settings-dialog { width: min(420px, calc(100% - 2rem)); padding: 1.25rem; border: 1px solid var(--line); border-radius: .85rem; box-shadow: 0 18px 50px rgba(16, 45, 34, .22); }
 .basic-settings-dialog::backdrop { background: rgba(8, 24, 17, .38); }
 .basic-settings-dialog form { display: grid; gap: 1rem; }
 .basic-settings-dialog label { display: grid; gap: .4rem; font-weight: 800; }
-@media (max-width: 760px) { .district-management-list > .district-setting-row { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .district-management-list > .district-setting-row { display: grid; grid-template-columns: 1fr; align-items: stretch; } .district-heading, .district-child-groups { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; } }
 .annual-heading { align-items: center; }
 .annual-candidate-group { margin-top: 1.15rem; border: 1px solid var(--line); border-radius: .8rem; overflow: hidden; background: #fff; }
 .annual-candidate-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; background: var(--green-pale); border-bottom: 1px solid var(--line); }
