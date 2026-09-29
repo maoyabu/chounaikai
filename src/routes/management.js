@@ -97,8 +97,8 @@ managementRouter.get('/:associationId/manage/basic', requirePermission('associat
     const [roles, departments, districts, childGroups] = await Promise.all([
       RoleDefinition.find({ association: association._id, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Department.find({ association: association._id }).sort({ sortOrder: 1, name: 1 }).lean(),
-      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
-      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
+      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     const districtGroups = districts.map((district) => ({ ...district, groups: childGroups.filter((group) => String(group.parentDistrict) === String(district._id)) }));
     return res.render('association-basic-settings', { title: `${association.name} 基本設定`, association, roles, departments, districtGroups });
@@ -115,7 +115,7 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     const [memberships, officers, roles, departments, districtGroups, leaderAssignments] = await Promise.all([
       AssociationMembership.find({ association: association._id, status: 'active', household: { $exists: true } }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name').populate('household', 'displayName address representative').sort({ startedAt: 1 }).lean(),
       AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').sort({ createdAt: 1 }).lean(),
-      RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(), Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(), DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
+      RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(), Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(), DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
       AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean()
     ]);
     const candidateUserIds = memberships.map((membership) => membership.user?._id).filter(Boolean);
@@ -139,7 +139,7 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     const officerCandidates = memberships.filter((item) => item.user).map((item) => ({ _id: item.user._id, name: item.user.displayname || item.user.username, email: item.user.email || '', districtGroup: item.districtGroup }));
     const leaderCandidates = officerCandidates;
     const leaderRecords = await AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean();
-    const leaderChildren = await DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true }, active: true }).sort({ sortOrder: 1, name: 1 }).lean();
+    const leaderChildren = await DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true }, active: true }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean();
     const leaderDistricts = districtGroups.map((district) => ({ ...district, groups: leaderChildren.filter((group) => String(group.parentDistrict) === String(district._id)) }));
     return res.render('association-annual-settings', { title: `${association.name}年度設定`, association, fiscalYear, memberships, householdRepresentatives, officers, officerRecords: officers, officerCandidates, leaderRecords, leaderCandidates, leaderDistricts, roles, departments, districtGroups, leaderAssignments });
   } catch (error) { return next(error); }
@@ -153,10 +153,10 @@ managementRouter.get('/:associationId/manage/officers', requirePermission('assoc
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) throw fail('町内会を確認できません。', 404);
     const [officers, roles, departments, districtGroups] = await Promise.all([
-      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean(),
+      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean(),
       RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(),
-      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     const memberships = await AssociationMembership.find({ association: association._id, user: { $in: officers.map((item) => item.user?._id).filter(Boolean) }, status: 'active' }).populate('household', 'displayName address').populate('districtGroup', 'name').lean();
     const membershipByUser = new Map(memberships.map((membership) => [String(membership.user), membership]));
@@ -173,12 +173,14 @@ managementRouter.get('/:associationId/manage/leaders', requirePermission('associ
     if (!association) throw fail('町内会を確認できません。', 404);
     const leaders = await AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null })
       .populate('representative', 'displayname username email avatar')
-      .populate('districtGroup', 'name')
+      .populate('districtGroup', 'name parentDistrict')
+      .populate('district', 'name')
+      .populate('group', 'name parentDistrict')
       .populate('household', 'displayName address')
       .sort({ createdAt: 1 }).lean();
     const [memberships, districtGroups] = await Promise.all([
       AssociationMembership.find({ association: association._id, user: { $in: leaders.map((item) => item.representative?._id).filter(Boolean) }, status: 'active' }).populate('districtGroup', 'name').lean(),
-      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     const membershipByUser = new Map(memberships.map((membership) => [String(membership.user), membership]));
     return res.render('association-leaders', { title: `${fiscalYear}年度の班長一覧`, association, fiscalYear, districtGroups, leaders: leaders.map((leader) => ({ ...leader, membership: membershipByUser.get(String(leader.representative?._id)) })) });
@@ -196,7 +198,7 @@ managementRouter.get('/:associationId/manage/members', requirePermission('associ
       AnnualOfficer.find({ association: association._id, fiscalYear, user: { $in: userIds }, cancelledAt: null }).populate('role', 'name').populate('department', 'name').lean(),
       AnnualLeaderAssignment.find({ association: association._id, fiscalYear, representative: { $in: userIds }, cancelledAt: null }).select('representative').lean(),
       RoleAssignment.find({ association: association._id, user: { $in: userIds }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' }, select: 'name' }).lean(),
-      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
+      DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
       RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean()
     ]);
@@ -215,7 +217,7 @@ managementRouter.get('/:associationId/manage/order', requirePermission('associat
     const [roles, departments, districtGroups] = await Promise.all([
       RoleDefinition.find({ association: association._id, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Department.find({ association: association._id }).sort({ sortOrder: 1, name: 1 }).lean(),
-      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: association._id, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     return res.render('association-order-settings', { title: '並び順設定', association, roles, departments, districtGroups });
   } catch (error) { return next(error); }
