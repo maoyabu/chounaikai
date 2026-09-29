@@ -6,6 +6,7 @@ const annualLeaderAssignmentSchema = new mongoose.Schema({
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup', required: true },
   district: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
+  address: { type: String, trim: true },
   representative: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   name: { type: String, trim: true },
   nameKana: { type: String, trim: true },

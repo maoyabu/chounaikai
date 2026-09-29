@@ -10,6 +10,7 @@ const annualOfficerSchema = new mongoose.Schema({
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
   district: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
+  address: { type: String, trim: true },
   phone: { type: String, trim: true },
   mobilePhone: { type: String, trim: true },
   role: { type: mongoose.Schema.Types.ObjectId, ref: 'RoleDefinition' },

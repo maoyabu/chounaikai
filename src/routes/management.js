@@ -451,7 +451,7 @@ managementRouter.post('/:associationId/manage/annual/officers/create', requirePe
       Department.findOne({ _id: departmentId, association: req.params.associationId, active: true })
     ]);
     if ((roleId && !role) || !department) throw fail('役職または部会を確認できません。');
-    const officer = await AnnualOfficer.create({ association: req.params.associationId, fiscalYear, name, nameKana, role: role?._id, department: department._id, ...location, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), selectedBy: req.user._id });
+    const officer = await AnnualOfficer.create({ association: req.params.associationId, fiscalYear, name, nameKana, role: role?._id, department: department._id, ...location, address: String(req.body.address || '').trim(), phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), selectedBy: req.user._id });
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_officer.created', targetType: 'AnnualOfficer', targetId: officer._id, after: { fiscalYear, name }, req });
     req.session.notice = '役員を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
   } catch (error) { return next(error); }
@@ -546,7 +546,7 @@ managementRouter.post('/:associationId/manage/annual/officers/:officerId/update'
     const location = (req.body.groupId || req.body.districtGroupId) ? await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId }) : null;
     if ((req.body.groupId || req.body.districtGroupId) && !location) throw fail('地区・班を確認できません。');
     const before = { role: officer.role, department: officer.department, districtGroup: officer.districtGroup }; officer.role = role?._id || null; officer.department = department._id; if (location) Object.assign(officer, location); await officer.save();
-    for (const field of ['name', 'nameKana', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) officer[field] = String(req.body[field] || '').trim();
+    for (const field of ['name', 'nameKana', 'address', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) officer[field] = String(req.body[field] || '').trim();
     await officer.save();
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_officer.updated', targetType: 'AnnualOfficer', targetId: officer._id, before, after: { role: officer.role, department: officer.department }, req });
     req.session.notice = '役員の役職・所属部を更新しました。'; return redirectAnnual(res, req.params.associationId, officer.fiscalYear);
@@ -567,7 +567,7 @@ managementRouter.post('/:associationId/manage/annual/leaders/:leaderId/update', 
     const leader = await AnnualLeaderAssignment.findOne({ _id: req.params.leaderId, association: req.params.associationId });
     if (!leader) throw fail('班長を確認できません。', 404);
     if (req.body.groupId || req.body.districtGroupId) { const location = await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId }); if (!location) throw fail('地区・班を確認できません。'); Object.assign(leader, location); }
-    for (const field of ['name', 'nameKana', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) leader[field] = String(req.body[field] || '').trim();
+    for (const field of ['name', 'nameKana', 'address', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) leader[field] = String(req.body[field] || '').trim();
     await leader.save(); req.session.notice = '班長情報を更新しました。'; return redirectAnnual(res, req.params.associationId, leader.fiscalYear);
   } catch (error) { return next(error); }
 });
@@ -578,7 +578,7 @@ managementRouter.post('/:associationId/manage/leaders/create', requirePermission
     const location = await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId });
     if (!Number.isInteger(fiscalYear) || !location || !name || !nameKana) throw fail('地区・班、氏名、氏名よみを正しく入力してください。');
     if (await AnnualLeaderAssignment.exists({ association: req.params.associationId, fiscalYear, districtGroup: location.districtGroup, cancelledAt: null })) throw fail('選択した地区・班はすでに設定されています。', 409);
-    const leader = await AnnualLeaderAssignment.create({ association: req.params.associationId, fiscalYear, ...location, name, nameKana, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), assignedBy: req.user._id });
+    const leader = await AnnualLeaderAssignment.create({ association: req.params.associationId, fiscalYear, ...location, name, nameKana, address: String(req.body.address || '').trim(), phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), assignedBy: req.user._id });
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'district_leader.created', targetType: 'AnnualLeaderAssignment', targetId: leader._id, after: { fiscalYear, name, districtGroup: district._id }, req });
     req.session.notice = '班長を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
   } catch (error) { return next(error); }
