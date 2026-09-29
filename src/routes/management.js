@@ -23,6 +23,22 @@ const meta = (req) => ({ requestId: req.get('x-request-id'), ip: req.ip });
 const redirectBasic = (res, associationId) => res.redirect(`/associations/${associationId}/manage/basic`);
 const redirectAnnual = (res, associationId, fiscalYear) => res.redirect(`/associations/${associationId}/manage/annual?year=${fiscalYear}`);
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
+const resolveAnnualLocation = async ({ associationId, districtId, groupId, districtGroupId }) => {
+  const legacyId = groupId || districtGroupId;
+  if (!validId(legacyId)) return null;
+  const selected = await DistrictGroup.findOne({ _id: legacyId, association: associationId, active: true });
+  if (!selected) return null;
+  if (groupId && selected.parentDistrict) {
+    if (districtId && String(selected.parentDistrict) !== String(districtId)) return null;
+    const district = await DistrictGroup.findOne({ _id: selected.parentDistrict, association: associationId, active: true });
+    return district ? { district: district._id, group: selected._id, districtGroup: selected._id } : null;
+  }
+  if (selected.parentDistrict) {
+    const district = await DistrictGroup.findOne({ _id: selected.parentDistrict, association: associationId, active: true });
+    return district ? { district: district._id, group: selected._id, districtGroup: selected._id } : null;
+  }
+  return { district: selected._id, group: null, districtGroup: selected._id };
+};
 
 const audit = ({ association, actor, action, targetType, targetId, before, after, req }) => AuditLog.create({
   association, actor, action, targetType, targetId, before, after, ...meta(req)
@@ -98,9 +114,9 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     if (!association) throw fail('町内会を確認できません。', 404);
     const [memberships, officers, roles, departments, districtGroups, leaderAssignments] = await Promise.all([
       AssociationMembership.find({ association: association._id, status: 'active', household: { $exists: true } }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name').populate('household', 'displayName address representative').sort({ startedAt: 1 }).lean(),
-      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean(),
+      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').sort({ createdAt: 1 }).lean(),
       RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(), Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(), DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
-      AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean()
+      AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean()
     ]);
     const candidateUserIds = memberships.map((membership) => membership.user?._id).filter(Boolean);
     const permanentAssignments = candidateUserIds.length ? await RoleAssignment.find({ association: association._id, user: { $in: candidateUserIds }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true }, select: 'name permissions' }).populate('department', 'name').lean() : [];
@@ -122,7 +138,7 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     });
     const officerCandidates = memberships.filter((item) => item.user).map((item) => ({ _id: item.user._id, name: item.user.displayname || item.user.username, email: item.user.email || '', districtGroup: item.districtGroup }));
     const leaderCandidates = officerCandidates;
-    const leaderRecords = await AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean();
+    const leaderRecords = await AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean();
     const leaderChildren = await DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true }, active: true }).sort({ sortOrder: 1, name: 1 }).lean();
     const leaderDistricts = districtGroups.map((district) => ({ ...district, groups: leaderChildren.filter((group) => String(group.parentDistrict) === String(district._id)) }));
     return res.render('association-annual-settings', { title: `${association.name}年度設定`, association, fiscalYear, memberships, householdRepresentatives, officers, officerRecords: officers, officerCandidates, leaderRecords, leaderCandidates, leaderDistricts, roles, departments, districtGroups, leaderAssignments });
@@ -425,10 +441,17 @@ managementRouter.post('/:associationId/manage/roles/:roleId/delete', requirePerm
 managementRouter.post('/:associationId/manage/annual/officers/create', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
     const fiscalYear = Number(req.body.fiscalYear), name = String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim();
-    if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200 || !name || !nameKana || !validId(req.body.roleId) || !validId(req.body.districtGroupId)) throw fail('役職、氏名、氏名よみ、地区・班を正しく入力してください。');
-    const [role, districtGroup] = await Promise.all([RoleDefinition.findOne({ _id: req.body.roleId, association: req.params.associationId, active: true, name: { $ne: '町内会管理者' } }), DistrictGroup.findOne({ _id: req.body.districtGroupId, association: req.params.associationId, active: true })]);
-    if (!role || !districtGroup) throw fail('役職または地区・班を確認できません。');
-    const officer = await AnnualOfficer.create({ association: req.params.associationId, fiscalYear, name, nameKana, role: role._id, districtGroup: districtGroup._id, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), selectedBy: req.user._id });
+    const roleId = Array.isArray(req.body.roleId) ? req.body.roleId.at(-1) : req.body.roleId;
+    const departmentId = Array.isArray(req.body.departmentId) ? req.body.departmentId.at(-1) : req.body.departmentId;
+    const districtGroupId = Array.isArray(req.body.districtGroupId) ? req.body.districtGroupId.at(-1) : req.body.districtGroupId;
+    const location = await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId });
+    if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200 || !name || !nameKana || !validId(departmentId) || !location) throw fail('部会、氏名、氏名よみ、地区・班を正しく入力してください。');
+    const [role, department] = await Promise.all([
+      roleId ? RoleDefinition.findOne({ _id: roleId, association: req.params.associationId, active: true, name: { $ne: '町内会管理者' } }) : null,
+      Department.findOne({ _id: departmentId, association: req.params.associationId, active: true })
+    ]);
+    if ((roleId && !role) || !department) throw fail('役職または部会を確認できません。');
+    const officer = await AnnualOfficer.create({ association: req.params.associationId, fiscalYear, name, nameKana, role: role?._id, department: department._id, ...location, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), selectedBy: req.user._id });
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_officer.created', targetType: 'AnnualOfficer', targetId: officer._id, after: { fiscalYear, name }, req });
     req.session.notice = '役員を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
   } catch (error) { return next(error); }
@@ -502,7 +525,7 @@ managementRouter.post('/:associationId/manage/annual/officers/configure', requir
       req.body.roleId ? RoleDefinition.findOne({ _id: req.body.roleId, association: req.params.associationId, active: true, name: { $ne: '町内会管理者' } }) : null,
       req.body.departmentId ? Department.findOne({ _id: req.body.departmentId, association: req.params.associationId, active: true }) : null
     ]);
-    if ((req.body.roleId && !role) || (req.body.departmentId && !department)) throw fail('役職または所属部を確認できません。');
+    if ((req.body.roleId && !role) || !department) throw fail('役職または部会を確認できません。');
     const officer = await AnnualOfficer.findOneAndUpdate(
       { association: req.params.associationId, fiscalYear, user: userId },
       { $set: { role: role?._id || null, department: department?._id || null }, $setOnInsert: { selectedBy: req.user._id }, $unset: { cancelledAt: '' } },
@@ -519,8 +542,12 @@ managementRouter.post('/:associationId/manage/annual/officers/:officerId/update'
     const officer = await AnnualOfficer.findOne({ _id: req.params.officerId, association: req.params.associationId });
     if (!officer) throw fail('年度役員を確認できません。', 404);
     const [role, department] = await Promise.all([req.body.roleId ? RoleDefinition.findOne({ _id: req.body.roleId, association: req.params.associationId, active: true }) : null, req.body.departmentId ? Department.findOne({ _id: req.body.departmentId, association: req.params.associationId, active: true }) : null]);
-    if ((req.body.roleId && !role) || (req.body.departmentId && !department)) throw fail('役職または所属部を確認できません。');
-    const before = { role: officer.role, department: officer.department }; officer.role = role?._id; officer.department = department?._id; await officer.save();
+    if ((req.body.roleId && !role) || !department) throw fail('役職または部会を確認できません。');
+    const location = (req.body.groupId || req.body.districtGroupId) ? await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId }) : null;
+    if ((req.body.groupId || req.body.districtGroupId) && !location) throw fail('地区・班を確認できません。');
+    const before = { role: officer.role, department: officer.department, districtGroup: officer.districtGroup }; officer.role = role?._id || null; officer.department = department._id; if (location) Object.assign(officer, location); await officer.save();
+    for (const field of ['name', 'nameKana', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) officer[field] = String(req.body[field] || '').trim();
+    await officer.save();
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_officer.updated', targetType: 'AnnualOfficer', targetId: officer._id, before, after: { role: officer.role, department: officer.department }, req });
     req.session.notice = '役員の役職・所属部を更新しました。'; return redirectAnnual(res, req.params.associationId, officer.fiscalYear);
   } catch (error) { return next(error); }
@@ -535,13 +562,23 @@ managementRouter.post('/:associationId/manage/annual/officers/:officerId/delete'
   } catch (error) { return next(error); }
 });
 
+managementRouter.post('/:associationId/manage/annual/leaders/:leaderId/update', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const leader = await AnnualLeaderAssignment.findOne({ _id: req.params.leaderId, association: req.params.associationId });
+    if (!leader) throw fail('班長を確認できません。', 404);
+    if (req.body.groupId || req.body.districtGroupId) { const location = await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId }); if (!location) throw fail('地区・班を確認できません。'); Object.assign(leader, location); }
+    for (const field of ['name', 'nameKana', 'phone', 'mobilePhone']) if (req.body[field] !== undefined) leader[field] = String(req.body[field] || '').trim();
+    await leader.save(); req.session.notice = '班長情報を更新しました。'; return redirectAnnual(res, req.params.associationId, leader.fiscalYear);
+  } catch (error) { return next(error); }
+});
+
 managementRouter.post('/:associationId/manage/leaders/create', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
     const fiscalYear = Number(req.body.fiscalYear), name = String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim();
-    if (!Number.isInteger(fiscalYear) || !validId(req.body.districtGroupId) || !name || !nameKana) throw fail('地区・班、氏名、氏名よみを正しく入力してください。');
-    const district = await DistrictGroup.findOne({ _id: req.body.districtGroupId, association: req.params.associationId, active: true });
-    if (!district || await AnnualLeaderAssignment.exists({ association: req.params.associationId, fiscalYear, districtGroup: district._id, cancelledAt: null })) throw fail('選択した地区・班はすでに設定されています。', 409);
-    const leader = await AnnualLeaderAssignment.create({ association: req.params.associationId, fiscalYear, districtGroup: district._id, name, nameKana, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), assignedBy: req.user._id });
+    const location = await resolveAnnualLocation({ associationId: req.params.associationId, districtId: req.body.districtId, groupId: req.body.groupId, districtGroupId: req.body.districtGroupId });
+    if (!Number.isInteger(fiscalYear) || !location || !name || !nameKana) throw fail('地区・班、氏名、氏名よみを正しく入力してください。');
+    if (await AnnualLeaderAssignment.exists({ association: req.params.associationId, fiscalYear, districtGroup: location.districtGroup, cancelledAt: null })) throw fail('選択した地区・班はすでに設定されています。', 409);
+    const leader = await AnnualLeaderAssignment.create({ association: req.params.associationId, fiscalYear, ...location, name, nameKana, phone: String(req.body.phone || '').trim(), mobilePhone: String(req.body.mobilePhone || '').trim(), assignedBy: req.user._id });
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'district_leader.created', targetType: 'AnnualLeaderAssignment', targetId: leader._id, after: { fiscalYear, name, districtGroup: district._id }, req });
     req.session.notice = '班長を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
   } catch (error) { return next(error); }

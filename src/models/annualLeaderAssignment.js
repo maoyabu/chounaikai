@@ -4,6 +4,8 @@ const annualLeaderAssignmentSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   fiscalYear: { type: Number, required: true, min: 2000, max: 2200, index: true },
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup', required: true },
+  district: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
+  group: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
   representative: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   name: { type: String, trim: true },
   nameKana: { type: String, trim: true },

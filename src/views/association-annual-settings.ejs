@@ -10,13 +10,14 @@
     <dialog class="officer-dialog" id="new-officer-dialog"><div class="dialog-heading"><h3>役員を新規登録</h3><button type="button" class="dialog-close" data-close-new-officer>×</button></div>
     <form class="resident-officer-form" action="/associations/<%= association._id %>/manage/annual/officers/create" method="post">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="fiscalYear" value="<%= fiscalYear %>">
-      <label>役職<select name="roleId" required><option value="">選択してください</option><% roles.forEach((role) => { %><option value="<%= role._id %>"><%= role.name %></option><% }) %></select></label>
+      <label>役職<select name="roleId"><option value="">選択してください（任意）</option><% roles.forEach((role) => { %><option value="<%= role._id %>"><%= role.name %></option><% }) %></select></label>
+      <label>部会<select name="departmentId" required><option value="">選択してください</option><% departments.forEach((department) => { %><option value="<%= department._id %>"><%= department.name %></option><% }) %></select></label>
       <label>氏名<input name="name" required></label><label>氏名よみ<input name="nameKana" required></label>
       <label>地区・班<select name="districtGroupId" required><option value="">選択してください</option><% districtGroups.forEach((group) => { %><option value="<%= group._id %>"><%= group.name %></option><% }) %></select></label>
       <label>電話番号<input name="phone" type="tel"></label><label>携帯電話番号<input name="mobilePhone" type="tel"></label>
       <div class="form-actions"><button class="button button-primary">新規登録</button></div>
     </form></dialog>
-    <h3>役員一覧</h3><div class="annual-officer-record-list"><% (officerRecords || []).forEach((officer) => { %><article><div><strong><%= officer.name || officer.user?.displayname || officer.user?.username || '氏名未登録' %></strong><span><%= officer.role?.name || '役職未設定' %> / <%= officer.districtGroup?.name || '地区・班未設定' %></span><small><%= officer.nameKana || '' %>　<%= officer.phone || '' %>　<%= officer.mobilePhone || '' %></small><small><%= officer.user ? `紐付け済み：${officer.user.displayname || officer.user.username || officer.user.email}` : '会員未紐付け' %></small></div><div class="form-actions"><button type="button" class="button button-quiet" data-open-link-dialog="link-officer-<%= officer._id %>">会員を紐付け</button><form method="post" action="/associations/<%= association._id %>/manage/annual/officers/<%= officer._id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form></div></article><dialog class="officer-dialog" id="link-officer-<%= officer._id %>"><div class="dialog-heading"><h3>会員を紐付け</h3><button type="button" class="dialog-close" data-close-link-dialog>×</button></div><label class="resident-search">名前・メールアドレスで検索<input type="search" data-link-search="<%= officer._id %>"></label><div data-link-results="<%= officer._id %>"><% (officerCandidates || []).forEach((candidate) => { %><form method="post" action="/associations/<%= association._id %>/manage/annual/officers/<%= officer._id %>/link" data-link-candidate data-search="<%= [candidate.name, candidate.email].join(' ') %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="userId" value="<%= candidate._id %>"><button class="resident-row-button"><strong><%= candidate.name %></strong><span><%= candidate.email %></span></button></form><% }) %></div></dialog><% }) %></div>
+    <h3>役員一覧</h3><div class="annual-officer-record-list"><% (officerRecords || []).forEach((officer) => { %><article><div><strong><%= officer.name || officer.user?.displayname || officer.user?.username || '氏名未登録' %></strong><span><%= officer.role?.name || '一般役員' %> / <%= officer.districtGroup?.name || '地区・班未設定' %></span><small><%= officer.nameKana || '' %>　<%= officer.phone || '' %>　<%= officer.mobilePhone || '' %></small><small><%= officer.user ? `紐付け済み：${officer.user.displayname || officer.user.username || officer.user.email}` : '会員未紐付け' %></small></div><div class="form-actions"><button type="button" class="button button-quiet" data-open-link-dialog="link-officer-<%= officer._id %>">会員を紐付け</button><form method="post" action="/associations/<%= association._id %>/manage/annual/officers/<%= officer._id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form></div></article><dialog class="officer-dialog" id="link-officer-<%= officer._id %>"><div class="dialog-heading"><h3>会員を紐付け</h3><button type="button" class="dialog-close" data-close-link-dialog>×</button></div><label class="resident-search">名前・メールアドレスで検索<input type="search" data-link-search="<%= officer._id %>"></label><div data-link-results="<%= officer._id %>"><% (officerCandidates || []).forEach((candidate) => { %><form method="post" action="/associations/<%= association._id %>/manage/annual/officers/<%= officer._id %>/link" data-link-candidate data-search="<%= [candidate.name, candidate.email].join(' ') %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="userId" value="<%= candidate._id %>"><button class="resident-row-button"><strong><%= candidate.name %></strong><span><%= candidate.email %></span></button></form><% }) %></div></dialog><% }) %></div>
     <h3>次年度へコピー</h3><form class="inline-form" method="post" action="/associations/<%= association._id %>/manage/annual/officers/copy" onsubmit="if (!confirm('コピー先に登録済みの役員がある場合は上書きされます。続行しますか？')) return false; this.overwrite.value='1'; return true"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="overwrite" value="0"><label>コピー元年度<input type="number" name="fromYear" value="<%= fiscalYear %>" required></label><label>コピー先年度<input type="number" name="toYear" value="<%= fiscalYear + 1 %>" required></label><button class="button button-primary">年度設定をコピー</button></form>
   </section>
   <section class="content-card management-card" data-annual-panel="legacy-officers" hidden>
@@ -98,24 +99,27 @@
     const leaderDistricts = <%- JSON.stringify(typeof leaderDistricts !== 'undefined' ? leaderDistricts : []) %>;
     const leaderDistrictSelect = document.querySelector('#new-leader-dialog select[name="districtGroupId"]');
     if (leaderDistrictSelect) {
-      const hidden = leaderDistrictSelect, label = hidden.closest('label');
-      hidden.type = 'hidden'; hidden.style.display = 'none';
+      const label = leaderDistrictSelect.closest('label');
+      const hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = 'districtGroupId'; leaderDistrictSelect.remove(); label.append(hidden);
       const district = document.createElement('select'), group = document.createElement('select');
       district.required = true; district.innerHTML = '<option value="">地区を選択してください</option>' + leaderDistricts.map((item) => `<option value="${item._id}">${item.name}</option>`).join('');
       group.innerHTML = '<option value="">班を選択してください</option>';
       const groupLabel = document.createElement('label'); groupLabel.textContent = '班'; groupLabel.append(group); label.after(groupLabel); label.querySelector('span')?.remove(); label.append(district);
       const updateGroups = () => { const item = leaderDistricts.find((districtItem) => String(districtItem._id) === String(district.value)); group.innerHTML = item?.groups?.length ? '<option value="">班を選択してください</option>' + item.groups.map((child) => `<option value="${child._id}">${child.name.replace(item.name, '')}</option>`).join('') : '<option value="">地区全体</option>'; hidden.value = item?.groups?.length ? group.value : (item?._id || ''); };
       district.addEventListener('change', updateGroups); group.addEventListener('change', () => { hidden.value = group.value || district.value; });
+      hidden.closest('form')?.addEventListener('submit', () => { hidden.value = group.value || district.value; });
     }
     const officerDistrictSelect = document.querySelector('#new-officer-dialog select[name="districtGroupId"]');
     if (officerDistrictSelect) {
-      const hidden = officerDistrictSelect, label = hidden.closest('label'); hidden.type = 'hidden'; hidden.style.display = 'none';
+      const label = officerDistrictSelect.closest('label');
+      const hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = 'districtGroupId'; officerDistrictSelect.remove(); label.append(hidden);
       const district = document.createElement('select'), group = document.createElement('select');
       district.required = true; district.innerHTML = '<option value="">地区を選択してください</option>' + leaderDistricts.map((item) => `<option value="${item._id}">${item.name}</option>`).join('');
       group.innerHTML = '<option value="">班を選択してください</option>';
       const groupLabel = document.createElement('label'); groupLabel.textContent = '班'; groupLabel.append(group); label.after(groupLabel); label.append(district);
       const updateGroups = () => { const item = leaderDistricts.find((districtItem) => String(districtItem._id) === String(district.value)); group.innerHTML = item?.groups?.length ? '<option value="">班を選択してください</option>' + item.groups.map((child) => `<option value="${child._id}">${child.name.replace(item.name, '')}</option>`).join('') : '<option value="">地区全体</option>'; hidden.value = item?.groups?.length ? group.value : (item?._id || ''); };
       district.addEventListener('change', updateGroups); group.addEventListener('change', () => { hidden.value = group.value || district.value; });
+      hidden.closest('form')?.addEventListener('submit', () => { hidden.value = group.value || district.value; });
     }
     document.querySelectorAll('[data-open-leader-link]').forEach((button) => button.addEventListener('click', () => { const dialog = document.getElementById(button.dataset.openLeaderLink); const summary = dialog?.querySelector('.selected-officer-summary'); const search = dialog?.querySelector('.resident-search'); if (summary && search) search.before(summary); dialog?.showModal(); }));
     document.querySelectorAll('[data-close-leader-link]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
@@ -126,7 +130,40 @@
       const q = input.value.normalize('NFKC').toLocaleLowerCase('ja');
       document.querySelectorAll(`[data-link-results="${input.dataset.linkSearch}"] [data-link-candidate]`).forEach((row) => { row.hidden = !row.dataset.search.normalize('NFKC').toLocaleLowerCase('ja').includes(q); });
     }));
-    document.querySelectorAll('.annual-officer-record-list > article').forEach((article) => {
+    const editableOfficerRecords = <%- JSON.stringify(typeof officerRecords !== 'undefined' ? officerRecords : []) %>;
+    const editableLeaderRecords = <%- JSON.stringify(typeof leaderRecords !== 'undefined' ? leaderRecords : []) %>;
+    const roleOptions = <%- JSON.stringify(typeof roles !== 'undefined' ? roles : []) %>;
+    const departmentOptions = <%- JSON.stringify(typeof departments !== 'undefined' ? departments : []) %>;
+    const districtOptions = <%- JSON.stringify(typeof leaderDistricts !== 'undefined' ? leaderDistricts : []) %>;
+    const openEditDialog = (record, isLeader, articleCsrf) => {
+      if (!record || !record._id) return;
+      const dialog = document.createElement('dialog'); dialog.className = 'officer-dialog record-edit-dialog';
+      const id = record._id, prefix = isLeader ? 'leaders' : 'officers';
+      const districts = districtOptions.flatMap((district) => [{ ...district, display: district.name }, ...(district.groups || []).map((group) => ({ ...group, display: `${district.name} ${group.name.replace(district.name, '')}` }))]);
+      dialog.innerHTML = `<div class="dialog-heading"><h3>${isLeader ? '班長' : '役員'}を編集</h3><button type="button" class="dialog-close">×</button></div><form method="post" class="resident-officer-form" action="${location.pathname.replace(/\/manage\/annual.*/, '')}/manage/annual/${prefix}/${id}/update">${isLeader ? '' : `<label>役職<select name="roleId"><option value="">選択してください（任意）</option>${roleOptions.map((role) => `<option value="${role._id}" ${String(record.role?._id || record.role) === String(role._id) ? 'selected' : ''}>${role.name}</option>`).join('')}</select></label><label>部会<select name="departmentId" required><option value="">選択してください</option>${departmentOptions.map((department) => `<option value="${department._id}" ${String(record.department?._id || record.department) === String(department._id) ? 'selected' : ''}>${department.name}</option>`).join('')}</select></label>`}<label>地区<select data-edit-district required><option value="">地区を選択してください</option>${districtOptions.map((item) => `<option value="${item._id}">${item.name}</option>`).join('')}</select></label><label>班<select name="groupId" data-edit-group><option value="">班を選択してください</option></select></label><input type="hidden" name="districtId" data-edit-district-id><input type="hidden" name="districtGroupId" data-edit-location><label>氏名<input name="name" value="${record.name || record.representative?.displayname || ''}" required></label><label>氏名よみ<input name="nameKana" value="${record.nameKana || ''}" required></label><label>電話番号<input name="phone" value="${record.phone || ''}" type="tel"></label><label>携帯電話番号<input name="mobilePhone" value="${record.mobilePhone || ''}" type="tel"></label><input type="hidden" name="_csrf" value="${articleCsrf}"><div class="form-actions"><button type="button" class="button button-quiet dialog-cancel">キャンセル</button><button class="button button-primary">保存</button></div></form>`;
+      const districtSelect = dialog.querySelector('[data-edit-district]'), groupSelect = dialog.querySelector('[data-edit-group]'), districtId = dialog.querySelector('[data-edit-district-id]'), locationField = dialog.querySelector('[data-edit-location]');
+      const selectedDistrict = String(record.district?._id || record.district || (record.group?.parentDistrict || record.districtGroup?.parentDistrict) || record.districtGroup?._id || '');
+      const selectedGroup = String(record.group?._id || record.group || (record.districtGroup?.parentDistrict ? record.districtGroup?._id : '') || '');
+      const refreshGroups = () => { const item = districtOptions.find((entry) => String(entry._id) === String(districtSelect.value)); groupSelect.innerHTML = item?.groups?.length ? '<option value="">班を選択してください</option>' + item.groups.map((child) => `<option value="${child._id}">${child.name.replace(item.name, '')}</option>`).join('') : '<option value="">地区全体</option>'; groupSelect.required = Boolean(item?.groups?.length); groupSelect.value = selectedGroup || ''; districtId.value = districtSelect.value; locationField.value = groupSelect.value || districtSelect.value; };
+      districtSelect.value = selectedDistrict; districtSelect.addEventListener('change', () => { refreshGroups(); }); groupSelect.addEventListener('change', () => { districtId.value = districtSelect.value; locationField.value = groupSelect.value || districtSelect.value; }); refreshGroups();
+      dialog.querySelector('.dialog-close').onclick = () => dialog.close(); dialog.querySelector('.dialog-cancel').onclick = () => dialog.close(); document.body.append(dialog); dialog.showModal();
+    };
+    document.querySelectorAll('.annual-officer-record-list > article').forEach((article, index) => {
+      // 編集対象の dialog は article の子ではなく、article の直後に出力される兄弟要素。
+      const editDialog = article.nextElementSibling?.matches('dialog') ? article.nextElementSibling : null;
+      const isLeaderRecord = Boolean(article.closest('[data-annual-panel="leaders"]'));
+      const recordId = editDialog?.id?.replace(/^(?:leader-link|link-officer)-/, '');
+      const records = isLeaderRecord ? editableLeaderRecords : editableOfficerRecords;
+      const sourceRecord = records.find((item) => String(item._id) === String(recordId)) || records[index];
+      // SSR 側の配列が空でも、既存の紐付けモーダルのIDから編集対象を確定する。
+      const record = sourceRecord || { _id: recordId, name: article.querySelector('strong')?.textContent?.trim() || '', nameKana: '', phone: '', mobilePhone: '' };
+      article.classList.add('record-editable');
+      article.addEventListener('click', (event) => {
+        if (event.target.closest('button, form, dialog, a, input, select')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openEditDialog(record, isLeaderRecord, article.querySelector('input[name="_csrf"]')?.value);
+      }, true);
       const linked = [...article.querySelectorAll('small')].find((item) => item.textContent.includes('紐付け済み'));
       const actions = article.querySelector(':scope > div:last-of-type');
       const linkButton = actions?.querySelector('[data-open-link-dialog], [data-open-leader-link]');
