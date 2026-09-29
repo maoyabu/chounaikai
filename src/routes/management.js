@@ -9,6 +9,7 @@ import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { Notification } from '../models/notification.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
+import { User } from '../models/user.js';
 import { AuditLog } from '../models/auditLog.js';
 import { AssociationGroupRequest } from '../models/associationGroup.js';
 import { JoinApplication } from '../models/workflow.js';
@@ -192,21 +193,41 @@ managementRouter.get('/:associationId/manage/members', requirePermission('associ
     const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) throw fail('町内会を確認できません。', 404);
-    const memberships = await AssociationMembership.find({ association: association._id, status: 'active' }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name').populate('household', 'displayName address').sort({ startedAt: 1 }).lean();
+    const memberships = await AssociationMembership.find({ association: association._id, status: 'active' }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name parentDistrict').populate('household', 'displayName address').sort({ startedAt: 1 }).lean();
     const userIds = memberships.map((item) => item.user?._id).filter(Boolean);
-    const [officers, leaders, managerAssignments, districtGroups, roles, departments] = await Promise.all([
+    const [officers, leaders, managerAssignments, districtGroups, roles, departments, districtChildren] = await Promise.all([
       AnnualOfficer.find({ association: association._id, fiscalYear, user: { $in: userIds }, cancelledAt: null }).populate('role', 'name').populate('department', 'name').lean(),
       AnnualLeaderAssignment.find({ association: association._id, fiscalYear, representative: { $in: userIds }, cancelledAt: null }).select('representative').lean(),
       RoleAssignment.find({ association: association._id, user: { $in: userIds }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' }, select: 'name' }).lean(),
       DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
       RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean()
+      ,DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
+    const locationOptions = districtGroups.flatMap((district) => [{ ...district, label: district.name }, ...districtChildren.filter((group) => String(group.parentDistrict) === String(district._id)).map((group) => ({ ...group, label: `${district.name} ${group.name.replace(district.name, '')}` }))]);
     const officerByUser = new Map(officers.map((item) => [String(item.user), item]));
     const leaderUserIds = new Set(leaders.map((item) => String(item.representative)));
     const managerUserIds = new Set(managerAssignments.filter((item) => item.role).map((item) => String(item.user)));
     const members = memberships.filter((item) => item.user).map((membership) => ({ ...membership, officer: officerByUser.get(String(membership.user._id)), isLeader: leaderUserIds.has(String(membership.user._id)), isAssociationManager: managerUserIds.has(String(membership.user._id)) }));
-    return res.render('association-members', { title: `${association.name}住人一覧`, association, fiscalYear, members, districtGroups, roles, departments });
+    return res.render('association-members', { title: `${association.name}住人一覧`, association, fiscalYear, members, districtGroups, locationOptions, roles, departments });
+  } catch (error) { return next(error); }
+});
+
+managementRouter.post('/:associationId/manage/members/:membershipId/update', requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const membership = await AssociationMembership.findOne({ _id: req.params.membershipId, association: req.params.associationId, status: 'active' }).populate('household');
+    if (!membership) throw fail('住人情報を確認できません。', 404);
+    const districtGroup = await DistrictGroup.findOne({ _id: req.body.districtGroupId, association: req.params.associationId, active: true });
+    if (!districtGroup) throw fail('地区・班を確認できません。');
+    const name = String(req.body.name || '').trim(), email = String(req.body.email || '').trim().toLowerCase();
+    if (!name || !email) throw fail('氏名とメールアドレスを入力してください。');
+    await User.updateOne({ _id: membership.user }, { $set: { displayname: name, email } });
+    membership.districtGroup = districtGroup._id; await membership.save();
+    if (membership.household) {
+      membership.household.address = { postalCode: String(req.body.postalCode || '').trim(), street: String(req.body.address || '').trim(), building: String(req.body.building || '').trim() };
+      membership.household.phone = String(req.body.phone || '').trim(); membership.household.email = email; membership.household.districtGroup = districtGroup._id; await membership.household.save();
+    }
+    req.session.notice = '住人情報を更新しました。'; return res.redirect(`/associations/${req.params.associationId}/manage/members`);
   } catch (error) { return next(error); }
 });
 

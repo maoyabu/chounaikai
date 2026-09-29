@@ -750,7 +750,7 @@ webRouter.get('/associations/:associationId/officers', requireLogin, async (req,
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }).lean()
     ]);
     if (!association || (!membership && !req.user.isAdmin)) return res.status(404).render('error', { title: '町内会が見つかりません', message: '指定された町内会を確認できませんでした。' });
-    const officers = await AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean();
+    const officers = await AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean();
     return res.render('association-public-officers', { title: `${association.name}の役員`, association, fiscalYear, officers });
   } catch (error) { return next(error); }
 });
