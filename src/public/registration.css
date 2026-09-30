@@ -449,6 +449,8 @@ h1, h2, h3, h4, h5, h6,
 .association-event-list-item { display: flex; align-items: center; gap: .8rem; width: 100%; padding: .7rem 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
 .association-event-list-item:hover strong { color: var(--green); text-decoration: underline; }
 .association-event-list-item > span:nth-child(2) { display: grid; flex: 1; gap: .15rem; }
+.association-event-list-item > .association-event-color { flex: 0 0 4px; width: 4px; height: 2.2rem; border-radius: 2px; }
+.association-event-list-item > .status-badge { flex: 0 0 auto; white-space: nowrap; }
 .association-event-list-item small, .association-event-manage-heading small { color: var(--muted); font-size: .78rem; }
 .association-event-color { display: inline-block; flex: 0 0 auto; width: .8rem; height: .8rem; border-radius: 50%; }
 .association-event-dialog { width: min(80vw, 960px); max-width: 80vw; padding: 1.5rem; border: 1px solid var(--line); border-radius: 1rem; box-shadow: var(--shadow); }
@@ -481,9 +483,19 @@ h1, h2, h3, h4, h5, h6,
 .association-event-manage-list { display: grid; gap: .8rem; }
 .association-event-manage-item { padding: .8rem 1rem; border: 1px solid var(--line); border-radius: .8rem; }
 .association-event-manage-heading, .association-event-manage-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
-.association-event-manage-heading { display: grid; grid-template-columns: auto minmax(0, 1fr) 4.5rem 13.5rem; align-items: center; gap: 1rem; }
-.association-event-manage-heading > .association-event-inline-actions { grid-column: 4; display: flex; align-items: center; justify-content: center; gap: .45rem; min-width: 0; }
-.association-event-manage-heading > .association-event-completed-tag { grid-column: 3; justify-self: center; }
+.association-event-manage-heading { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) 13.5rem; align-items: center; gap: 1rem; }
+.association-event-manage-heading > .association-event-color { display: block; grid-column: 2; grid-row: 1; justify-self: start; width: 4px; height: 70%; border-radius: 2px; }
+.association-event-manage-heading > div:first-of-type { grid-column: 2; grid-row: 1; width: 100%; box-sizing: border-box; padding-left: 1rem; }
+.association-event-manage-heading > .association-event-inline-actions { grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: .45rem; min-width: 0; }
+.association-event-manage-heading > .association-event-inline-actions > form:last-child { margin-left: 0; }
+.association-event-manage-heading > .association-event-completed-tag { grid-column: 1; grid-row: 1; justify-self: center; }
+.association-event-inline-actions button[data-event-open^="report-event-"] { font-size: 0; }
+.association-event-inline-actions button[data-event-open^="report-event-"]::after { content: '完了'; font-size: .9rem; }
+.association-event-inline-actions form[action*="/complete"] button { font-size: 0; }
+.association-event-inline-actions form[action*="/complete"] button::after { content: '戻す'; font-size: .9rem; }
+.association-event-inline-actions button[data-event-open^="edit-event-"] { display: none; }
+.association-event-manage-item { cursor: pointer; }
+.association-event-manage-item .association-event-inline-actions, .association-event-manage-item .association-event-inline-actions * { cursor: default; }
 .association-event-inline-actions { display: contents; }
 .association-event-inline-actions form { margin: 0; }
 .association-event-inline-actions .button { min-height: 34px; padding: .35rem .6rem; font-size: .8rem; }
