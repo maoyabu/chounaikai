@@ -440,6 +440,11 @@ h1, h2, h3, h4, h5, h6,
 .association-event-dots { display: flex; justify-content: center; gap: 2px; min-height: 5px; }
 .association-event-dots i { width: 5px; height: 5px; border-radius: 50%; }
 .association-event-list { padding: 0 1.25rem 1.25rem; }
+.association-event-list > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; cursor: pointer; list-style: none; }
+.association-event-list > summary::-webkit-details-marker { display: none; }
+.association-event-list > summary h3 { margin: 0 !important; }
+.association-event-list > summary > span { color: var(--green-dark); font-size: 1.25rem; transition: transform .2s ease; }
+.association-event-list[open] > summary > span { transform: rotate(180deg); }
 .association-event-list h3 { margin: 0 0 .6rem; font-size: 1rem; }
 .association-event-list-item { display: flex; align-items: center; gap: .8rem; width: 100%; padding: .7rem 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
 .association-event-list-item:hover strong { color: var(--green); text-decoration: underline; }
