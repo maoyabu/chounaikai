@@ -524,12 +524,28 @@ managementRouter.post('/:associationId/manage/annual/officers/copy', requirePerm
   try {
     const fromYear = Number(req.body.fromYear), toYear = Number(req.body.toYear), overwrite = req.body.overwrite === '1';
     if (!Number.isInteger(fromYear) || !Number.isInteger(toYear) || fromYear === toYear) throw fail('コピー元とコピー先の年度を確認してください。');
-    const source = await AnnualOfficer.find({ association: req.params.associationId, fiscalYear: fromYear, cancelledAt: null }).lean();
-    const existing = await AnnualOfficer.countDocuments({ association: req.params.associationId, fiscalYear: toYear, cancelledAt: null });
-    if (existing && !overwrite) throw fail('コピー先に役員が登録されています。上書き確認をしてください。', 409);
-    if (existing) await AnnualOfficer.deleteMany({ association: req.params.associationId, fiscalYear: toYear });
-    if (source.length) await AnnualOfficer.insertMany(source.map(({ _id, createdAt, updatedAt, fiscalYear, ...item }) => ({ ...item, fiscalYear: toYear, selectedBy: req.user._id, user: undefined })));
-    req.session.notice = `${fromYear}年度の役員を${toYear}年度へコピーしました。`; return redirectAnnual(res, req.params.associationId, toYear);
+    const association = req.params.associationId;
+    const [officerSource, leaderSource, planSource] = await Promise.all([
+      AnnualOfficer.find({ association, fiscalYear: fromYear, cancelledAt: null }).lean(),
+      AnnualLeaderAssignment.find({ association, fiscalYear: fromYear, cancelledAt: null }).lean(),
+      AnnualDepartmentPlan.find({ association, fiscalYear: fromYear }).lean()
+    ]);
+    const [officerExisting, leaderExisting, planExisting] = await Promise.all([
+      AnnualOfficer.countDocuments({ association, fiscalYear: toYear, cancelledAt: null }),
+      AnnualLeaderAssignment.countDocuments({ association, fiscalYear: toYear, cancelledAt: null }),
+      AnnualDepartmentPlan.countDocuments({ association, fiscalYear: toYear })
+    ]);
+    const hasExisting = officerExisting || leaderExisting || planExisting;
+    if (hasExisting && !overwrite) throw fail('コピー先に年度設定が登録されています。上書き確認をしてください。', 409);
+    if (hasExisting) await Promise.all([
+      AnnualOfficer.deleteMany({ association, fiscalYear: toYear }),
+      AnnualLeaderAssignment.deleteMany({ association, fiscalYear: toYear }),
+      AnnualDepartmentPlan.deleteMany({ association, fiscalYear: toYear })
+    ]);
+    if (officerSource.length) await AnnualOfficer.insertMany(officerSource.map(({ _id, createdAt, updatedAt, fiscalYear, ...item }) => ({ ...item, fiscalYear: toYear, selectedBy: req.user._id })));
+    if (leaderSource.length) await AnnualLeaderAssignment.insertMany(leaderSource.map(({ _id, createdAt, updatedAt, fiscalYear, ...item }) => ({ ...item, fiscalYear: toYear, assignedBy: req.user._id })));
+    if (planSource.length) await AnnualDepartmentPlan.insertMany(planSource.map(({ _id, createdAt, updatedAt, fiscalYear, report, reportUpdatedBy, ...item }) => ({ ...item, fiscalYear: toYear, createdBy: req.user._id, updatedBy: req.user._id, report: '' })));
+    req.session.notice = `${fromYear}年度の役員・班長・部会の事業計画を${toYear}年度へ複製しました。`; return redirectAnnual(res, req.params.associationId, toYear);
   } catch (error) { return next(error); }
 });
 
