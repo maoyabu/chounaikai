@@ -56,16 +56,18 @@ householdsRouter.post('/:associationId/household', verifyCsrfToken, async (req, 
 householdsRouter.get('/:associationId/join', async (req, res, next) => {
   try {
     if (!validId(req.params.associationId)) throw fail('申請できません。', 403);
-    const [association, membership, existingApplication, districtGroups] = await Promise.all([
+    const [association, membership, existingApplication, districtGroups, districtChildren] = await Promise.all([
       NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean(),
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }),
       JoinApplication.findOne({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }),
-      DistrictGroup.find({ association: req.params.associationId, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean()
+      DistrictGroup.find({ association: req.params.associationId, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
+      DistrictGroup.find({ association: req.params.associationId, active: true, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     if (!association || membership) throw fail('この町内会には参加申請できません。', 409);
     if (existingApplication) return res.redirect(`/associations/${existingApplication.association}/participation`);
     const values = await loadJoinFormValues({ associationId: association._id, user: req.user });
-    return res.render('household-application', { title: `${association.name} 参加申請`, association, districtGroups, values });
+    const locationOptions = districtGroups.flatMap((district) => [{ ...district, label: district.name }, ...districtChildren.filter((group) => String(group.parentDistrict) === String(district._id)).map((group) => ({ ...group, label: `${district.name} ${group.name.replace(district.name, '')}` }))]);
+    return res.render('household-application', { title: `${association.name} 参加申請`, association, districtGroups, locationOptions, values });
   } catch (error) { return next(error); }
 });
 

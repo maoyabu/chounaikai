@@ -48,13 +48,13 @@
     <% if (!profileHouseholds.length && !availableRegistrations.length && !linkedHouseholds.length) { %>
       <div class="form-card profile-empty"><h2>世帯情報はまだありません</h2><p>町内会への参加後、この画面からいつでも世帯情報を登録・編集できます。</p><a class="button button-primary" href="/dashboard">参加中の町内会を確認する</a></div>
     <% } %>
-    <% availableRegistrations.forEach(({ membership, districtGroups }) => { %>
+    <% availableRegistrations.forEach(({ membership, districtGroups, locationOptions }) => { %>
       <div class="profile-household profile-household-registration">
         <div class="profile-household-heading"><div><p class="eyebrow"><%= membership.association.name %></p><h2>世帯情報を登録</h2><p>参加後でも、世帯と世帯代表者の情報を登録できます。</p></div></div>
         <% if (!districtGroups.length) { %><div class="alert alert-error">登録できる班がありません。町内会管理者へ確認してください。</div><% } else { %>
         <form class="form-card form-stack" action="/associations/<%= membership.association._id %>/household" method="post">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <label>班 <span class="required">必須</span><select name="districtGroupId" required><option value="">選択してください</option><% districtGroups.forEach((district) => { %><option value="<%= district._id %>"><%= district.name %></option><% }) %></select></label>
+          <label>地区 <span class="required">必須</span><select class="profile-registration-district" required><option value="">選択してください</option><% districtGroups.forEach((district) => { %><option value="<%= district._id %>"><%= district.name %></option><% }) %></select></label><label>班 <span class="required">必須</span><select class="profile-registration-group"><option value="">地区を選択してください</option></select></label><input type="hidden" name="districtGroupId" class="profile-registration-location">
           <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" inputmode="numeric" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" autocomplete="tel"></label></div>
           <label>住所 <span class="required">必須</span><input name="street" autocomplete="street-address" required></label><label>建物名など（任意）<input name="building"></label>
           <h3>世帯代表者</h3>
@@ -156,4 +156,5 @@
   document.querySelectorAll('[data-close-member-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.household-member-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
 </script>
+<script><% availableRegistrations.forEach(({ locationOptions }) => { %>{const locations=<%- JSON.stringify(locationOptions || []) %>,district=document.querySelector('.profile-registration-district'),group=document.querySelector('.profile-registration-group'),hidden=document.querySelector('.profile-registration-location');if(district&&group&&hidden){const refresh=()=>{const item=locations.find(x=>String(x._id)===String(district.value)),groups=locations.filter(x=>String(x.parentDistrict)===String(district.value));group.innerHTML=groups.length?'<option value="">選択してください</option>'+groups.map(x=>`<option value="${x._id}">${x.label.replace(item?.label||'','')}</option>`).join(''):'<option value="">地区全体</option>';group.required=Boolean(groups.length);hidden.value=group.value||district.value;};district.addEventListener('change',refresh);group.addEventListener('change',()=>{hidden.value=group.value||district.value;});refresh();}}<% }) %></script>
 <%- include('partials/foot') %>

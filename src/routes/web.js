@@ -403,12 +403,16 @@ webRouter.get('/profile', requireLogin, async (req, res, next) => {
     }, {});
     const registeredAssociationIds = new Set(visibleHouseholds.map((household) => String(household.association._id)));
     const unregisteredMemberships = memberships.filter((membership) => membership.association && !membership.household && !registeredAssociationIds.has(String(membership.association._id)));
-    const districtGroups = await DistrictGroup.find({ association: { $in: unregisteredMemberships.map((membership) => membership.association._id) }, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, name: 1 }).lean();
+    const associationIds = unregisteredMemberships.map((membership) => membership.association._id);
+    const [districtGroups, districtChildren] = await Promise.all([
+      DistrictGroup.find({ association: { $in: associationIds }, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
+      DistrictGroup.find({ association: { $in: associationIds }, active: true, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
+    ]);
     const districtsByAssociation = districtGroups.reduce((result, district) => {
       (result[String(district.association)] ||= []).push(district);
       return result;
     }, {});
-    const availableHouseholdRegistrations = unregisteredMemberships.map((membership) => ({ membership, districtGroups: districtsByAssociation[String(membership.association._id)] || [] }));
+    const availableHouseholdRegistrations = unregisteredMemberships.map((membership) => { const districts = districtsByAssociation[String(membership.association._id)] || []; return { membership, districtGroups: districts, locationOptions: districts.flatMap((district) => [{ ...district, label: district.name }, ...districtChildren.filter((group) => String(group.association) === String(district.association) && String(group.parentDistrict) === String(district._id)).map((group) => ({ ...group, label: `${district.name} ${group.name.replace(district.name, '')}` }))]) }; });
     const [householdLinkApplications, householdInvitations, affiliatedHouseholds, ownHouseholdMembers] = await Promise.all([
       JoinApplication.find({ household: { $in: visibleHouseholds.map((household) => household._id) }, status: 'awaiting_household' }).populate('applicant', 'displayname username email').lean(),
       Invitation.find({ household: { $in: visibleHouseholds.map((household) => household._id) } }).select('householdMember status expiresAt').sort({ createdAt: -1 }).lean(),
