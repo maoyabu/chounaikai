@@ -5,6 +5,7 @@ import { connectDatabase } from './db/connect.js';
 import { createApp } from './app.js';
 import { deleteExpiredAnnouncementAttachments } from './services/announcementAttachmentService.js';
 import { AnnualOfficer } from './models/annualOfficer.js';
+import { dispatchPendingNotifications } from './services/notificationService.js';
 
 const config = loadConfig();
 const app = createApp(config);
@@ -13,6 +14,14 @@ mongoose.connection.on('disconnected', () => console.error('MongoDB disconnected
 try {
   await connectDatabase(config.mongoUri, config.nodeEnv);
   console.log('MongoDB connected.');
+  let notificationDispatchRunning = false;
+  setInterval(async () => {
+    if (notificationDispatchRunning) return;
+    notificationDispatchRunning = true;
+    try { await dispatchPendingNotifications(); }
+    catch (error) { console.error('Notification dispatch failed:', error.name); }
+    finally { notificationDispatchRunning = false; }
+  }, 10000).unref();
   // 旧バージョンの user 一意インデックスが残っていると、会員未紐付け
   // （user=null）の役員を複数登録できないため、スキーマ定義に合わせて同期する。
   try { await AnnualOfficer.syncIndexes(); } catch (error) { console.error('Annual officer indexes could not be synchronized:', error.message); }

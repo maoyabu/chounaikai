@@ -1,4 +1,5 @@
 import express from 'express';
+import { queueNotice, notifyResponsible, notifyEvent } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
@@ -83,11 +84,11 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/pr', accept
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId/manage/events', acceptEventImage, verifyCsrfToken, async (req, res, next) => {
-  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); const values = eventValues(req.body); if (req.file) values.image = await uploadPublicPhoto(req.file, group._id, `group-event-${Date.now()}`); await AssociationEvent.create({ ...values, association: group.association, group: group._id }); req.session.notice = 'グループ行事を登録しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
+  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); const values = eventValues(req.body); if (req.file) values.image = await uploadPublicPhoto(req.file, group._id, `group-event-${Date.now()}`); const createdEvent = await AssociationEvent.create({ ...values, association: group.association, group: group._id }); await notifyEvent(createdEvent, '登録'); req.session.notice = 'グループ行事を登録しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
 });
 
 for (const action of ['update', 'delete']) associationGroupsRouter.post(`/:associationId/groups/:groupId/manage/events/:eventId${action === 'update' ? '' : '/delete'}`, acceptEventImage, verifyCsrfToken, async (req, res, next) => {
-  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); if (action === 'delete') await AssociationEvent.deleteOne({ _id: req.params.eventId, group: group._id }); else { const values = eventValues(req.body); if (req.file) values.image = await uploadPublicPhoto(req.file, group._id, `group-event-${req.params.eventId}`); await AssociationEvent.updateOne({ _id: req.params.eventId, group: group._id }, { $set: values }); } req.session.notice = action === 'delete' ? '行事を削除しました。' : '行事を更新しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
+  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); const previous = await AssociationEvent.findOne({ _id: req.params.eventId, group: group._id, association: group.association }).lean(); if (!previous) throw fail('行事を確認できません。', 404); if (action === 'delete') await AssociationEvent.deleteOne({ _id: req.params.eventId, group: group._id }); else { const values = eventValues(req.body); if (req.file) values.image = await uploadPublicPhoto(req.file, group._id, `group-event-${req.params.eventId}`); await AssociationEvent.updateOne({ _id: req.params.eventId, group: group._id }, { $set: values }); } const current = action === 'delete' ? previous : await AssociationEvent.findById(req.params.eventId).lean(); await notifyEvent({ ...current, visible: previous.visible || current.visible }, action === 'delete' ? '削除' : '変更'); req.session.notice = action === 'delete' ? '行事を削除しました。' : '行事を更新しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId/manage/events/:eventId/complete', verifyCsrfToken, async (req, res, next) => {
@@ -101,6 +102,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId', verifyCsrfToken,
     if (!group || !await AssociationMembership.exists({ association: req.params.associationId, user: req.user._id, status: 'active' })) throw fail('参加できるグループを確認できません。', 403);
     if (await AssociationGroupMembership.exists({ group: group._id, user: req.user._id, status: { $in: ['active', 'pending'] } })) throw fail('すでに参加中、または申請済みです。', 409);
     await AssociationGroupJoinRequest.create({ association: group.association, group: group._id, applicant: req.user._id });
+    await queueNotice({ association: group.association, recipients: await AssociationGroupMembership.find({ association: group.association, group: group._id, role: 'manager', status: 'active' }).distinct('user'), type: 'group_request', title: 'グループへの参加申請が届きました', relatedId: group._id });
     req.session.notice = 'グループへの参加申請を送信しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}`);
   } catch (error) { return next(error); }
 });
@@ -125,6 +127,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/requests/:r
     if (!request) throw fail('参加申請を確認できません。', 404);
     if (req.params.decision === 'approve') await AssociationGroupMembership.findOneAndUpdate({ association: request.association, group: request.group, user: request.applicant }, { $set: { status: 'active', approvedBy: req.user._id, joinedAt: new Date() } }, { upsert: true, new: true, setDefaultsOnInsert: true });
     request.status = req.params.decision === 'approve' ? 'approved' : 'rejected'; request.decidedBy = req.user._id; request.decidedAt = new Date(); await request.save();
+    await queueNotice({ association: request.association, recipients: [request.applicant], type: 'group_request', title: request.status === 'approved' ? 'グループ参加が承認されました' : 'グループ参加申請が承認されませんでした', relatedId: request.group });
     return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}/manage`);
   } catch (error) { return next(error); }
 });
@@ -164,6 +167,7 @@ associationGroupsRouter.post('/:associationId/groups/request', verifyCsrfToken, 
     if (!name) throw fail('グループ名を入力してください。');
     if (!await AssociationMembership.exists({ association: req.params.associationId, user: req.user._id, status: 'active' })) throw fail('参加中の住人だけが申請できます。', 403);
     await AssociationGroupRequest.create({ association: req.params.associationId, requestedBy: req.user._id, name, purpose });
+    await notifyResponsible({ association: req.params.associationId, type: 'group_request', title: 'グループ作成申請が届きました' });
     req.session.notice = 'グループ作成を申請しました。町内会管理者の承認をお待ちください。';
     return res.redirect('/dashboard');
   } catch (error) { return next(error); }
@@ -196,6 +200,7 @@ associationGroupsRouter.post('/:associationId/manage/groups/:requestId/approve',
     const group = await AssociationGroup.create({ association: req.params.associationId, name: request.name, purpose: request.purpose, createdBy: req.user._id });
     await AssociationGroupMembership.create(managerIds.map(user => ({ association: req.params.associationId, group: group._id, user, role: 'manager', status: 'active', approvedBy: req.user._id, joinedAt: new Date() })));
     request.status = 'approved'; request.decidedBy = req.user._id; request.decidedAt = new Date(); await request.save();
+    await queueNotice({ association: request.association, recipients: [request.requestedBy], type: 'group_request', title: 'グループ作成が承認されました', relatedId: group._id });
     req.session.notice = `「${group.name}」を作成しました。`;
     return res.redirect(`/associations/${req.params.associationId}/manage/groups`);
   } catch (error) { return next(error); }
@@ -205,6 +210,7 @@ associationGroupsRouter.post('/:associationId/manage/groups/:requestId/reject', 
   try {
     const request = await AssociationGroupRequest.findOneAndUpdate({ _id: req.params.requestId, association: req.params.associationId, status: 'pending' }, { $set: { status: 'rejected', decidedBy: req.user._id, decidedAt: new Date(), rejectionReason: String(req.body.reason || '').trim() } });
     if (!request) throw fail('承認待ちの申請がありません。', 404);
+    await queueNotice({ association: request.association, recipients: [request.requestedBy], type: 'group_request', title: 'グループ作成申請が承認されませんでした' });
     req.session.notice = 'グループ作成申請を却下しました。'; return res.redirect(`/associations/${req.params.associationId}/manage/groups`);
   } catch (error) { return next(error); }
 });

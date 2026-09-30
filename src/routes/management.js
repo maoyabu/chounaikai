@@ -8,6 +8,8 @@ import { Department, DistrictGroup, Household, HouseholdMember } from '../models
 import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { Notification } from '../models/notification.js';
+import { NotificationSettings, notificationCategories } from '../models/notificationSettings.js';
+import { queueNotice, notifyDepartmentPlan } from '../services/notificationRecipients.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AnnualDepartmentPlan } from '../models/annualDepartmentPlan.js';
 import { User } from '../models/user.js';
@@ -19,6 +21,23 @@ import { acceptSymbolImage, uploadPublicPhoto } from '../services/publicPageImag
 
 export const managementRouter = express.Router();
 managementRouter.use(requireLogin);
+
+managementRouter.get('/:associationId/manage/notifications', requirePermission('association.manage'), async (req, res, next) => {
+  try {
+    const association = await NeighborhoodAssociation.findById(req.params.associationId).lean();
+    if (!association) return res.sendStatus(404);
+    const settings = await NotificationSettings.findOne({ association: association._id }).lean();
+    res.render('notification-settings', { title: '通知設定', association, categories: notificationCategories, channels: settings?.channels || {} });
+  } catch (error) { next(error); }
+});
+managementRouter.post('/:associationId/manage/notifications', requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const channels = Object.fromEntries(notificationCategories.map(([key]) => [key, { push: req.body[`${key}_push`] === 'on', email: req.body[`${key}_email`] === 'on' }]));
+    await NotificationSettings.findOneAndUpdate({ association: req.params.associationId }, { $set: { channels } }, { upsert: true, runValidators: true });
+    req.session.notice = '通知設定を保存しました。';
+    res.redirect(`/associations/${req.params.associationId}/manage/notifications`);
+  } catch (error) { next(error); }
+});
 
 const validId = (value) => mongoose.isValidObjectId(value);
 const meta = (req) => ({ requestId: req.get('x-request-id'), ip: req.ip });
@@ -473,6 +492,7 @@ managementRouter.post('/:associationId/manage/annual/department-plans/create', r
     if (!department) throw fail('部会を確認できません。');
     if (await AnnualDepartmentPlan.exists({ association: req.params.associationId, fiscalYear, department: department._id })) throw fail('選択した部会の事業計画はすでに登録されています。', 409);
     const plan = await AnnualDepartmentPlan.create({ association: req.params.associationId, fiscalYear, department: department._id, goal, createdBy: req.user._id, updatedBy: req.user._id });
+    await notifyDepartmentPlan(plan);
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_department_plan.created', targetType: 'AnnualDepartmentPlan', targetId: plan._id, after: { fiscalYear, department: department._id }, req });
     req.session.notice = '部会の事業計画を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
   } catch (error) { return next(error); }
@@ -488,6 +508,7 @@ managementRouter.post('/:associationId/manage/annual/department-plans/:planId/up
     if (!department) throw fail('部会を確認できません。');
     if (await AnnualDepartmentPlan.exists({ _id: { $ne: plan._id }, association: req.params.associationId, fiscalYear: plan.fiscalYear, department: department._id })) throw fail('選択した部会の事業計画はすでに登録されています。', 409);
     plan.department = department._id; plan.goal = goal; plan.updatedBy = req.user._id; await plan.save();
+    await notifyDepartmentPlan(plan);
     req.session.notice = '部会の事業計画を更新しました。'; return redirectAnnual(res, req.params.associationId, plan.fiscalYear);
   } catch (error) { return next(error); }
 });
@@ -516,7 +537,10 @@ managementRouter.post('/:associationId/manage/annual/officers/:officerId/link', 
     const officer = await AnnualOfficer.findOne({ _id: req.params.officerId, association: req.params.associationId });
     const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active' });
     if (!officer || !membership) throw fail('役員または会員を確認できません。', 404);
-    officer.user = membership.user; await officer.save(); req.session.notice = '役員に会員を紐付けました。'; return redirectAnnual(res, req.params.associationId, officer.fiscalYear);
+    const changed = String(officer.user) !== String(membership.user);
+    officer.user = membership.user; await officer.save();
+    if (changed) await queueNotice({ association: req.params.associationId, recipients: [membership.user], type: 'officer_assigned', title: `${officer.fiscalYear}年度の役員に登録されました`, relatedId: officer._id });
+    req.session.notice = '役員に会員を紐付けました。'; return redirectAnnual(res, req.params.associationId, officer.fiscalYear);
   } catch (error) { return next(error); }
 });
 
@@ -659,7 +683,10 @@ managementRouter.post('/:associationId/manage/leaders/:leaderId/link', requirePe
     const leader = await AnnualLeaderAssignment.findOne({ _id: req.params.leaderId, association: req.params.associationId });
     const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active' });
     if (!leader || !membership) throw fail('班長または会員を確認できません。', 404);
-    leader.representative = membership.user; leader.household = membership.household; await leader.save(); req.session.notice = '班長に会員を紐付けました。'; return redirectAnnual(res, req.params.associationId, leader.fiscalYear);
+    const changed = String(leader.representative) !== String(membership.user);
+    leader.representative = membership.user; leader.household = membership.household; await leader.save();
+    if (changed) await queueNotice({ association: req.params.associationId, recipients: [membership.user], type: 'district_leader_assigned', title: `${leader.fiscalYear}年度の班長に登録されました`, relatedId: leader._id });
+    req.session.notice = '班長に会員を紐付けました。'; return redirectAnnual(res, req.params.associationId, leader.fiscalYear);
   } catch (error) { return next(error); }
 });
 

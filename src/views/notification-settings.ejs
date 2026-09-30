@@ -1,0 +1,19 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/associations/<%= association._id %>/manage">← 運営管理へ戻る</a>
+  <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>通知設定</h1></div></div>
+  <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+  <form method="post" class="form-card form-stack">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <p>この町内会からの通知方法を設定します。OFFでもアプリ内のお知らせは残ります。Pushは受信者が通知を許可した端末に届きます。メールは初期設定でOFFです。</p>
+    <% categories.forEach(([key, label]) => { const setting = channels[key] || { push: true, email: false }; %>
+    <fieldset style="border:1px solid var(--line);border-radius:.75rem;padding:1rem"><legend><%= label %></legend>
+      <div style="display:flex;gap:2rem;flex-wrap:wrap">
+        <label style="display:flex;align-items:center"><input style="width:auto" role="switch" type="checkbox" name="<%= key %>_push" <%= setting.push ? 'checked' : '' %>>Push通知</label>
+        <label style="display:flex;align-items:center"><input style="width:auto" role="switch" type="checkbox" name="<%= key %>_email" <%= setting.email ? 'checked' : '' %>>メール通知</label>
+      </div>
+    </fieldset><% }) %>
+    <p class="help-text">招待リンク・メールアドレス確認・パスワード再設定のメールは、操作に必要なためこの設定の対象外です。</p>
+    <div class="form-actions"><button class="button button-primary">設定を保存</button></div>
+  </form>
+</main><%- include('partials/foot') %>

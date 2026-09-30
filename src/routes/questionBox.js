@@ -1,4 +1,5 @@
 import express from 'express';
+import { notifyResponsible } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
@@ -38,6 +39,7 @@ questionBoxRouter.post('/:associationId/department-plans/:planId/report', verify
     const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean();
     if (!plan || !officer || String(plan.department) !== String(officer.department)) throw Object.assign(new Error('担当部会の事業計画を確認できません。'), { status: 403 });
     plan.report = report; plan.reportUpdatedBy = req.user._id; await plan.save();
+    await notifyResponsible({ association: association._id, type: 'department_plan', title: '部会の実施報告が更新されました', relatedId: plan._id });
     req.session.notice = '年度の実施報告を保存しました。'; return res.redirect(`/associations/${association._id}/department-plans?year=${fiscalYear}`);
   } catch (error) { return next(error); }
 });

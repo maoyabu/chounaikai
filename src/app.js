@@ -20,6 +20,7 @@ import { districtMessagesRouter } from './routes/districtMessages.js';
 import { associationEventsRouter } from './routes/associationEvents.js';
 import { associationGroupsRouter } from './routes/associationGroups.js';
 import { associationFinanceRouter } from './routes/associationFinance.js';
+import { notificationsRouter } from './routes/notifications.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development' }) 
   app.use(passport.initialize());
   app.use(passport.session());
 
+  app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
   app.use('/associations', associationEventsRouter);
   app.use('/associations', associationGroupsRouter);

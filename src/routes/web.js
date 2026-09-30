@@ -534,6 +534,22 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const notifications = [...unreadNotifications, ...readNotifications].slice(0, 20);
     const residentRegistration = await ResidentRegistration.findOne({ user: req.user._id }).lean();
     for (const notification of notifications) {
+      if (notification.association) {
+        notification.actionUrl = `/associations/${notification.association._id}`;
+        notification.actionLabel = '町内会のページを確認';
+        if (['question_created', 'question_reopened'].includes(notification.type)) {
+          notification.actionUrl = `/associations/${notification.association._id}/questions/officer`;
+          notification.actionLabel = '質問を確認';
+        }
+        if (notification.type === 'household_link_requested') {
+          notification.actionUrl = '/profile?tab=household';
+          notification.actionLabel = '世帯への申請を確認';
+        }
+        if (notification.type === 'join_application_received' && res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id))) {
+          notification.actionUrl = `/associations/${notification.association._id}/manage/applications`;
+          notification.actionLabel = '参加申請を確認';
+        }
+      }
       if (notification.type === 'withdrawal_leader_requested' && notification.association && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
         notification.actionUrl = `/associations/${notification.association._id}/leader?tab=withdrawals#withdrawal-${notification.relatedId}`;
         notification.actionLabel = '班長メニューの退会申請を開く';

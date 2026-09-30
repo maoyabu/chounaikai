@@ -5,6 +5,8 @@ import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { QuestionThread } from '../models/questionThread.js';
 import { Notification } from '../models/notification.js';
+import { createNotification } from './notificationService.js';
+import { notifyResponsible } from './notificationRecipients.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const fiscalYear = (now = new Date()) => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
@@ -32,9 +34,11 @@ export const loadQuestionBoxAccess = async ({ associationId, userId, now = new D
 export const createQuestion = async ({ associationId, userId, title, body }) => {
   const { membership } = await loadQuestionBoxAccess({ associationId, userId });
   const now = new Date();
-  return QuestionThread.create({ association: associationId, author: userId, districtGroup: membership.districtGroup,
+  const thread = await QuestionThread.create({ association: associationId, author: userId, districtGroup: membership.districtGroup,
     title: text(title, 120, 'タイトル'), messages: [{ sender: userId, kind: 'resident', body: text(body, 3000, '内容'), createdAt: now }],
     status: 'unanswered', residentMessageCount: 1, lastResidentAt: now });
+  await notifyResponsible({ association: associationId, officers: true, type: 'question_created', title: '質問・ご意見が届きました', relatedId: thread._id });
+  return thread;
 };
 
 export const addQuestionMessage = async ({ associationId, threadId, userId, body }) => {
@@ -56,9 +60,10 @@ export const addQuestionMessage = async ({ associationId, threadId, userId, body
   if (!updated) throw fail('先に別の返信が届きました。画面を読み直してください。', 409);
   if (kind === 'officer') {
     try {
-      await Notification.create({ association: associationId, recipient: thread.author, type: 'question_answered', title: '質問・ご意見箱に回答が届きました', body: `「${thread.title}」に役員から回答が届きました。`, relatedType: 'QuestionThread', relatedId: threadId });
+      await createNotification({ association: associationId, recipient: thread.author, type: 'question_answered', title: '質問・ご意見箱に回答が届きました', body: `「${thread.title}」に役員から回答が届きました。`, relatedType: 'QuestionThread', relatedId: threadId });
     } catch (error) { console.error('Question answer notification failed', error.message); }
   } else {
+    await notifyResponsible({ association: associationId, officers: true, type: 'question_reopened', title: '質問・ご意見に再質問が届きました', relatedId: threadId });
     await Notification.updateMany({ recipient: userId, relatedType: 'QuestionThread', relatedId: threadId, type: 'question_answered', readAt: null }, { $set: { readAt: now } });
   }
   return updated;

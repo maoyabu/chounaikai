@@ -1,4 +1,5 @@
 import express from 'express';
+import { notifyResponsible } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
@@ -110,6 +111,7 @@ householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, 
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     req.session.notice = `「${association.name}・${districtGroup.name}」への参加を申請しました。`;
+    await notifyResponsible({ association: association._id, districtGroup: districtGroup._id, type: 'join_application_received', title: '町内会への参加申請が届きました' });
     await ResidentRegistration.deleteOne({ user: req.user._id });
     return res.redirect(`/associations/${association._id}/participation`);
   } catch (error) { return next(error); }

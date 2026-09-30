@@ -18,7 +18,7 @@ export const deleteNotification = async ({ notificationId, recipient }) => {
   return Notification.deleteOne({ _id: notificationId, recipient });
 };
 
-const announcementTypes = ['officer_announcement', 'officer_announcement_reminder', 'officer_network', 'officer_network_reminder', 'district_message', 'district_message_reminder'];
+const announcementTypes = ['officer_announcement', 'officer_announcement_reminder', 'officer_network', 'officer_network_reminder', 'district_message', 'district_message_reminder', 'group_message', 'group_message_reminder'];
 const actionableTypes = [...announcementTypes, 'question_answered', 'join_application_received', 'household_link_requested', 'withdrawal_head_requested', 'withdrawal_leader_requested'];
 
 export const syncCompletedNotifications = async ({ recipient }) => {

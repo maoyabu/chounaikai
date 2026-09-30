@@ -22,7 +22,7 @@ const setup = (t, leader = false) => {
   t.mock.method(OfficerAnnouncement, 'create', async value => ({ _id: announcementId, ...value }));
   let receipts, notices;
   t.mock.method(OfficerAnnouncementReceipt, 'insertMany', async values => { receipts = values; });
-  t.mock.method(Notification, 'insertMany', async values => { notices = values; });
+  t.mock.method(Notification, 'insertMany', async values => { notices = values; return values; });
   return { get receipts() { return receipts; }, get notices() { return notices; } };
 };
 
@@ -52,7 +52,7 @@ test('再通知は元の送信者に限られる', async t => {
   t.mock.method(OfficerAnnouncementReceipt, 'find', () => query([{ _id: id(), recipient: first }]));
   t.mock.method(OfficerAnnouncementReceipt, 'findOneAndUpdate', async () => ({ _id: id() }));
   let notices;
-  t.mock.method(Notification, 'insertMany', async values => { notices = values; });
+  t.mock.method(Notification, 'insertMany', async values => { notices = values; return values; });
   assert.equal(await remindAnnouncement({ associationId: association, announcementId, userId: sender, channel: 'district' }), 1);
   assert.equal(notices[0].type, 'district_message_reminder');
 });

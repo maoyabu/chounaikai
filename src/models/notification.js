@@ -3,12 +3,21 @@ import mongoose from 'mongoose';
 const notificationSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  type: { type: String, enum: ['district_leader_assigned', 'join_application_received', 'join_application_approved', 'join_application_rejected', 'household_link_requested', 'household_removed', 'withdrawal_head_requested', 'withdrawal_leader_requested', 'withdrawal_approved', 'withdrawal_rejected', 'question_answered', 'officer_announcement', 'officer_announcement_reminder', 'officer_network', 'officer_network_reminder', 'district_message', 'district_message_reminder', 'group_message', 'group_message_reminder'], required: true },
+  // Keep legacy values because existing records and route logic use them.
+  // New code should use the dot-separated event IDs documented in the notification spec.
+  type: { type: String, required: true, index: true },
   title: { type: String, required: true },
   body: { type: String, required: true },
   relatedType: String,
   relatedId: mongoose.Schema.Types.ObjectId,
-  readAt: Date
+  readAt: Date,
+  queuedAt: { type: Date, default: Date.now },
+  deliveryClaimedAt: Date,
+  delivery: {
+    push: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String },
+    email: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String }
+  },
+  deliveryKey: { type: String, index: true }
 }, { timestamps: true, collection: 'notifications' });
 
 export const Notification = mongoose.model('Notification', notificationSchema);

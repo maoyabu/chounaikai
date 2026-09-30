@@ -5,6 +5,7 @@ import { AnnualOfficer } from '../models/annualOfficer.js';
 import { Department } from '../models/organization.js';
 import { OfficerContactGroup } from '../models/officerContactGroup.js';
 import { Notification } from '../models/notification.js';
+import { createNotifications } from './notificationService.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { loadQuestionBoxAccess } from './questionBoxService.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
@@ -125,8 +126,8 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
       throw error;
     }
     try {
-      await Notification.insertMany(recipients.map(recipient => ({ association: associationId, recipient, type: channel === 'district' ? 'district_message' : channel === 'officer' ? 'officer_network' : 'officer_announcement',
-        title: `${channel === 'district' ? '班内の連絡' : channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}：${announcement.title}`, body: `緊急度 ${'★'.repeat(level)}${level === 5 ? ' 緊急' : ''} の連絡が届きました。`, relatedType: 'OfficerAnnouncement', relatedId: announcement._id })));
+      await createNotifications(recipients.map(recipient => ({ association: associationId, recipient, type: channel === 'association_group' ? 'group_message' : channel === 'district' ? 'district_message' : channel === 'officer' ? 'officer_network' : 'officer_announcement',
+        title: `${channel === 'association_group' ? 'グループ内の連絡' : channel === 'district' ? '班内の連絡' : channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}：${announcement.title}`, body: `緊急度 ${'★'.repeat(level)}${level === 5 ? ' 緊急' : ''} の連絡が届きました。`, relatedType: 'OfficerAnnouncement', relatedId: announcement._id })));
     } catch (error) { console.error('Officer announcement notification failed', error); }
     return { announcement, recipientCount: recipients.length };
   } catch (error) {
@@ -194,8 +195,8 @@ export const remindAnnouncement = async ({ associationId, announcementId, userId
     if (claimed) recipients.push(receipt.recipient);
   }
   if (!recipients.length) throw fail('未確認の送信先がありません。', 409);
-  await Notification.insertMany(recipients.map(recipient => ({ association: associationId, recipient, type: announcement.channel === 'district' ? 'district_message_reminder' : announcement.channel === 'officer' ? 'officer_network_reminder' : 'officer_announcement_reminder',
-    title: `未確認の連絡：${announcement.title}`, body: `${announcement.channel === 'district' ? '班内の連絡' : announcement.channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}を確認してください。`, relatedType: 'OfficerAnnouncement', relatedId: announcementId })));
+  await createNotifications(recipients.map(recipient => ({ association: associationId, recipient, type: announcement.channel === 'association_group' ? 'group_message_reminder' : announcement.channel === 'district' ? 'district_message_reminder' : announcement.channel === 'officer' ? 'officer_network_reminder' : 'officer_announcement_reminder',
+    title: `未確認の連絡：${announcement.title}`, body: `${announcement.channel === 'association_group' ? 'グループ内の連絡' : announcement.channel === 'district' ? '班内の連絡' : announcement.channel === 'officer' ? '役員間の連絡' : '町内会役員から住人への連絡'}を確認してください。`, relatedType: 'OfficerAnnouncement', relatedId: announcementId })));
   return recipients.length;
 };
 

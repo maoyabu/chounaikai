@@ -6,6 +6,8 @@ import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { User } from '../models/user.js';
 import { Group } from '../models/group.js';
 import { Notification } from '../models/notification.js';
+import { createNotification } from './notificationService.js';
+import { notifyResponsible } from './notificationRecipients.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { AuditLog } from '../models/auditLog.js';
 import { ResidentRegistration } from '../models/residentRegistration.js';
@@ -17,10 +19,11 @@ const notifyDistrictLeaders = async ({ application, household, applicantName }) 
     const now = new Date();
     const fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const leaders = await AnnualLeaderAssignment.find({ association: application.association, districtGroup: application.districtGroup, fiscalYear, cancelledAt: null }).select('representative').lean();
-    for (const recipient of new Set(leaders.map(leader => String(leader.representative)))) {
+    for (const recipient of new Set(leaders.filter(leader => leader.representative).map(leader => String(leader.representative)))) {
       if (!await AssociationMembership.exists({ association: application.association, user: recipient, status: 'active' })) continue;
-      await Notification.create({ association: application.association, recipient, type: 'join_application_received', title: `${household.displayName}の${applicantName}さんの参加申請`, body: '世帯主の確認は済んでいます。班長メニューの「参加申請」で、班・世帯への参加を承認してください。', relatedType: 'JoinApplication', relatedId: application._id });
+      await createNotification({ association: application.association, recipient, type: 'join_application_received', title: `${household.displayName}の${applicantName}さんの参加申請`, body: '世帯主の確認は済んでいます。班長メニューの「参加申請」で、班・世帯への参加を承認してください。', relatedType: 'JoinApplication', relatedId: application._id, emailRequired: true });
     }
+    await notifyResponsible({ association: application.association, exclude: leaders.map(leader => leader.representative), type: 'join_application_received', title: '町内会への参加申請が届きました', relatedId: application._id });
   } catch (error) { console.error('District-leader participation notification failed', error.message); }
 };
 const clearCompletedRegistration = async (userId) => {

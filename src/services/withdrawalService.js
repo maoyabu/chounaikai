@@ -9,6 +9,7 @@ import { RoleAssignment } from '../models/role.js';
 import { User } from '../models/user.js';
 import { Group } from '../models/group.js';
 import { Notification } from '../models/notification.js';
+import { createNotification } from './notificationService.js';
 import { AuditLog } from '../models/auditLog.js';
 import { runWithOptionalTransaction } from './associationService.js';
 
@@ -28,9 +29,9 @@ const context = async (associationId, householdId, session = null) => {
 
 const notify = async (application, type, recipients) => {
   try {
-    for (const recipient of new Set(recipients.map(String))) await Notification.create({ association: application.association, recipient, type,
+    for (const recipient of new Set(recipients.map(String))) await createNotification({ association: application.association, recipient, type,
       title: type === 'withdrawal_head_requested' ? '世帯メンバーから退会申請が届きました' : type === 'withdrawal_leader_requested' ? '班・世帯から退会申請が届きました' : type === 'withdrawal_approved' ? '町内会の退会が完了しました' : '退会申請が承認されませんでした',
-      body: type === 'withdrawal_head_requested' ? 'プロフィールの「退会申請」から確認してください。' : type === 'withdrawal_leader_requested' ? '班長メニューの「退会申請」から確認してください。' : 'プロフィールの「退会申請」から申請状況を確認できます。共通アカウントは削除されません。', relatedType: 'WithdrawalApplication', relatedId: application._id });
+      body: type === 'withdrawal_head_requested' ? 'プロフィールの「退会申請」から確認してください。' : type === 'withdrawal_leader_requested' ? '班長メニューの「退会申請」から確認してください。' : 'プロフィールの「退会申請」から申請状況を確認できます。共通アカウントを使用する他のサービスには影響しません。', relatedType: 'WithdrawalApplication', relatedId: application._id, emailRequired: ['withdrawal_approved', 'withdrawal_rejected'].includes(type) });
   } catch (error) { console.error('Withdrawal notification failed', error.message); }
 };
 const notifyLeaders = async application => {
