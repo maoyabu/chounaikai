@@ -4,6 +4,8 @@ import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
 import { QuestionThread } from '../models/questionThread.js';
 import { addQuestionMessage, closeQuestion, createQuestion, loadQuestionBoxAccess, markQuestionRead } from '../services/questionBoxService.js';
+import { AnnualOfficer } from '../models/annualOfficer.js';
+import { AnnualDepartmentPlan } from '../models/annualDepartmentPlan.js';
 
 export const questionBoxRouter = express.Router();
 questionBoxRouter.use(requireLogin);
@@ -11,6 +13,34 @@ questionBoxRouter.use(requireLogin);
 const redirectToBox = (res, associationId, open, officer = false) => res.redirect(`/associations/${associationId}/questions${officer ? '/officer' : ''}${open ? `?open=${open}` : ''}`);
 const populateThreads = query => query.populate('author', 'displayname username').populate('districtGroup', 'name')
   .populate('lastOfficer', 'displayname username').populate('messages.sender', 'displayname username').sort({ updatedAt: -1 }).lean();
+const currentFiscalYear = (now = new Date()) => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+
+questionBoxRouter.get('/:associationId/department-plans', async (req, res, next) => {
+  try {
+    const { association, canAnswer } = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id });
+    if (!canAnswer) return res.status(403).render('error', { title: 'エラー', message: '役員メニューを開く権限がありません。' });
+    const fiscalYear = Number(req.query.year) || currentFiscalYear();
+    if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200) throw Object.assign(new Error('年度を確認してください。'), { status: 400 });
+    const [plans, myOfficer] = await Promise.all([
+      AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean(),
+      AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean()
+    ]);
+    return res.render('officer-department-plans', { title: `${association.name} 部会の年度目標`, association, fiscalYear, plans, canEditReports: Boolean(myOfficer) });
+  } catch (error) { return next(error); }
+});
+
+questionBoxRouter.post('/:associationId/department-plans/:planId/report', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const { association, canAnswer } = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id });
+    if (!canAnswer) throw Object.assign(new Error('実施報告を入力できる権限がありません。'), { status: 403 });
+    const fiscalYear = Number(req.body.fiscalYear), report = String(req.body.report || '').trim();
+    const plan = await AnnualDepartmentPlan.findOne({ _id: req.params.planId, association: association._id, fiscalYear });
+    const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean();
+    if (!plan || !officer || String(plan.department) !== String(officer.department)) throw Object.assign(new Error('担当部会の事業計画を確認できません。'), { status: 403 });
+    plan.report = report; plan.reportUpdatedBy = req.user._id; await plan.save();
+    req.session.notice = '年度の実施報告を保存しました。'; return res.redirect(`/associations/${association._id}/department-plans?year=${fiscalYear}`);
+  } catch (error) { return next(error); }
+});
 
 questionBoxRouter.get('/:associationId/questions', async (req, res, next) => {
   try {

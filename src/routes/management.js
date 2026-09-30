@@ -9,6 +9,7 @@ import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { Notification } from '../models/notification.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
+import { AnnualDepartmentPlan } from '../models/annualDepartmentPlan.js';
 import { User } from '../models/user.js';
 import { AuditLog } from '../models/auditLog.js';
 import { AssociationGroupRequest } from '../models/associationGroup.js';
@@ -113,11 +114,12 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200) throw fail('年度を確認してください。');
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) throw fail('町内会を確認できません。', 404);
-    const [memberships, officers, roles, departments, districtGroups, leaderAssignments] = await Promise.all([
+    const [memberships, officers, roles, departments, districtGroups, leaderAssignments, departmentPlans] = await Promise.all([
       AssociationMembership.find({ association: association._id, status: 'active', household: { $exists: true } }).populate('user', 'displayname username email avatar').populate('districtGroup', 'name').populate('household', 'displayName address representative').sort({ startedAt: 1 }).lean(),
       AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').sort({ createdAt: 1 }).lean(),
       RoleDefinition.find({ association: association._id, active: true, name: { $ne: '町内会管理者' } }).sort({ sortOrder: 1, name: 1 }).lean(), Department.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean(), DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
-      AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean()
+      AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean(),
+      AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name').sort({ 'department.sortOrder': 1, createdAt: 1 }).lean()
     ]);
     const candidateUserIds = memberships.map((membership) => membership.user?._id).filter(Boolean);
     const permanentAssignments = candidateUserIds.length ? await RoleAssignment.find({ association: association._id, user: { $in: candidateUserIds }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true }, select: 'name permissions' }).populate('department', 'name').lean() : [];
@@ -142,7 +144,7 @@ managementRouter.get('/:associationId/manage/annual', requirePermission('associa
     const leaderRecords = await AnnualLeaderAssignment.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('districtGroup', 'name parentDistrict').populate('district', 'name').populate('group', 'name parentDistrict').populate('representative', 'displayname username email').sort({ createdAt: 1 }).lean();
     const leaderChildren = await DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true }, active: true }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean();
     const leaderDistricts = districtGroups.map((district) => ({ ...district, groups: leaderChildren.filter((group) => String(group.parentDistrict) === String(district._id)) }));
-    return res.render('association-annual-settings', { title: `${association.name}年度設定`, association, fiscalYear, memberships, householdRepresentatives, officers, officerRecords: officers, officerCandidates, leaderRecords, leaderCandidates, leaderDistricts, roles, departments, districtGroups, leaderAssignments });
+    return res.render('association-annual-settings', { title: `${association.name}年度設定`, association, fiscalYear, memberships, householdRepresentatives, officers, officerRecords: officers, officerCandidates, leaderRecords, leaderCandidates, leaderDistricts, roles, departments, districtGroups, leaderAssignments, departmentPlans });
   } catch (error) { return next(error); }
 });
 
@@ -458,6 +460,35 @@ managementRouter.post('/:associationId/manage/roles/:roleId/delete', requirePerm
     if (role.name === '町内会管理者' || await RoleAssignment.exists({ association: req.params.associationId, role: role._id }) || await AnnualOfficer.exists({ association: req.params.associationId, role: role._id })) throw fail('管理者役職または使用中の役職は削除できません。', 409);
     await role.deleteOne(); await audit({ association: req.params.associationId, actor: req.user._id, action: 'role.deleted', targetType: 'RoleDefinition', targetId: role._id, before: { name: role.name }, req });
     req.session.notice = '役職を削除しました。'; return redirectBasic(res, req.params.associationId);
+  } catch (error) { return next(error); }
+});
+
+managementRouter.post('/:associationId/manage/annual/department-plans/create', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const fiscalYear = Number(req.body.fiscalYear);
+    const departmentId = String(req.body.departmentId || '');
+    const goal = String(req.body.goal || '').trim();
+    if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200 || !validId(departmentId) || !goal) throw fail('部会と年度の目標を正しく入力してください。');
+    const department = await Department.findOne({ _id: departmentId, association: req.params.associationId, active: true });
+    if (!department) throw fail('部会を確認できません。');
+    if (await AnnualDepartmentPlan.exists({ association: req.params.associationId, fiscalYear, department: department._id })) throw fail('選択した部会の事業計画はすでに登録されています。', 409);
+    const plan = await AnnualDepartmentPlan.create({ association: req.params.associationId, fiscalYear, department: department._id, goal, createdBy: req.user._id, updatedBy: req.user._id });
+    await audit({ association: req.params.associationId, actor: req.user._id, action: 'annual_department_plan.created', targetType: 'AnnualDepartmentPlan', targetId: plan._id, after: { fiscalYear, department: department._id }, req });
+    req.session.notice = '部会の事業計画を登録しました。'; return redirectAnnual(res, req.params.associationId, fiscalYear);
+  } catch (error) { return next(error); }
+});
+
+managementRouter.post('/:associationId/manage/annual/department-plans/:planId/update', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const plan = await AnnualDepartmentPlan.findOne({ _id: req.params.planId, association: req.params.associationId });
+    const departmentId = String(req.body.departmentId || ''), goal = String(req.body.goal || '').trim();
+    if (!plan) throw fail('部会の事業計画を確認できません。', 404);
+    if (!validId(departmentId) || !goal) throw fail('部会と年度の目標を正しく入力してください。');
+    const department = await Department.findOne({ _id: departmentId, association: req.params.associationId, active: true });
+    if (!department) throw fail('部会を確認できません。');
+    if (await AnnualDepartmentPlan.exists({ _id: { $ne: plan._id }, association: req.params.associationId, fiscalYear: plan.fiscalYear, department: department._id })) throw fail('選択した部会の事業計画はすでに登録されています。', 409);
+    plan.department = department._id; plan.goal = goal; plan.updatedBy = req.user._id; await plan.save();
+    req.session.notice = '部会の事業計画を更新しました。'; return redirectAnnual(res, req.params.associationId, plan.fiscalYear);
   } catch (error) { return next(error); }
 });
 
