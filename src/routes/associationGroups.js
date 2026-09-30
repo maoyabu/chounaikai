@@ -91,7 +91,7 @@ for (const action of ['update', 'delete']) associationGroupsRouter.post(`/:assoc
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId/manage/events/:eventId/complete', verifyCsrfToken, async (req, res, next) => {
-  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); await AssociationEvent.updateOne({ _id: req.params.eventId, group: group._id }, { $set: { completed: req.body.completed === 'on' } }); return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
+  try { const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403); const completed = req.body.completed === 'on'; const update = { completed }; if (completed) update.implementationReport = String(req.body.implementationReport || '').trim(); const event = await AssociationEvent.findOne({ _id: req.params.eventId, association: group.association, group: group._id }).select('_id'); if (!event) throw fail('行事を確認できません。', 404); await AssociationEvent.collection.updateOne({ _id: event._id, association: group.association, group: group._id }, { $set: update }); return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/events`); } catch (error) { return next(error); }
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId', verifyCsrfToken, async (req, res, next) => {

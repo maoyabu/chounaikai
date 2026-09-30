@@ -109,8 +109,13 @@ associationEventsRouter.post('/:associationId/events/:eventId/complete', require
   try {
     const association = await officerAccess(req);
     if (!mongoose.isValidObjectId(req.params.eventId)) throw notFound();
-    const event = await AssociationEvent.findOneAndUpdate({ _id: req.params.eventId, association: association._id }, { $set: { completed: req.body.completed === 'on' } });
+    const completed = req.body.completed === 'on';
+    const implementationReport = String(req.body.implementationReport || '').trim();
+    const event = await AssociationEvent.findOne({ _id: req.params.eventId, association: association._id }).select('_id completed implementationReport');
     if (!event) throw notFound();
+    const update = { completed };
+    if (completed) update.implementationReport = implementationReport;
+    await AssociationEvent.collection.updateOne({ _id: event._id, association: association._id }, { $set: update });
     req.session.notice = req.body.completed === 'on' ? '行事を完了にしました。' : '完了を取り消しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);
   } catch (error) { return next(error); }

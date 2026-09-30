@@ -23,7 +23,8 @@ const schema = new mongoose.Schema({
   color: { type: String, required: true },
   visible: { type: Boolean, default: true },
   open: { type: Boolean, default: false },
-  completed: { type: Boolean, default: false }
+  completed: { type: Boolean, default: false },
+  implementationReport: { type: String, trim: true, default: '' }
   ,image: { url: String, publicId: String }, imageCaption: String, youtubeUrl: String, qrUrl: String, qrCaption: String
 }, { timestamps: true });
 
