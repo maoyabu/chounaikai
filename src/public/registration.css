@@ -1303,6 +1303,10 @@ h1, h2, h3, h4, h5, h6,
 .association-department-plans details:not([open]) .section-heading { margin-bottom: -1.25rem; border-bottom: 0; }
 .association-department-plans .annual-plan-list { display: grid; gap: .65rem; }
 .association-department-plans .annual-plan-record { border-color: #c8e4d5; background: #f8fcfa; }
+.association-department-officers { display: flex; flex-wrap: wrap; gap: .45rem .8rem; margin-top: .8rem; padding-top: .65rem; border-top: 1px solid #d8ebe0; }
+.association-department-officer { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .82rem; }
+.association-department-officer img, .association-department-officer-placeholder { width: 1.6rem; height: 1.6rem; border-radius: 50%; object-fit: cover; }
+.association-department-officer-placeholder { display: inline-grid; place-items: center; background: var(--green-pale); color: var(--green-dark); font-weight: 800; }
 .annual-plan-record dialog { cursor: default; }
 .annual-plan-admin-panel .annual-plan-list { margin-top: 1rem; }
 .annual-plan-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }

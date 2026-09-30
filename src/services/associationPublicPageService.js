@@ -26,8 +26,12 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     const groupHouseholds = households.filter(household => String(household.districtGroup) === String(group._id));
     return { name: group.name, householdCount: groupHouseholds.length, residentCount: groupHouseholds.reduce((sum, household) => sum + (memberCountByHousehold.get(String(household._id)) || 0), 0) };
   });
+  const plansWithOfficers = departmentPlans.map((plan) => ({
+    ...plan,
+    officers: officers.filter((officer) => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || ''))
+  }));
   return {
-    events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans, districtStats,
+    events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans: plansWithOfficers, districtStats,
     groups: groups.filter(group => !publicOnly || group.publicVisibility === 'open').map(group => ({ ...group, memberCount: groupCount.get(String(group._id)) || 0 })),
     householdCount: households.length,
     residentCount: households.reduce((sum, household) => sum + (memberCountByHousehold.get(String(household._id)) || 0), 0)
