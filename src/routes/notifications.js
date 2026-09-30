@@ -7,6 +7,19 @@ import { Notification } from '../models/notification.js';
 export const notificationsRouter = express.Router();
 notificationsRouter.use(requireLogin);
 
+notificationsRouter.get('/push/status', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const endpoint = String(req.query.endpoint || '');
+  if (!endpoint) return res.json({ enabled: false });
+  const subscription = await import('../models/pushSubscription.js').then(({ PushSubscription }) => PushSubscription.exists({ user: req.user._id, endpoint, disabledAt: null }));
+  return res.json({ enabled: Boolean(subscription) });
+});
+
+notificationsRouter.post('/permission-prompt/seen', verifyCsrfToken, (req, res) => {
+  req.session.notificationPromptPending = false;
+  return res.status(204).end();
+});
+
 notificationsRouter.get('/unread-count', async (req, res, next) => {
   res.set('Cache-Control', 'no-store');
   try {

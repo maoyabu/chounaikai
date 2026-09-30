@@ -137,7 +137,6 @@
     <% }) %>
   </section>
 </main>
-<dialog id="notification-permission-dialog" class="officer-dialog"><div class="dialog-heading"><div><p class="eyebrow">通知設定</p><h2>通知をONにしますか？</h2></div><button type="button" class="dialog-close" data-notification-dismiss aria-label="閉じる">×</button></div><p>参加申請、行事変更、町内会からの重要なお知らせをブラウザで受け取れるようになります。</p><div class="form-actions"><button type="button" class="button button-quiet" data-notification-dismiss>後で設定</button><button type="button" class="button button-primary" id="notification-enable-button">通知をONにする</button></div></dialog>
 <style>.notification-settings .section-heading{padding:0;border:0;align-items:center}.notification-toggle{position:relative;display:inline-flex;flex:0 0 auto}.notification-toggle input{position:absolute;opacity:0}.notification-toggle span{display:block;width:3.2rem;height:1.8rem;border-radius:2rem;background:#cbd5d0;cursor:pointer;transition:.2s}.notification-toggle span::after{content:"";display:block;width:1.35rem;height:1.35rem;margin:.225rem;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0003}.notification-toggle input:checked+span{background:var(--green)}.notification-toggle input:checked+span::after{transform:translateX(1.4rem)}.notification-toggle input:focus-visible+span{outline:3px solid #9bc8ff;outline-offset:2px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
 <script>
   document.getElementById('avatar-input')?.addEventListener('change', (event) => {
@@ -161,26 +160,6 @@
   document.querySelectorAll('[data-open-member-dialog]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.openMemberDialog)?.showModal()));
   document.querySelectorAll('[data-close-member-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.household-member-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
-  (() => {
-    const input = document.getElementById('notification-toggle-input'), status = document.getElementById('notification-settings-status'), dialog = document.getElementById('notification-permission-dialog'), enable = document.getElementById('notification-enable-button');
-    if (!input || !status || !dialog) return;
-    const supported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window && window.isSecureContext;
-    const setStatus = (message) => { status.textContent = message; };
-    const currentSubscription = async () => (await navigator.serviceWorker.getRegistration('/assets/push-service-worker.js'))?.pushManager.getSubscription();
-    const refresh = async () => {
-      if (!supported) { input.disabled = true; setStatus('このブラウザではブラウザ通知を利用できません。'); return; }
-      const subscription = await currentSubscription();
-      const active = Notification.permission === 'granted' && Boolean(subscription);
-      input.checked = active;
-      setStatus(active ? '通知はONです。' : Notification.permission === 'denied' ? '通知がブラウザで拒否されています。ブラウザのサイト設定から許可してください。' : '通知はOFFです。');
-    };
-    const enableNotifications = async () => { try { await window.enableWebPushNotifications(); localStorage.setItem('notification-prompt-dismissed', '1'); await refresh(); } catch (error) { console.error('Web Push subscription failed:', error); const messages = { web_push_permission_denied: '通知は許可されませんでした。ブラウザのサイト設定を確認してください。', web_push_not_supported: 'このブラウザまたは接続環境では通知を利用できません。', web_push_not_configured: 'サーバーにWeb Push公開鍵が設定されていません。', web_push_key_http_503: '通知サーバーに一時的に接続できません。再度ONにしてください（HTTP 503）。', web_push_login_required: 'ログインの有効期限が切れました。再ログインしてください。', web_push_public_key_missing: 'Web Push公開鍵を取得できませんでした。', web_push_subscription_failed: '通知先の登録に失敗しました。' }; setStatus(messages[error.message] || `通知を有効にできませんでした（${error.message || '原因不明'}）。`); input.checked = false; } };
-    const disableNotifications = async () => { const subscription = await currentSubscription(); if (subscription) { await fetch('/api/notifications/push-subscriptions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content }, body: JSON.stringify({ endpoint: subscription.endpoint }) }); await subscription.unsubscribe(); } await refresh(); };
-    input.addEventListener('change', () => input.checked ? enableNotifications() : disableNotifications());
-    enable.addEventListener('click', async () => { dialog.close(); await enableNotifications(); });
-    document.querySelectorAll('[data-notification-dismiss]').forEach((button) => button.addEventListener('click', () => { localStorage.setItem('notification-prompt-dismissed', '1'); dialog.close(); }));
-    refresh().then(() => { if (supported && Notification.permission === 'default' && !localStorage.getItem('notification-prompt-dismissed')) dialog.showModal(); }).catch(() => setStatus('通知の状態を確認できませんでした。'));
-  })();
 </script>
 <script><% availableRegistrations.forEach(({ locationOptions }) => { %>{const locations=<%- JSON.stringify(locationOptions || []) %>,district=document.querySelector('.profile-registration-district'),group=document.querySelector('.profile-registration-group'),hidden=document.querySelector('.profile-registration-location');if(district&&group&&hidden){const refresh=()=>{const item=locations.find(x=>String(x._id)===String(district.value)),groups=locations.filter(x=>String(x.parentDistrict)===String(district.value));group.innerHTML=groups.length?'<option value="">選択してください</option>'+groups.map(x=>`<option value="${x._id}">${x.label.replace(item?.label||'','')}</option>`).join(''):'<option value="">地区全体</option>';group.required=Boolean(groups.length);hidden.value=group.value||district.value;};district.addEventListener('change',refresh);group.addEventListener('change',()=>{hidden.value=group.value||district.value;});refresh();}}<% }) %></script>
 <%- include('partials/foot') %>

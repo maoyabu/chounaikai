@@ -348,6 +348,7 @@ webRouter.post('/login', verifyCsrfToken, (req, res, next) => {
     }
     return req.logIn(user, async (loginError) => {
       if (loginError) return next(loginError);
+      req.session.notificationPromptPending = true;
       try {
         const registration = await ResidentRegistration.findOne({ user: user._id }).lean();
         if (req.session.registrationChoice?.purpose === 'create') return res.redirect('/associations/new');

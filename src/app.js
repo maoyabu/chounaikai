@@ -59,6 +59,11 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development' }) 
   configurePassport(passport);
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use((req, res, next) => {
+    res.locals.currentUser = req.user || null;
+    res.locals.showNotificationPrompt = Boolean(req.user && req.session.notificationPromptPending);
+    next();
+  });
 
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
