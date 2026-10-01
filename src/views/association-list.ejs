@@ -2,6 +2,8 @@
 <% if (currentUser) { %><%- include('partials/header') %><% } %>
 <main class="page-shell association-list-shell">
   <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
+  <div class="association-list-layout">
+  <div class="association-list-main">
   <form class="association-list-search content-card" method="get" action="/associations">
     <label>都道府県<select name="prefecture" id="association-search-prefecture"><option value="">すべて</option><% (prefectures || []).forEach((prefecture) => { %><option value="<%= prefecture %>" <%= filters?.prefecture === prefecture ? 'selected' : '' %>><%= prefecture %></option><% }) %></select></label>
     <label>市区町村<select name="city" id="association-search-city" data-selected-city="<%= filters?.city || '' %>"><option value="">すべて</option></select></label>
@@ -9,7 +11,6 @@
     <button class="button button-primary" type="submit">絞り込む</button>
     <% if (filters?.prefecture || filters?.city || filters?.keyword) { %><a class="button button-quiet" href="/associations">条件をクリア</a><% } %>
   </form>
-  <div class="association-list-layout">
   <section class="content-card management-card association-list-directory">
     <% if (associations.length) { %>
       <div class="management-list"><% associations.forEach((association) => { %>
@@ -17,6 +18,7 @@
       <% }) %></div>
     <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
   </section>
+  </div>
   <section class="content-card association-list-request"><div class="association-list-request-heading"><h2>町内会が見つからない場合</h2></div><p>一覧を確認しても該当する町内会がない場合は、新規で町内会を申請できます。</p><p>※申請者が町内会の管理者となりますが、後で別の人に変更も可能です</p>
     <div class="association-list-request-actions"><div class="form-actions">
       <% if (currentUser) { %>

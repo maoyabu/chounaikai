@@ -956,7 +956,7 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 620px) { .event-title-row { grid-template-columns: 1fr; } .event-toggles { padding-bottom: 0; } }
 .association-list-shell { max-width: 1180px; }
 .association-list-layout { display: grid; grid-template-columns: minmax(0, 7fr) minmax(250px, 3fr); gap: 1.25rem; align-items: start; }
-.association-list-layout > .content-card { min-width: 0; }
+.association-list-layout > .content-card, .association-list-main { min-width: 0; }
 .association-list-request .form-actions { flex-direction: column; align-items: stretch; }
 .association-list-request .form-actions .button { width: 100%; }
 .association-list-request { background: #eef8f1; }
@@ -1159,11 +1159,13 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 800px) { .leader-fees-page .member-table > div { grid-template-columns: 1fr 1fr; } .leader-fees-page .member-table > div > span:nth-of-type(1), .leader-fees-page .member-table > div > strong, .leader-fees-page .member-table > div > span:nth-of-type(2), .leader-fees-page .member-table > div > span:nth-of-type(3), .leader-fees-page .member-table > div > span.household-row-actions, .leader-fees-page .member-table > div > form { grid-column: auto; } }
 .association-login-button { background: #2f6fab; border-color: #2f6fab; color: #fff; }
 .association-login-button:hover { background: #245a8d; border-color: #245a8d; }
-.association-list-search { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.5fr) auto auto; gap: .75rem; align-items: end; margin-bottom: 1.25rem; padding: 1rem 1.25rem; }
+.association-list-search { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) auto; gap: .75rem; align-items: end; margin-bottom: 1.25rem; padding: 1rem 1.25rem; }
+.association-list-search .button-quiet { grid-column: 1 / -1; justify-self: end; }
 .association-list-search label { display: grid; gap: .35rem; font-size: .85rem; font-weight: 700; }
 .association-list-search input { width: 100%; min-width: 0; padding: .65rem .75rem; border: 1px solid #bdcac3; border-radius: .55rem; font: inherit; }
 .association-list-search select { width: 100%; min-width: 0; padding: .65rem .75rem; border: 1px solid #bdcac3; border-radius: .55rem; background: #fff; font: inherit; }
 .association-list-search .button { min-height: 42px; white-space: nowrap; }
+@media (min-width: 801px) and (max-width: 1100px) { .association-list-search { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 800px) { .association-list-layout { grid-template-columns: 1fr; } .association-list-search { grid-template-columns: 1fr; } .association-list-search .button { width: 100%; } }
 .group-messages-layout .association-event-section { margin-bottom: 0; }
 .group-messages-communications { min-width: 0; }
