@@ -16,7 +16,7 @@ import { ResidentRegistration } from '../models/residentRegistration.js';
 import { PendingUserRegistration } from '../models/pendingUserRegistration.js';
 import { visibleEvents, calendarWindow } from '../services/associationEventService.js';
 import { loadAssociationPageData } from '../services/associationPublicPageService.js';
-import { loadHouseholdInvitation } from '../services/householdParticipationService.js';
+import { loadHouseholdInvitation, acceptHouseholdInvitation } from '../services/householdParticipationService.js';
 import { deleteNotification, markNotificationRead, syncCompletedNotifications } from '../services/notificationInboxService.js';
 import { requireLogin, requireSystemAdmin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
@@ -230,6 +230,7 @@ webRouter.get('/register', async (req, res, next) => {
       return res.redirect('/dashboard');
     }
     const invitation = req.session.householdInvitationId ? await loadHouseholdInvitation({ invitationId: req.session.householdInvitationId }) : null;
+    if (invitation && await User.findOne({ email: invitation.email }).collation({ locale: 'en', strength: 2 }).select('_id').lean()) return res.redirect('/login');
     const choice = req.session.registrationChoice;
     if (!invitation && !choice) return res.redirect('/associations');
     const association = choice?.purpose === 'join' ? await NeighborhoodAssociation.findOne({ _id: choice.associationId, status: 'active', deletedAt: { $exists: false } }).lean() : null;
@@ -244,6 +245,7 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
     choice = req.session.registrationChoice;
     invitation = req.session.householdInvitationId ? await loadHouseholdInvitation({ invitationId: req.session.householdInvitationId }) : null;
     if (!invitation && !choice) return res.redirect('/associations');
+    if (invitation && await User.findOne({ email: invitation.email }).collation({ locale: 'en', strength: 2 }).select('_id').lean()) return res.redirect('/login');
     association = choice?.purpose === 'join' ? await NeighborhoodAssociation.findOne({ _id: choice.associationId, status: 'active', deletedAt: { $exists: false } }).lean() : null;
     if (choice?.purpose === 'join' && !association) return res.redirect('/associations');
     res.locals.association = association;
@@ -266,15 +268,27 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
       return res.status(400).render('register', { title: '新規会員登録', values, formError: '招待が無効、またはメールアドレスが招待先と異なります。招待リンクを再度確認してください。' });
     }
     if (invitation && req.body.acceptInvitation !== 'on') return res.status(400).render('register', { title: '新規会員登録', values, formError: '招待を受諾することにチェックしてください。' });
-    try {
-      assertMailConfigured();
-    } catch (_mailConfigError) {
-      return res.status(503).render('register', {
-        title: '新規会員登録', values,
-        formError: '現在メール送信の準備中です。管理者がメール設定を完了してから、もう一度お試しください。'
-      });
+    if (!invitation) {
+      try {
+        assertMailConfigured();
+      } catch (_mailConfigError) {
+        return res.status(503).render('register', {
+          title: '新規会員登録', values,
+          formError: '現在メール送信の準備中です。管理者がメール設定を完了してから、もう一度お試しください。'
+        });
+      }
     }
     const { user, verificationToken } = await registerUser({ ...values, password, householdInvitation: invitation?._id, association: association?._id, registrationPurpose: choice?.purpose });
+    if (invitation) {
+      const completedUser = await verifyEmailToken(verificationToken);
+      if (!completedUser) throw new Error('invited_registration_completion_failed');
+      if (completedUser.$locals?.householdParticipationSubmitted) delete req.session.householdInvitationId;
+      return res.render('email-verified', {
+        title: '登録が完了しました', verified: true, invitationRegistration: true,
+        householdParticipationSubmitted: Boolean(completedUser.$locals?.householdParticipationSubmitted),
+        householdParticipationError: completedUser.$locals?.householdParticipationError || null
+      });
+    }
     try {
       await sendVerificationEmail({ user, token: verificationToken });
       return res.render('check-email', { title: '確認メールを送信しました', email: user.email, deliveryFailed: false });
@@ -337,6 +351,8 @@ webRouter.post('/verification-email/resend', verifyCsrfToken, async (req, res, n
 });
 
 webRouter.post('/login', verifyCsrfToken, (req, res, next) => {
+  const householdInvitationId = req.session.householdInvitationId;
+  const registrationChoice = req.session.registrationChoice;
   passport.authenticate('local', (error, user, info) => {
     if (error) return next(error);
     if (!user) {
@@ -348,7 +364,23 @@ webRouter.post('/login', verifyCsrfToken, (req, res, next) => {
     return req.logIn(user, async (loginError) => {
       if (loginError) return next(loginError);
       req.session.notificationPromptPending = true;
+      if (registrationChoice) req.session.registrationChoice = registrationChoice;
+      if (householdInvitationId) req.session.householdInvitationId = householdInvitationId;
       try {
+        if (householdInvitationId) {
+          if (user.isAdmin) return res.redirect('/resident-onboarding');
+          let application;
+          try {
+            application = await acceptHouseholdInvitation({ invitationId: householdInvitationId, user });
+          } catch (invitationError) {
+            if (invitationError.status && invitationError.status < 500) return res.redirect('/resident-onboarding');
+            throw invitationError;
+          }
+          delete req.session.householdInvitationId;
+          delete req.session.registrationChoice;
+          req.session.notice = '参加申請を送信しました。班長または町内会管理者の承認をお待ちください。';
+          return res.redirect(`/associations/${application.association}/participation`);
+        }
         const registration = await ResidentRegistration.findOne({ user: user._id }).lean();
         if (req.session.registrationChoice?.purpose === 'create') return res.redirect('/associations/new');
         if (req.session.registrationChoice?.purpose === 'join') return res.redirect(`/associations/${req.session.registrationChoice.associationId}/join`);

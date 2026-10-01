@@ -7,6 +7,7 @@ import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { Invitation, JoinApplication } from '../models/workflow.js';
 import { Household, HouseholdMember } from '../models/organization.js';
 import { AssociationMembership } from '../models/associationMembership.js';
+import { User } from '../models/user.js';
 import { assertMailConfigured, sendHouseholdInvitationEmail } from '../services/emailVerificationService.js';
 import { loadHouseholdInvitation, acceptHouseholdInvitation, createHouseholdInvitationToken, normalizeEmail } from '../services/householdParticipationService.js';
 
@@ -18,10 +19,13 @@ householdInvitationsRouter.get('/household-invitations', async (req, res, next) 
     const invitation = await loadHouseholdInvitation({ token: String(req.query.token || '') });
     if (!invitation) return res.status(400).render('error', { title: '招待を利用できません', message: '有効期限が切れているか、受諾済みの招待です。世帯主に再招待を依頼してください。' });
     req.session.householdInvitationId = String(invitation._id);
+    delete req.session.registrationChoice;
     res.set('Referrer-Policy', 'no-referrer');
     res.set('Cache-Control', 'no-store');
-    // Strip the token from the address bar, then send new invitees straight to registration.
-    return res.redirect(req.user ? '/resident-onboarding' : '/register');
+    // Strip the token before entering registration or login.
+    if (req.user) return res.redirect('/resident-onboarding');
+    const existingUser = await User.findOne({ email: invitation.email }).collation({ locale: 'en', strength: 2 }).select('_id').lean();
+    return res.redirect(existingUser ? '/login' : '/register');
   } catch (error) { return next(error); }
 });
 

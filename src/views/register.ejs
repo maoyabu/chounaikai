@@ -14,7 +14,7 @@
       <% if (typeof invitation !== 'undefined' && invitation) { %>
         <input type="hidden" name="residentMode" value="general">
         <p class="alert alert-success"><%= invitation.association.name %>：世帯主からの招待による会員登録です。招待先のメールアドレスで登録してください。</p>
-        <label class="household-invitation-consent"><input type="checkbox" name="acceptInvitation" required>世帯主からの招待を受諾します。メール確認後に世帯に紐付き、参加承認待ちになります。</label>
+        <label class="household-invitation-consent"><input type="checkbox" name="acceptInvitation" required>世帯主からの招待を受諾します。登録後に世帯に紐付き、参加承認待ちになります。メールアドレスの再確認は不要です。</label>
       <% } else { %>
         <input type="hidden" name="residentMode" value="representative">
       <% } %>

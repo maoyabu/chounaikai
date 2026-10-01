@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
+import passport from 'passport';
 import { fileURLToPath } from 'node:url';
 import { Invitation, JoinApplication } from '../src/models/workflow.js';
 import { Household, HouseholdMember, DistrictGroup } from '../src/models/organization.js';
@@ -19,6 +20,7 @@ import { registerUser } from '../src/services/userService.js';
 import { verifyEmailToken, sendHouseholdInvitationEmail } from '../src/services/emailVerificationService.js';
 import { householdInvitationsRouter } from '../src/routes/householdInvitations.js';
 import { householdsRouter } from '../src/routes/households.js';
+import { webRouter } from '../src/routes/web.js';
 import { managementRouter } from '../src/routes/management.js';
 import { verifyCsrfToken } from '../src/middleware/csrf.js';
 import { createHouseholdInvitationToken, digestInvitationToken, parseResidentProfile, loadHouseholdInvitation, acceptHouseholdInvitation, requestHouseholdLink, confirmHouseholdLink, decideJoinApplication } from '../src/services/householdParticipationService.js';
@@ -580,6 +582,7 @@ const route = (router, path, method = 'post') => router.stack.find(layer => laye
 
 test('anonymous invitee is sent directly from the invitation link to registration', async t => {
   stubInvitation(t);
+  stub(t, User, 'findOne', () => query(null));
   const handler = route(householdInvitationsRouter, '/household-invitations', 'get').stack.at(-1).handle;
   const req = { user: null, session: {}, query: { token: 'a'.repeat(64) } };
   let destination;
@@ -589,6 +592,102 @@ test('anonymous invitee is sent directly from the invitation link to registratio
   if (error) throw error;
   assert.equal(destination, '/register');
   assert.equal(req.session.householdInvitationId, String(ids.invitation));
+});
+
+test('existing invitee goes straight to login and retains the invitation', async t => {
+  stubInvitation(t);
+  stub(t, User, 'findOne', () => query(user));
+  const req = { session: { registrationChoice: { purpose: 'create' } }, query: { token: 'a'.repeat(64) } };
+  let destination;
+  await route(householdInvitationsRouter, '/household-invitations', 'get').stack.at(-1).handle(req, {
+    set() {}, redirect(path) { destination = path; }
+  }, error => { throw error; });
+  assert.equal(destination, '/login');
+  assert.equal(req.session.householdInvitationId, String(ids.invitation));
+  assert.equal(req.session.registrationChoice, undefined);
+});
+
+test('invited registration completes without sending a verification email and creates a pending application', async t => {
+  stubInvitation(t);
+  stub(t, User, 'exists', async () => null);
+  stub(t, User, 'findOne', () => query(null));
+  stub(t, PendingUserRegistration, 'deleteMany', async () => ({}));
+  stub(t, PendingUserRegistration, 'exists', async () => null);
+  let pending;
+  stub(t, PendingUserRegistration, 'findOne', () => query(pending || null));
+  stub(t, PendingUserRegistration, 'create', async fields => (pending = { _id: id(), ...fields }));
+  stub(t, PendingUserRegistration, 'deleteOne', async () => ({}));
+  stub(t, User, 'create', async fields => ({ _id: ids.user, ...fields }));
+  stub(t, ResidentRegistration, 'findOneAndUpdate', async () => ({}));
+  stub(t, Invitation, 'findOneAndUpdate', async () => ({ _id: ids.invitation }));
+  stub(t, HouseholdMember, 'findOneAndUpdate', async () => ({ ...member, user: ids.user }));
+  stub(t, JoinApplication, 'findOneAndUpdate', async (_filter, update) => ({ _id: ids.application, association: ids.association, ...update.$set }));
+  const mail = stub(t, nodemailer, 'createTransport', () => { throw new Error('must_not_send_email'); });
+  const grant = stub(t, AssociationMembership, 'findOneAndUpdate', () => { throw new Error('must_wait_for_approval'); });
+  const req = { session: { householdInvitationId: String(ids.invitation) }, body: {
+    username: user.username, email: user.email, displayname: user.displayname,
+    password: 'abcdefgh', passwordConfirmation: 'abcdefgh', acceptInvitation: 'on'
+  } };
+  let result;
+  await route(webRouter, '/register').stack.at(-1).handle(req, {
+    locals: {}, render(view, locals) { result = { view, locals }; }
+  }, error => { throw error; });
+  assert.equal(result.view, 'email-verified');
+  assert.equal(result.locals.invitationRegistration, true);
+  assert.equal(result.locals.householdParticipationSubmitted, true);
+  assert.equal(req.session.householdInvitationId, undefined);
+  assert.ok(User.create.mock.calls[0].arguments[0].emailVerifiedAt);
+  assert.equal(JoinApplication.findOneAndUpdate.mock.calls[0].arguments[1].$set.status, 'pending');
+  assert.equal(mail.mock.callCount(), 0);
+  assert.equal(grant.mock.callCount(), 0);
+});
+
+test('login from an invitation creates an application despite session regeneration', async t => {
+  stubInvitation(t);
+  stub(t, Invitation, 'findOneAndUpdate', async () => ({ _id: ids.invitation }));
+  stub(t, HouseholdMember, 'findOneAndUpdate', async () => ({ ...member, user: ids.user }));
+  stub(t, JoinApplication, 'findOneAndUpdate', async (_filter, update) => ({ _id: ids.application, association: ids.association, ...update.$set }));
+  const grant = stub(t, AssociationMembership, 'findOneAndUpdate', () => { throw new Error('must_wait_for_approval'); });
+  stub(t, passport, 'authenticate', (_strategy, callback) => () => callback(null, user));
+  const req = { session: { householdInvitationId: String(ids.invitation), registrationChoice: { purpose: 'create' } },
+    logIn(_user, callback) { this.session = {}; return callback(); }
+  };
+  const destination = await new Promise((resolve, reject) => {
+    route(webRouter, '/login').stack.at(-1).handle(req, { redirect: resolve }, reject);
+  });
+  assert.equal(destination, `/associations/${ids.association}/participation`);
+  assert.equal(req.session.householdInvitationId, undefined);
+  assert.equal(req.session.registrationChoice, undefined);
+  assert.equal(JoinApplication.findOneAndUpdate.mock.calls[0].arguments[1].$set.status, 'pending');
+  assert.equal(grant.mock.callCount(), 0);
+});
+
+test('login with a different invitation email returns to invitation guidance without claiming it', async t => {
+  stubInvitation(t);
+  const claim = stub(t, Invitation, 'findOneAndUpdate', () => { throw new Error('must_not_claim'); });
+  stub(t, passport, 'authenticate', (_strategy, callback) => () => callback(null, { ...user, email: 'other@example.test' }));
+  const req = { session: { householdInvitationId: String(ids.invitation) }, logIn(_user, callback) { this.session = {}; return callback(); } };
+  const destination = await new Promise((resolve, reject) => {
+    route(webRouter, '/login').stack.at(-1).handle(req, { redirect: resolve }, reject);
+  });
+  assert.equal(destination, '/resident-onboarding');
+  assert.equal(req.session.householdInvitationId, String(ids.invitation));
+  assert.equal(claim.mock.callCount(), 0);
+});
+
+test('invited registration rejects an altered email before creating any account', async t => {
+  stubInvitation(t);
+  stub(t, User, 'findOne', () => query(null));
+  const create = stub(t, PendingUserRegistration, 'create', () => { throw new Error('must_not_create'); });
+  let status, result;
+  await route(webRouter, '/register').stack.at(-1).handle({
+    session: { householdInvitationId: String(ids.invitation) }, body: {
+      username: user.username, email: 'other@example.test', password: 'abcdefgh', passwordConfirmation: 'abcdefgh', acceptInvitation: 'on'
+    }
+  }, { locals: {}, status(value) { status = value; return this; }, render(view, locals) { result = { view, locals }; } }, error => { throw error; });
+  assert.equal(status, 400);
+  assert.equal(result.view, 'register');
+  assert.equal(create.mock.callCount(), 0);
 });
 
 test('invited registration prepopulates the member name and locks the invitation email', async () => {
