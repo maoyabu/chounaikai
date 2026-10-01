@@ -81,7 +81,7 @@ householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, 
     const accountEmail = String(req.user.email || '').trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(email) || email !== accountEmail) throw fail('会員登録済みのメールアドレスを入力してください。');
     const registeredFamily = await HouseholdMember.exists({ association: req.params.associationId, email, isRepresentative: false, $or: [{ user: null }, { user: { $exists: false } }] });
-    if (registeredFamily) throw fail('このメールアドレスは世帯メンバーに登録されています。世帯主からの招待をご利用ください。', 409);
+    if (registeredFamily) throw fail('このメールアドレスは家族に登録されています。世帯主からの招待をご利用ください。', 409);
     await ensureCanApply(req.params.associationId, req.user._id);
     const residentProfile = parseResidentProfile(req.body, req.user);
     const [association, districtGroup, membership] = await Promise.all([
@@ -150,9 +150,9 @@ householdsRouter.post('/:associationId/household/:householdId/members', verifyCs
     const household = await loadOwnedHousehold(req.params.associationId, req.params.householdId, req.user._id);
     if (!household) throw fail('世帯を確認できません。', 404);
     const birthDate = new Date(req.body.birthDate), name = String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim(), gender = String(req.body.gender || 'unspecified');
-    if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('世帯メンバーの必須情報を入力してください。');
+    if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('家族の必須情報を入力してください。');
     await HouseholdMember.create({ association: req.params.associationId, household: household._id, name, nameKana, birthDate, gender, email: String(req.body.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), relationship: String(req.body.relationship || '').trim(), startsAt: new Date() });
-    req.session.notice = '世帯メンバーを登録しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    req.session.notice = '家族を登録しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
   } catch (error) { return next(error); }
 });
 
@@ -160,12 +160,12 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
   try {
     const household = await loadOwnedHousehold(req.params.associationId, req.params.householdId, req.user._id);
     const member = household && await HouseholdMember.findOne({ _id: req.params.memberId, household: household._id });
-    if (!member) throw fail('世帯メンバーを確認できません。', 404);
-    if (member.user && String(member.user) !== String(req.user._id)) throw fail('アカウントと紐付いたメンバーの本人情報は本人が変更してください。', 403);
+    if (!member) throw fail('家族を確認できません。', 404);
+    if (member.user && String(member.user) !== String(req.user._id)) throw fail('アカウントと紐付いた家族の本人情報は本人が変更してください。', 403);
     const birthDate = new Date(req.body.birthDate), name = member.isRepresentative ? String(req.user.displayname || req.user.username || '').trim() : String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim(), gender = String(req.body.gender || 'unspecified');
     if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('必須情報を入力してください。');
     Object.assign(member, { name, nameKana, birthDate, gender, email: String(req.body.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), relationship: member.isRepresentative ? '世帯代表者' : String(req.body.relationship || '').trim() }); await member.save();
-    req.session.notice = '世帯メンバーを更新しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    req.session.notice = '家族を更新しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
   } catch (error) { return next(error); }
 });
 
@@ -173,29 +173,29 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
   try {
     const household = await loadOwnedHousehold(req.params.associationId, req.params.householdId, req.user._id);
     const member = household && await HouseholdMember.findOne({ _id: req.params.memberId, association: req.params.associationId, household: household._id, endsAt: null });
-    if (!member) throw fail('世帯メンバーを確認できません。', 404);
+    if (!member) throw fail('家族を確認できません。', 404);
     if (member.isRepresentative) throw fail('世帯代表者は削除できません。', 409);
     if (member.user) {
       const result = await removeLinkedHouseholdMember({ associationId: req.params.associationId, householdId: household._id, memberId: member._id, actorId: req.user._id });
       req.session.notice = result.accountExists
-        ? 'アカウント紐付け済みメンバーを世帯から削除し、町内会への参加を終了しました。共通アカウントは残ります。'
-        : '存在しないアカウントへの参照を整理し、世帯メンバーを削除しました。';
+        ? 'アカウント紐付け済みの家族を世帯から削除し、町内会への参加を終了しました。共通アカウントは残ります。'
+        : '存在しないアカウントへの参照を整理し、家族を削除しました。';
       return res.redirect(`/profile?tab=household#household-${household._id}`);
     }
     await Invitation.updateMany({ householdMember: member._id, status: 'pending' }, { $set: { status: 'cancelled' } });
-    await member.deleteOne(); req.session.notice = '世帯メンバーを削除しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    await member.deleteOne(); req.session.notice = '家族を削除しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
   } catch (error) { return next(error); }
 });
 
 householdsRouter.post('/:associationId/household/:householdId/members/:memberId/self-update', verifyCsrfToken, async (req, res, next) => {
   try {
-    if (![req.params.associationId, req.params.householdId, req.params.memberId].every(validId)) throw fail('本人の世帯メンバー情報を確認してください。');
+    if (![req.params.associationId, req.params.householdId, req.params.memberId].every(validId)) throw fail('本人の家族情報を確認してください。');
     const membership = await AssociationMembership.exists({ association: req.params.associationId, household: req.params.householdId, user: req.user._id, status: 'active' });
     const nameKana = String(req.body.nameKana || '').trim();
-    if (!membership || !nameKana) throw fail('本人の世帯メンバー情報を確認してください。', 403);
+    if (!membership || !nameKana) throw fail('本人の家族情報を確認してください。', 403);
     const member = await HouseholdMember.findOneAndUpdate({ _id: req.params.memberId, association: req.params.associationId, household: req.params.householdId, user: req.user._id, isRepresentative: false }, { $set: { nameKana, lineAccount: String(req.body.lineAccount || '').trim(), relationship: String(req.body.relationship || '').trim() } }, { new: true });
-    if (!member) throw fail('本人の世帯メンバー情報を確認できません。', 404);
-    req.session.notice = '本人の世帯メンバー情報を更新しました。';
+    if (!member) throw fail('本人の家族情報を確認できません。', 404);
+    req.session.notice = '本人の家族情報を更新しました。';
     return res.redirect(`/profile?tab=household#household-${req.params.householdId}`);
   } catch (error) { return next(error); }
 });

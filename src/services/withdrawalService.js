@@ -30,7 +30,7 @@ const context = async (associationId, householdId, session = null) => {
 const notify = async (application, type, recipients) => {
   try {
     for (const recipient of new Set(recipients.map(String))) await createNotification({ association: application.association, recipient, type,
-      title: type === 'withdrawal_head_requested' ? '世帯メンバーから退会申請が届きました' : type === 'withdrawal_leader_requested' ? '班・世帯から退会申請が届きました' : type === 'withdrawal_approved' ? '町内会の退会が完了しました' : '退会申請が承認されませんでした',
+      title: type === 'withdrawal_head_requested' ? '家族から退会申請が届きました' : type === 'withdrawal_leader_requested' ? '班・世帯から退会申請が届きました' : type === 'withdrawal_approved' ? '町内会の退会が完了しました' : '退会申請が承認されませんでした',
       body: type === 'withdrawal_head_requested' ? 'プロフィールの「退会申請」から確認してください。' : type === 'withdrawal_leader_requested' ? '班長メニューの「退会申請」から確認してください。' : 'プロフィールの「退会申請」から申請状況を確認できます。共通アカウントを使用する他のサービスには影響しません。', relatedType: 'WithdrawalApplication', relatedId: application._id, emailRequired: ['withdrawal_approved', 'withdrawal_rejected'].includes(type) });
   } catch (error) { console.error('Withdrawal notification failed', error.message); }
 };
@@ -101,7 +101,7 @@ export const decideWithdrawal = async ({ associationId, applicationId, actorId, 
     if (approve) {
       if (application.scope === 'household') {
         const current = await AssociationMembership.find({ association: associationId, household: household._id, status: 'active' }).session(session).lean();
-        if (current.length !== memberships.length) throw fail('申請後に世帯メンバーが増えています。再申請してください。');
+        if (current.length !== memberships.length) throw fail('申請後に家族が増えています。再申請してください。');
         const change = await mutate(Household, { _id: household._id, active: true, representative: household.representative, districtGroup: household.districtGroup, updatedAt: household.updatedAt }, { $set: { active: false } }, ['active']);
         if (change.matchedCount !== 1) throw fail('世帯情報が変更されました。再申請してください。');
       } else if (application.scope === 'representative') {

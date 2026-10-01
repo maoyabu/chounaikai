@@ -100,7 +100,7 @@ export const requestHouseholdLink = async ({ associationId, districtGroupId, use
     $unset: { decidedBy: '', decidedAt: '', rejectionReason: '', invitation: '', invitedBy: '', householdMember: '', householdConfirmedBy: '', householdConfirmedAt: '' }
   }, { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true });
   try {
-    await Notification.create({ association: associationId, recipient: head._id, type: 'household_link_requested', title: '同居人から世帯への紐付け申請が届きました', body: `${residentProfile.name}さんが世帯への参加を申請しています。プロフィールの「世帯情報」から確認してください。`, relatedType: 'JoinApplication', relatedId: application._id });
+    await Notification.create({ association: associationId, recipient: head._id, type: 'household_link_requested', title: '家族から世帯への紐付け申請が届きました', body: `${residentProfile.name}さんが世帯への参加を申請しています。プロフィールの「世帯情報」から確認してください。`, relatedType: 'JoinApplication', relatedId: application._id });
   } catch (error) { console.error('Household-link notification creation failed', error.message); }
   return application;
 };
@@ -119,7 +119,7 @@ export const acceptHouseholdInvitation = async ({ invitationId, user }) => {
     if (!claimed) throw fail('この招待は既に使用されています。', 409);
     invitationClaimed = true;
     const member = await HouseholdMember.findOneAndUpdate({ _id: invitation.member._id, household: invitation.household._id, user: null }, { $set: { user: user._id, name: user.displayname || user.username, email: normalizeEmail(user.email) } }, { new: true, ...options });
-    if (!member) throw fail('世帯メンバーは既に別のアカウントと紐付いています。', 409);
+    if (!member) throw fail('家族は既に別のアカウントと紐付いています。', 409);
     memberLinked = true;
     application = await JoinApplication.findOneAndUpdate({ association: invitation.association._id, applicant: user._id, status: { $nin: blockedStatuses } }, {
       $set: { household: invitation.household._id, householdMember: member._id, districtGroup: invitation.household.districtGroup._id, status: 'pending', source: 'household_invitation', invitation: invitation._id, invitedBy: invitation.invitedBy._id, householdConfirmedBy: invitation.invitedBy._id, householdConfirmedAt: new Date() },
@@ -154,9 +154,9 @@ export const confirmHouseholdLink = async ({ associationId, householdId, applica
     claimed = true;
     if (memberId) {
       previousMember = await HouseholdMember.findOne({ _id: memberId, household: householdId, association: associationId, isRepresentative: false, user: null }).session(session).lean();
-      if (!previousMember) throw fail('未紐付けの世帯メンバーを選択してください。');
+      if (!previousMember) throw fail('未紐付けの家族を選択してください。');
       member = await HouseholdMember.findOneAndUpdate({ _id: memberId, household: householdId, user: null }, { $set: { user: applicant._id, name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email) } }, { new: true, ...options });
-      if (!member) throw fail('世帯メンバーの状態が変わりました。', 409);
+      if (!member) throw fail('家族の状態が変わりました。', 409);
     } else {
       previousMember = await HouseholdMember.findOne({ household: householdId, association: associationId, user: applicant._id, isRepresentative: false }).session(session).lean();
       member = await HouseholdMember.findOneAndUpdate({ household: householdId, association: associationId, user: applicant._id, isRepresentative: false }, { $setOnInsert: { ...application.toObject().residentProfile, name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email), startsAt: new Date() } }, { upsert: true, new: true, runValidators: true, ...options });
@@ -192,7 +192,7 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
     let member, created = false;
     if (application.householdMember) {
       member = await HouseholdMember.findOneAndUpdate({ _id: application.householdMember, household: household._id, association: application.association, user: null, isRepresentative: false }, { $set: { user: applicant._id, name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email) } }, { new: true });
-      if (!member) throw fail('世帯メンバーの状態が変更されています。', 409);
+      if (!member) throw fail('家族の状態が変更されています。', 409);
     } else {
       const existingMember = await HouseholdMember.findOne({ household: household._id, association: application.association, user: applicant._id, isRepresentative: false });
       member = existingMember || await HouseholdMember.create({ association: application.association, household: household._id, user: applicant._id, ...(application.residentProfile?.toObject?.() || application.residentProfile || {}), name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email), isRepresentative: false, startsAt: new Date() });
@@ -239,11 +239,11 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
       }
       if (application.householdMember && application.source !== 'representative') {
         const previousMember = await HouseholdMember.findOne({ _id: application.householdMember, household: household._id, user: application.applicant }).session(session).lean();
-        if (!previousMember) throw fail('世帯メンバーの状態が変更されています。', 409);
+        if (!previousMember) throw fail('家族の状態が変更されています。', 409);
         if (previousMember.endsAt) {
           changes.reactivatedMember = previousMember;
           const reactivated = await HouseholdMember.updateOne({ _id: previousMember._id, user: application.applicant, endsAt: previousMember.endsAt }, { $set: { startsAt: now }, $unset: { endsAt: '' } }, options);
-          if (reactivated.modifiedCount !== 1) throw fail('世帯メンバーの状態が変更されています。', 409);
+          if (reactivated.modifiedCount !== 1) throw fail('家族の状態が変更されています。', 409);
         }
       }
       await AssociationMembership.updateOne({ _id: membership._id }, { $set: { status: 'active' } }, options);

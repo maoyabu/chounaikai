@@ -66,7 +66,7 @@ export const sendHouseholdInvitationEmail = async ({ email, token, associationNa
   const transporter = nodemailer.createTransport({ ...config.transport, disableFileAccess: true, disableUrlAccess: true });
   await transporter.sendMail({
     from: config.from, to: email, subject: `【まちの伝言板】${associationName}・世帯への招待`,
-    text: `${memberName}さん\n\n${inviterName}さんから同一世帯のメンバーとして招待されました。\n${url}\n\nリンクから招待を確認し、会員登録またはログインして受諾してください。班長または町内会管理者の承認後に利用できます。招待の有効期限は7日間です。心当たりがない場合は操作不要です。`,
+    text: `${memberName}さん\n\n${inviterName}さんから家族として招待されました。\n${url}\n\nリンクから招待を確認し、会員登録またはログインして受諾してください。班長または町内会管理者の承認後に利用できます。招待の有効期限は7日間です。心当たりがない場合は操作不要です。`,
     html: `<p>${escapeHtml(memberName)}さん</p><p>${escapeHtml(inviterName)}さんから「${escapeHtml(associationName)}」の同一世帯へ招待されました。</p><p><a href="${url}">招待を確認する</a></p><p>会員登録またはログインして受諾してください。班長または町内会管理者の承認後に利用できます。有効期限は7日間です。心当たりがない場合は操作不要です。</p>`
   });
 };

@@ -81,12 +81,12 @@ householdInvitationsRouter.post('/associations/:associationId/household/:househo
 householdInvitationsRouter.post('/associations/:associationId/household/:householdId/members/:memberId/invite', requireLogin, verifyCsrfToken, async (req, res, next) => {
   try {
     const { associationId, householdId, memberId } = req.params;
-    if (![associationId, householdId, memberId].every(mongoose.isValidObjectId)) throw fail('世帯メンバーを確認してください。');
+    if (![associationId, householdId, memberId].every(mongoose.isValidObjectId)) throw fail('家族を確認してください。');
     const household = await Household.findOne({ _id: householdId, association: associationId, representative: req.user._id, active: true }).populate('association', 'name status deletedAt');
     const member = household && await HouseholdMember.findOne({ _id: memberId, household: householdId, association: associationId, isRepresentative: false, user: null });
-    if (!member || household.association?.status !== 'active' || household.association.deletedAt || !await AssociationMembership.exists({ association: associationId, user: req.user._id, household: householdId, status: 'active' })) throw fail('参加中の世帯の未紐付けメンバーだけを招待できます。', 403);
+    if (!member || household.association?.status !== 'active' || household.association.deletedAt || !await AssociationMembership.exists({ association: associationId, user: req.user._id, household: householdId, status: 'active' })) throw fail('参加中の世帯の未紐付けの家族だけを招待できます。', 403);
     const email = normalizeEmail(req.body.email);
-    if (!/^\S+@\S+\.\S+$/.test(email) || email === normalizeEmail(req.user.email)) throw fail('同居人本人のメールアドレスを入力してください。');
+    if (!/^\S+@\S+\.\S+$/.test(email) || email === normalizeEmail(req.user.email)) throw fail('家族本人のメールアドレスを入力してください。');
     if (await Invitation.exists({ householdMember: memberId, status: 'pending', createdAt: { $gt: new Date(Date.now() - 60000) } })) throw fail('再送は1分以上あけてください。', 429);
     try { assertMailConfigured(); } catch (_error) { throw fail('メール送信の設定が完了していません。町内会管理者に確認してください。', 503); }
     const verification = createHouseholdInvitationToken();

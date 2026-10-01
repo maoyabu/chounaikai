@@ -4,7 +4,7 @@
       <div>
         <strong><% if (application.source === 'household_invitation') { %><%= application.household?.displayName %>の<% } %><%= application.applicant?.displayname || application.applicant?.username || application.household?.displayName %><% if (application.source === 'household_invitation') { %>さんの参加申請<% } %></strong>
         <span class="status-badge"><%= application.districtGroup?.name %></span>
-        <span class="status-badge"><%= application.source === 'household_invitation' ? '世帯主からの招待' : application.source === 'household_link' ? '一般メンバー・世帯紐付け' : '世帯主' %></span>
+        <span class="status-badge"><%= application.source === 'household_invitation' ? '世帯主からの招待' : application.source === 'household_link' ? '家族・世帯参加' : '世帯主' %></span>
         <p><%= application.applicant?.email || '' %></p>
         <small>世帯：<%= application.household?.displayName %><% if (application.invitedBy) { %> ／ 招待元：<%= application.invitedBy.displayname || application.invitedBy.username %><% } else if (application.household?.representative?.displayname) { %> ／ 世帯主：<%= application.household.representative.displayname %><% } %></small>
         <p class="application-address"><%= application.household?.address?.postalCode %> <%= application.household?.address?.street %> <%= application.household?.address?.building || '' %></p>

@@ -17,20 +17,20 @@ const fiscalYear = now => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFu
 const same = (left, right) => String(left) === String(right);
 
 export const removeLinkedHouseholdMember = async ({ associationId, householdId, memberId, actorId, now = new Date() }) => {
-  if (![associationId, householdId, memberId, actorId].every(mongoose.isValidObjectId)) throw fail('世帯メンバーを確認してください。', 400);
+  if (![associationId, householdId, memberId, actorId].every(mongoose.isValidObjectId)) throw fail('家族を確認してください。', 400);
   const journal = [];
   let groupRestore, userRestore, groupId, memberUserId, notificationId, auditId;
   return runWithOptionalTransaction(async session => {
     const options = session ? { session } : {};
     const household = await Household.findOne({ _id: householdId, association: associationId, representative: actorId, active: true }).session(session).lean();
-    if (!household || !await AssociationMembership.exists({ association: associationId, household: householdId, user: actorId, status: 'active' }).session(session)) throw fail('参加中の世帯主だけがメンバーを削除できます。', 403);
+    if (!household || !await AssociationMembership.exists({ association: associationId, household: householdId, user: actorId, status: 'active' }).session(session)) throw fail('参加中の世帯主だけが家族を削除できます。', 403);
     const member = await HouseholdMember.findOne({ _id: memberId, association: associationId, household: householdId, isRepresentative: false, endsAt: null }).session(session).lean();
-    if (!member?.user || same(member.user, actorId)) throw fail('削除できるアカウント紐付け済みメンバーを確認できません。', 404);
+    if (!member?.user || same(member.user, actorId)) throw fail('削除できるアカウント紐付け済みの家族を確認できません。', 404);
     const association = await NeighborhoodAssociation.findOne({ _id: associationId, status: 'active', deletedAt: { $exists: false } }).session(session).lean();
     const group = association?.group && await Group.findById(association.group).select('members').session(session).lean();
     const user = await User.findById(member.user).select('groups defaultGroup').session(session).lean();
     if (!association || !group) throw fail('町内会を確認できません。');
-    if (await WithdrawalApplication.exists({ association: associationId, household: householdId, requestedBy: member.user, status: 'processing' }).session(session)) throw fail('退会処理中のメンバーは削除できません。処理完了後に再度お試しください。');
+    if (await WithdrawalApplication.exists({ association: associationId, household: householdId, requestedBy: member.user, status: 'processing' }).session(session)) throw fail('退会処理中の家族は削除できません。処理完了後に再度お試しください。');
     groupId = association.group;
     memberUserId = member.user;
 
@@ -41,7 +41,7 @@ export const removeLinkedHouseholdMember = async ({ associationId, householdId, 
       if (result.modifiedCount) journal.push({ Model, before, fields });
       return result.modifiedCount;
     };
-    if (await update(HouseholdMember, { _id: member._id, user: member.user, endsAt: null }, { $set: { endsAt: now } }, ['endsAt']) !== 1) throw fail('世帯メンバーの状態が変更されました。画面を開き直してください。');
+    if (await update(HouseholdMember, { _id: member._id, user: member.user, endsAt: null }, { $set: { endsAt: now } }, ['endsAt']) !== 1) throw fail('家族の状態が変更されました。画面を開き直してください。');
     await update(AssociationMembership, { association: associationId, household: householdId, user: member.user, status: { $in: ['active', 'pending', 'withdrawal_pending'] } }, { $set: { status: 'inactive', endedAt: now } }, ['status', 'endedAt']);
     await update(RoleAssignment, { association: associationId, user: member.user, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }, { $set: { endsAt: new Date(now.getTime() - 1) } }, ['endsAt']);
     await update(AnnualOfficer, { association: associationId, user: member.user, fiscalYear: { $gte: fiscalYear(now) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
