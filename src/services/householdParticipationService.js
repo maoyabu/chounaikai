@@ -172,16 +172,41 @@ export const confirmHouseholdLink = async ({ associationId, householdId, applica
 };
 
 // Both the current district leader and an association manager use this decision path.
-export const decideJoinApplication = async ({ application, actor, approve, rejectionReason }) => {
+export const decideJoinApplication = async ({ application, actor, approve, rejectionReason, managerOverride = false }) => {
   const household = await Household.findOne({ _id: application.household, association: application.association, active: true });
   const association = await NeighborhoodAssociation.findOne({ _id: application.association, status: 'active', deletedAt: { $exists: false } });
   const district = household && await DistrictGroup.findOne({ _id: household.districtGroup, association: application.association, active: true });
   if (!household || !association || !district || String(district._id) !== String(application.districtGroup._id || application.districtGroup)) throw fail('世帯の所属班が変更されています。申請先を確認してください。', 409);
   if ((!application.source || application.source === 'representative') && String(household.representative) !== String(application.applicant)) throw fail('申請者と世帯代表者が一致していません。', 409);
-  if (approve && application.source !== 'representative' && application.source) {
+  if (approve && application.source !== 'representative' && application.source && !(managerOverride && application.status === 'awaiting_household' && application.source === 'household_link')) {
     const member = await HouseholdMember.exists({ _id: application.householdMember, household: household._id, user: application.applicant, isRepresentative: false });
     if (!member || !application.householdConfirmedBy) throw fail('世帯主の確認が完了していません。', 409);
     if (!await AssociationMembership.exists({ association: application.association, household: household._id, user: household.representative, status: 'active' })) throw fail('世帯主は現在、町内会に参加していません。', 409);
+  }
+  // A manager can approve a general resident directly while the household head
+  // confirmation is pending. Link the account to the resident profile first,
+  // so the regular approval transaction can apply membership and group changes.
+  if (approve && managerOverride && application.status === 'awaiting_household' && application.source === 'household_link') {
+    const applicant = await User.findById(application.applicant).select('email displayname username');
+    if (!applicant || await AssociationMembership.exists({ user: applicant._id, status: 'active' })) throw fail('申請者の状態が変わりました。町内会管理者へ確認してください。', 409);
+    let member, created = false;
+    if (application.householdMember) {
+      member = await HouseholdMember.findOneAndUpdate({ _id: application.householdMember, household: household._id, association: application.association, user: null, isRepresentative: false }, { $set: { user: applicant._id, name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email) } }, { new: true });
+      if (!member) throw fail('世帯メンバーの状態が変更されています。', 409);
+    } else {
+      const existingMember = await HouseholdMember.findOne({ household: household._id, association: application.association, user: applicant._id, isRepresentative: false });
+      member = existingMember || await HouseholdMember.create({ association: application.association, household: household._id, user: applicant._id, ...(application.residentProfile?.toObject?.() || application.residentProfile || {}), name: applicant.displayname || applicant.username, email: normalizeEmail(applicant.email), isRepresentative: false, startsAt: new Date() });
+      created = !existingMember;
+    }
+    const linked = await JoinApplication.findOneAndUpdate({ _id: application._id, status: 'awaiting_household' }, { $set: { status: 'pending', householdMember: member._id, householdConfirmedBy: actor._id, householdConfirmedAt: new Date() } }, { new: true });
+    if (!linked) {
+      if (created) await HouseholdMember.deleteOne({ _id: member._id, user: applicant._id });
+      else if (application.householdMember) await HouseholdMember.updateOne({ _id: member._id, user: applicant._id }, { $unset: { user: '' } });
+      throw fail('この申請は既に処理されています。', 409);
+    }
+    application.status = 'pending';
+    application.householdMember = member._id;
+    application.householdConfirmedBy = actor._id;
   }
   if (approve && await AssociationMembership.exists({ user: application.applicant, status: 'active', association: { $ne: application.association } })) throw fail('申請者は別の町内会に参加しています。', 409);
   const reason = String(rejectionReason || '').trim();
@@ -196,7 +221,7 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
     if (approve) {
       changes.previousMembership = await AssociationMembership.findOne({ association: application.association, user: application.applicant }).session(session).lean();
       const previousGroup = await Group.findById(association.group).select('members').session(session).lean();
-      const previousUser = await User.findById(application.applicant).select('groups').session(session).lean();
+      const previousUser = await User.findById(application.applicant).select('groups birth_date sex').session(session).lean();
       if (!previousGroup || !previousUser) throw fail('申請者または町内会の共通グループが見つかりません。', 409);
       const membership = await AssociationMembership.findOneAndUpdate({ association: application.association, user: application.applicant }, { $set: { status: 'pending', startedAt: now, household: household._id, districtGroup: district._id, residentVerifiedAt: now, joinedBy: application.source === 'household_invitation' ? 'invitation' : 'application', approvedBy: actor._id }, $unset: { endedAt: '' } }, { upsert: true, new: true, setDefaultsOnInsert: true, ...options });
       changes.membershipId = membership._id;
@@ -204,6 +229,14 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
       await Group.updateOne({ _id: association.group }, { $addToSet: { members: application.applicant } }, options);
       changes.userGroupAdded = !(previousUser.groups || []).some(id => String(id) === String(association.group));
       await User.updateOne({ _id: application.applicant }, { $addToSet: { groups: association.group } }, options);
+      if (application.source === 'household_link' && application.residentProfile) {
+        changes.previousProfile = { birth_date: previousUser.birth_date, sex: previousUser.sex };
+        const profile = application.residentProfile.toObject?.() || application.residentProfile;
+        const profileUpdate = {};
+        if (profile.birthDate) profileUpdate.birth_date = profile.birthDate;
+        if (profile.gender) profileUpdate.sex = profile.gender;
+        if (Object.keys(profileUpdate).length) await User.updateOne({ _id: application.applicant }, { $set: profileUpdate }, options);
+      }
       if (application.householdMember && application.source !== 'representative') {
         const previousMember = await HouseholdMember.findOne({ _id: application.householdMember, household: household._id, user: application.applicant }).session(session).lean();
         if (!previousMember) throw fail('世帯メンバーの状態が変更されています。', 409);
@@ -240,6 +273,13 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
     }
     if (changes.groupAdded) await Group.updateOne({ _id: association.group }, { $pull: { members: application.applicant } });
     if (changes.userGroupAdded) await User.updateOne({ _id: application.applicant }, { $pull: { groups: association.group } });
+    if (changes.previousProfile) {
+      const set = {}, unset = {};
+      for (const [field, value] of Object.entries(changes.previousProfile)) {
+        if (value === undefined) unset[field] = ''; else set[field] = value;
+      }
+      await User.updateOne({ _id: application.applicant }, { ...(Object.keys(set).length ? { $set: set } : {}), ...(Object.keys(unset).length ? { $unset: unset } : {}) });
+    }
     if (changes.memberUnlinked) await HouseholdMember.updateOne({ _id: application.householdMember, household: household._id, user: null }, { $set: { user: application.applicant } });
     if (changes.notificationId) await Notification.deleteOne({ _id: changes.notificationId });
     if (changes.auditId) await AuditLog.deleteOne({ _id: changes.auditId });

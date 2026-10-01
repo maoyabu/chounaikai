@@ -103,9 +103,9 @@ managementRouter.get('/:associationId/manage/applications', requirePermission('a
 for (const decision of ['approve', 'reject']) managementRouter.post('/:associationId/manage/applications/:applicationId/' + decision, requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
     if (!validId(req.params.applicationId)) throw fail('参加申請を確認してください。');
-    const application = await JoinApplication.findOne({ _id: req.params.applicationId, association: req.params.associationId, status: 'pending' });
-    if (!application) throw fail('承認できる参加申請がありません。世帯主の確認待ちは承認できません。', 409);
-    await decideJoinApplication({ application, actor: req.user, approve: decision === 'approve', rejectionReason: req.body.rejectionReason });
+    const application = await JoinApplication.findOne({ _id: req.params.applicationId, association: req.params.associationId, status: decision === 'approve' ? { $in: ['pending', 'awaiting_household'] } : 'pending' });
+    if (!application) throw fail('承認できる参加申請がありません。', 409);
+    await decideJoinApplication({ application, actor: req.user, approve: decision === 'approve', rejectionReason: req.body.rejectionReason, managerOverride: true });
     req.session.notice = decision === 'approve' ? '参加申請を承認しました。' : '参加申請を拒否しました。';
     return res.redirect(`/associations/${req.params.associationId}/manage/applications`);
   } catch (error) { return next(error); }

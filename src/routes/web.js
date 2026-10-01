@@ -252,10 +252,9 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
   } catch (error) { return next(error); }
   const values = {
     username: String(req.body.username || '').trim(),
-    displayname: String(req.body.displayname || '').trim(),
+    displayname: String(req.body.displayname || invitation?.member.name || '').trim(),
     email: String(req.body.email || '').trim().toLowerCase(),
-    residentMode: String(req.body.residentMode || 'representative'),
-    householdHeadEmail: String(req.body.householdHeadEmail || '').trim().toLowerCase()
+    residentMode: invitation ? 'general' : 'representative'
   };
   if (choice?.purpose === 'create' && !invitation) values.residentMode = 'representative';
   const password = String(req.body.password || '');
@@ -267,7 +266,6 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
       return res.status(400).render('register', { title: '新規会員登録', values, formError: '招待が無効、またはメールアドレスが招待先と異なります。招待リンクを再度確認してください。' });
     }
     if (invitation && req.body.acceptInvitation !== 'on') return res.status(400).render('register', { title: '新規会員登録', values, formError: '招待を受諾することにチェックしてください。' });
-    if (invitation) values.residentMode = 'general';
     try {
       assertMailConfigured();
     } catch (_mailConfigError) {
@@ -289,7 +287,7 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
       invalid_registration_fields: 'ユーザー名と有効なメールアドレスを入力してください。',
       password_too_short: 'パスワードは8文字以上で入力してください。',
       account_already_exists: '同じユーザー名またはメールアドレスのアカウントがすでに存在します。',
-      invalid_household_head_email: '一般メンバーとして登録する場合は、同居する世帯主の有効なメールアドレスを入力してください。'
+      invalid_household_head_email: 'この登録方法は利用できません。世帯主からの招待をご利用ください。'
     };
     if (messages[error.message] || error?.code === 11000 || error?.name === 'UserExistsError') {
       return res.status(error.status || 409).render('register', {
@@ -414,15 +412,20 @@ webRouter.get('/profile', requireLogin, async (req, res, next) => {
       return result;
     }, {});
     const availableHouseholdRegistrations = unregisteredMemberships.map((membership) => { const districts = districtsByAssociation[String(membership.association._id)] || []; return { membership, districtGroups: districts, locationOptions: districts.flatMap((district) => [{ ...district, label: district.name }, ...districtChildren.filter((group) => String(group.association) === String(district.association) && String(group.parentDistrict) === String(district._id)).map((group) => ({ ...group, label: `${district.name} ${group.name.replace(district.name, '')}` }))]) }; });
-    const [householdLinkApplications, householdInvitations, affiliatedHouseholds, ownHouseholdMembers] = await Promise.all([
-      JoinApplication.find({ household: { $in: visibleHouseholds.map((household) => household._id) }, status: 'awaiting_household' }).populate('applicant', 'displayname username email').lean(),
+    const [householdInvitations, affiliatedHouseholds, ownHouseholdMembers] = await Promise.all([
       Invitation.find({ household: { $in: visibleHouseholds.map((household) => household._id) } }).select('householdMember status expiresAt').sort({ createdAt: -1 }).lean(),
       Household.find({ _id: { $in: memberships.map((membership) => membership.household).filter(Boolean) }, representative: { $ne: req.user._id }, active: true }).populate('association', 'name').populate('districtGroup', 'name').populate('representative', 'displayname username').lean(),
       HouseholdMember.find({ user: req.user._id, household: { $in: memberships.map((membership) => membership.household).filter(Boolean) } }).lean()
     ]);
+    // Older join approvals saved resident details only on HouseholdMember.
+    // Fill blank account profile fields from the linked representative/member record.
+    const ownResident = [...members, ...ownHouseholdMembers].find(member => String(member.user || '') === String(req.user._id));
+    let profileSex = req.user.sex;
+    if (!profileSex || profileSex === 'unspecified') profileSex = ownResident?.gender || profileSex;
+    const profileValues = { ...req.user.toObject(), birth_date: req.user.birth_date || ownResident?.birthDate, sex: profileSex };
     const invitationByMember = householdInvitations.reduce((result, invitation) => { result[String(invitation.householdMember)] ||= invitation; return result; }, {});
     const activeHouseholdIds = memberships.map((membership) => String(membership.household || ''));
-    return res.render('profile', { title: 'プロフィール', values: res.locals.currentUser, formError: null, households: visibleHouseholds, membersByHousehold, availableHouseholdRegistrations, householdLinkApplications, invitationByMember, activeHouseholdIds, affiliatedHouseholds: affiliatedHouseholds.filter(household => household.association), ownHouseholdMembers });
+    return res.render('profile', { title: 'プロフィール', values: profileValues, formError: null, households: visibleHouseholds, membersByHousehold, availableHouseholdRegistrations, invitationByMember, activeHouseholdIds, affiliatedHouseholds: affiliatedHouseholds.filter(household => household.association), ownHouseholdMembers });
   } catch (error) { return next(error); }
 });
 
@@ -541,10 +544,6 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
         if (['question_created', 'question_reopened'].includes(notification.type)) {
           notification.actionUrl = `/associations/${notification.association._id}/questions/officer`;
           notification.actionLabel = '質問を確認';
-        }
-        if (notification.type === 'household_link_requested') {
-          notification.actionUrl = '/profile?tab=household';
-          notification.actionLabel = '世帯への申請を確認';
         }
         if (notification.type === 'join_application_received' && res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id))) {
           notification.actionUrl = `/associations/${notification.association._id}/manage/applications`;

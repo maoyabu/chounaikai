@@ -20,8 +20,8 @@ householdInvitationsRouter.get('/household-invitations', async (req, res, next) 
     req.session.householdInvitationId = String(invitation._id);
     res.set('Referrer-Policy', 'no-referrer');
     res.set('Cache-Control', 'no-store');
-    // Strip the token from the address bar before rendering links to other pages.
-    return res.redirect('/resident-onboarding');
+    // Strip the token from the address bar, then send new invitees straight to registration.
+    return res.redirect(req.user ? '/resident-onboarding' : '/register');
   } catch (error) { return next(error); }
 });
 

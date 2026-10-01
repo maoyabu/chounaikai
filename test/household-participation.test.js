@@ -398,6 +398,17 @@ test('approval of an invited resident grants the same household and district aft
   assert.deepEqual(Group.updateOne.mock.calls[0].arguments[1].$addToSet, { members: ids.user });
 });
 
+test('approved general-member application copies resident birth date and gender to the account profile', async (t) => {
+  const application = stubDecision(t, 'household_link');
+  application.residentProfile = { birthDate: new Date('1995-04-01'), gender: 'female' };
+  const previousUser = { _id: ids.user, groups: [], birth_date: undefined, sex: undefined };
+  User.findById.mock.mockImplementation(() => query(previousUser));
+  await decideJoinApplication({ application, actor: { _id: ids.head }, approve: true });
+  const update = User.updateOne.mock.calls.find(call => call.arguments[1].$set?.birth_date)?.arguments[1];
+  assert.equal(update.$set.birth_date.toISOString().slice(0, 10), '1995-04-01');
+  assert.equal(update.$set.sex, 'female');
+});
+
 test('the existing household-head registration route remains approvable', async (t) => {
   const application = stubDecision(t, 'representative');
   Household.findOne.mock.mockImplementation(() => query({ ...household, representative: ids.user }));
@@ -414,7 +425,7 @@ test('a confirmed general resident is granted application membership in the exis
   assert.equal(membership.household, ids.household);
 });
 
-test('approvers cannot bypass household-head confirmation', async (t) => {
+test('ordinary approvers cannot bypass household-head confirmation', async (t) => {
   const application = stubDecision(t, 'household_link');
   application.householdConfirmedBy = undefined;
   await assert.rejects(decideJoinApplication({ application, actor: { _id: ids.head }, approve: true }), /世帯主の確認が完了/);
@@ -469,7 +480,7 @@ test('failed approval does not remove pre-existing legacy group membership', asy
   assert.equal(Notification.deleteOne.mock.callCount(), 1);
 });
 
-const render = (name, data) => ejs.renderFile(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: user, values: {}, ...data });
+const render = (name, data) => ejs.renderFile(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', assetVersion: 'test', csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: user, values: {}, ...data });
 
 test('invitation page offers signup/login and binds acceptance to the exact invitation', async () => {
   const details = { ...invitation, household: { ...household, districtGroup: { name: '1班' } }, member };
@@ -490,9 +501,10 @@ test('registration and joining expose general/resident routes and household-head
   assert.match(joining, /世帯主として登録する/);
   assert.match(joining, /一般メンバーとして既存の世帯に参加する/);
   assert.match(joining, /name="householdHeadEmail"/);
+  assert.match(joining, /メールアドレス <span class="required">必須<\/span><input type="email" name="email"[^>]*required/);
 });
 
-test('manager inbox identifies household invitations and disables unconfirmed self-requests', async () => {
+test('manager inbox allows direct approval of unconfirmed self-requests', async () => {
   const applications = [
     { _id: ids.application, applicant: user, districtGroup: { name: '1班' }, household, source: 'household_invitation', status: 'pending', invitedBy: invitation.invitedBy },
     { _id: 'waiting', applicant: user, districtGroup: { name: '1班' }, household, source: 'household_link', status: 'awaiting_household' }
@@ -501,7 +513,8 @@ test('manager inbox identifies household invitations and disables unconfirmed se
   assert.match(html, /世帯主からの招待/);
   assert.match(html, /招待元：山田 太郎/);
   assert.match(html, new RegExp(`/manage/applications/${ids.application}/approve`));
-  assert.doesNotMatch(html, /applications\/waiting\/approve/);
+  assert.match(html, /applications\/waiting\/approve/);
+  assert.match(html, /世帯主確認を兼ねて承認/);
 });
 
 test('co-resident profile shows own household without another resident edit or new household form', async () => {
@@ -565,6 +578,27 @@ test('invitation email uses the existing SMTP config and escapes household-suppl
 
 const route = (router, path, method = 'post') => router.stack.find(layer => layer.route?.path === path && layer.route.methods[method]).route;
 
+test('anonymous invitee is sent directly from the invitation link to registration', async t => {
+  stubInvitation(t);
+  const handler = route(householdInvitationsRouter, '/household-invitations', 'get').stack.at(-1).handle;
+  const req = { user: null, session: {}, query: { token: 'a'.repeat(64) } };
+  let destination;
+  const res = { set() { return this; }, redirect(path) { destination = path; return this; } };
+  let error;
+  await handler(req, res, value => { error = value; });
+  if (error) throw error;
+  assert.equal(destination, '/register');
+  assert.equal(req.session.householdInvitationId, String(ids.invitation));
+});
+
+test('invited registration prepopulates the member name and locks the invitation email', async () => {
+  const details = { ...invitation, household: { ...household, districtGroup: { name: '1班' } }, member };
+  const html = await render('register', { currentUser: null, invitation: details, association, values: { email: invitation.email, displayname: member.name } });
+  assert.match(html, new RegExp(`name="displayname" value="${member.name}"[^>]*required`));
+  assert.match(html, new RegExp(`name="email" value="${invitation.email}"[^>]*readonly`));
+  assert.match(html, /世帯主からの招待による会員登録です/);
+});
+
 test('all new mutation endpoints require CSRF verification', () => {
   const endpoints = [
     [householdInvitationsRouter, '/household-invitations/:invitationId/accept'],
@@ -595,7 +629,7 @@ test('invitation sender endpoint requires the owned household and an unlinked me
   assert.equal(Household.findOne.mock.calls[0].arguments[0].representative, ids.user);
 });
 
-test('manager approval endpoint cannot approve applications from another association or awaiting head consent', async (t) => {
+test('manager approval endpoint scopes applications to its association and accepts head-confirmation waits', async (t) => {
   stub(t, JoinApplication, 'findOne', () => query(null));
   const handler = route(managementRouter, '/:associationId/manage/applications/:applicationId/approve').stack.at(-1).handle;
   let error;
@@ -603,5 +637,5 @@ test('manager approval endpoint cannot approve applications from another associa
   assert.equal(error.status, 409);
   const filter = JoinApplication.findOne.mock.calls[0].arguments[0];
   assert.equal(filter.association, String(ids.association));
-  assert.equal(filter.status, 'pending');
+  assert.deepEqual(filter.status, { $in: ['pending', 'awaiting_household'] });
 });

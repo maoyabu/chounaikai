@@ -1,0 +1,63 @@
+{"kind":"deck","id":"pr/hjhm9b","name":"Deck"}
+{"kind":"layout","layoutId":"d9b69069-31bc-4bd3-9b59-a948cde1dfb5","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"fb8de66e-3be4-430b-8b9a-06946737e6c1","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/2v6pha","slide":1,"title":"町内会への参加ガイド","textShapes":40}
+{"kind":"shape","id":"sh/98bax0f2","slide":1,"bbox":[0,0,1280,12]}
+{"kind":"textbox","id":"sh/m5krmlgr","slide":1,"text":"町内会への参加ガイド","textPreview":"町内会への参加ガイド","textChars":10,"textLines":1,"bbox":[54,31,920,50]}
+{"kind":"textbox","id":"sh/n6tsvqxc","slide":1,"text":"会員登録から参加申請まで  メールを確認しながら進めます","textPreview":"会員登録から参加申請まで  メールを確認しながら進めます","textChars":28,"textLines":1,"bbox":[56,83,950,31]}
+{"kind":"shape","id":"sh/0ji9kvyl","slide":1,"bbox":[130,185,920,4]}
+{"kind":"shape","id":"sh/l4bat0f6","slide":1,"bbox":[106,162,48,48]}
+{"kind":"textbox","id":"sh/yh0rilgf","slide":1,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[106,163,48,46]}
+{"kind":"textbox","id":"sh/zi9srqx0","slide":1,"text":"登録画面","textPreview":"登録画面","textChars":4,"textLines":1,"bbox":[40,220,180,29]}
+{"kind":"textbox","id":"sh/kfmtwfyp","slide":1,"text":"ユーザー名・メール\nパスワードを入力","textPreview":"ユーザー名・メール | パスワードを入力","textChars":18,"textLines":2,"bbox":[30,252,200,49]}
+{"kind":"shape","id":"sh/50va5kfa","slide":1,"bbox":[336,162,48,48]}
+{"kind":"textbox","id":"sh/lwvadwf6","slide":1,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[336,163,48,46]}
+{"kind":"textbox","id":"sh/0vmtkrel","slide":1,"text":"メール確認","textPreview":"メール確認","textChars":5,"textLines":1,"bbox":[270,220,180,29]}
+{"kind":"textbox","id":"sh/zudsbmx0","slide":1,"text":"届いた確認メールの\nリンクを開く","textPreview":"届いた確認メールの | リンクを開く","textChars":16,"textLines":2,"bbox":[260,252,200,49]}
+{"kind":"shape","id":"sh/yt4bihwf","slide":1,"bbox":[566,162,48,48]}
+{"kind":"textbox","id":"sh/dsva9cfu","slide":1,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[566,163,48,46]}
+{"kind":"textbox","id":"sh/cr29g7e9","slide":1,"text":"ログイン","textPreview":"ログイン","textChars":4,"textLines":1,"bbox":[500,220,180,29]}
+{"kind":"textbox","id":"sh/b6ts7mxo","slide":1,"text":"登録したメールまたは\nユーザー名でログイン","textPreview":"登録したメールまたは | ユーザー名でログイン","textChars":21,"textLines":2,"bbox":[490,252,200,49]}
+{"kind":"shape","id":"sh/q5krehw3","slide":1,"bbox":[796,162,48,48]}
+{"kind":"textbox","id":"sh/xofalgvy","slide":1,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[796,163,48,46]}
+{"kind":"textbox","id":"sh/wn6tsbet","slide":1,"text":"参加申請","textPreview":"参加申請","textChars":4,"textLines":1,"bbox":[730,220,180,29]}
+{"kind":"textbox","id":"sh/gjyl4jq1","slide":1,"text":"町内会・地区・班と\n世帯情報を入力","textPreview":"町内会・地区・班と | 世帯情報を入力","textChars":17,"textLines":2,"bbox":[720,252,200,49]}
+{"kind":"shape","id":"sh/hk7mxo7m","slide":1,"bbox":[1026,162,48,48]}
+{"kind":"textbox","id":"sh/uhg3298v","slide":1,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[1026,163,48,46]}
+{"kind":"textbox","id":"sh/fip4bepg","slide":1,"text":"承認を待つ","textPreview":"承認を待つ","textChars":5,"textLines":1,"bbox":[960,220,180,29]}
+{"kind":"textbox","id":"sh/sfel0zq5","slide":1,"text":"班長または町内管理者が\n参加を承認","textPreview":"班長または町内管理者が | 参加を承認","textChars":17,"textLines":2,"bbox":[950,252,200,49]}
+{"kind":"shape","id":"sh/tg7m947a","slide":1,"bbox":[56,330,1168,1]}
+{"kind":"textbox","id":"sh/6dw3y98z","slide":1,"text":"参加申請画面のイメージ","textPreview":"参加申請画面のイメージ","textChars":11,"textLines":1,"bbox":[56,348,390,30]}
+{"kind":"textbox","id":"sh/7e547upk","slide":1,"text":"登録方法で入力欄が切り替わります","textPreview":"登録方法で入力欄が切り替わります","textChars":16,"textLines":1,"bbox":[452,350,440,28]}
+{"kind":"shape","id":"sh/kbelwzqt","slide":1,"bbox":[56,391,550,199]}
+{"kind":"shape","id":"sh/5cnm547e","slide":1,"bbox":[56,391,550,34]}
+{"kind":"textbox","id":"sh/nml4fut0","slide":1,"text":"町内会への参加申請","textPreview":"町内会への参加申請","textChars":9,"textLines":1,"bbox":[74,395,400,25]}
+{"kind":"textbox","id":"sh/mlcn6psv","slide":1,"text":"地区・班を選択","textPreview":"地区・班を選択","textChars":7,"textLines":1,"bbox":[78,438,185,23]}
+{"kind":"shape","id":"sh/983mh4b6","slide":1,"bbox":[267,437,300,28]}
+{"kind":"textbox","id":"sh/8nu58zal","slide":1,"text":"▼  地区・班を選択","textPreview":"▼  地区・班を選択","textChars":10,"textLines":1,"bbox":[279,440,275,22]}
+{"kind":"textbox","id":"sh/va54jutc","slide":1,"text":"登録方法","textPreview":"登録方法","textChars":4,"textLines":1,"bbox":[78,478,160,23]}
+{"kind":"shape","id":"sh/a9wnapsr","slide":1,"bbox":[267,477,300,30]}
+{"kind":"textbox","id":"sh/xcnml4bi","slide":1,"text":"世帯主として登録する  ▾","textPreview":"世帯主として登録する  ▾","textChars":13,"textLines":1,"bbox":[279,481,275,22]}
+{"kind":"textbox","id":"sh/wbe5czax","slide":1,"text":"メールアドレス  必須","textPreview":"メールアドレス  必須","textChars":11,"textLines":1,"bbox":[78,522,194,22]}
+{"kind":"shape","id":"sh/je54net8","slide":1,"bbox":[267,518,300,30]}
+{"kind":"textbox","id":"sh/idwne9sn","slide":1,"text":"name@example.jp","textPreview":"name@example.jp","textChars":15,"textLines":1,"bbox":[280,522,275,22]}
+{"kind":"textbox","id":"sh/ih47ad0z","slide":1,"text":"一般メンバーは世帯主メールも入力","textPreview":"一般メンバーは世帯主メールも入力","textChars":16,"textLines":1,"bbox":[78,556,440,22]}
+{"kind":"shape","id":"sh/3idojihk","slide":1,"bbox":[638,391,282,199]}
+{"kind":"textbox","id":"sh/4jmpcni5","slide":1,"text":"世帯主として申請","textPreview":"世帯主として申請","textChars":8,"textLines":1,"bbox":[660,410,235,29]}
+{"kind":"textbox","id":"sh/5kv6lszq","slide":1,"text":"住所・生年月日などを入力\n申請後、承認されると参加完了","textPreview":"住所・生年月日などを入力 | 申請後、承認されると参加完了","textChars":27,"textLines":2,"bbox":[660,449,233,58]}
+{"kind":"shape","id":"sh/qlo7ex0b","slide":1,"bbox":[660,524,235,42]}
+{"kind":"textbox","id":"sh/rmxon2hg","slide":1,"text":"通知：承認結果が届きます","textPreview":"通知：承認結果が届きます","textChars":12,"textLines":1,"bbox":[672,530,215,27]}
+{"kind":"shape","id":"sh/sn6pgni1","slide":1,"bbox":[938,391,286,199]}
+{"kind":"textbox","id":"sh/dofqpszm","slide":1,"text":"一般メンバーとして申請","textPreview":"一般メンバーとして申請","textChars":11,"textLines":1,"bbox":[960,410,245,29]}
+{"kind":"textbox","id":"sh/6pk72t0r","slide":1,"text":"世帯主メールを入力\n世帯主確認後、班長または\n町内管理者が承認","textPreview":"世帯主メールを入力 | 世帯主確認後、班長または | 町内管理者が承認","textChars":31,"textLines":3,"bbox":[960,447,244,70]}
+{"kind":"shape","id":"sh/7qtobyhc","slide":1,"bbox":[960,529,240,42]}
+{"kind":"textbox","id":"sh/94jahwju","slide":1,"text":"管理者承認なら世帯主確認も完了","textPreview":"管理者承認なら世帯主確認も完了","textChars":15,"textLines":1,"bbox":[970,533,224,34]}
+{"kind":"shape","id":"sh/ojq9or29","slide":1,"bbox":[0,615,1280,105]}
+{"kind":"textbox","id":"sh/nihsfm1o","slide":1,"text":"届く通知","textPreview":"届く通知","textChars":4,"textLines":1,"bbox":[54,631,160,28]}
+{"kind":"textbox","id":"sh/mh8rm1kj","slide":1,"text":"登録時","textPreview":"登録時","textChars":3,"textLines":1,"bbox":[215,631,85,24]}
+{"kind":"textbox","id":"sh/x8jalgj6","slide":1,"text":"確認メール（登録したアドレス）","textPreview":"確認メール（登録したアドレス）","textChars":15,"textLines":1,"bbox":[215,660,315,28]}
+{"kind":"textbox","id":"sh/w7a9sb2l","slide":1,"text":"申請時","textPreview":"申請時","textChars":3,"textLines":1,"bbox":[558,631,85,24]}
+{"kind":"textbox","id":"sh/b61sj610","slide":1,"text":"アプリ内通知（班長・町内管理者）","textPreview":"アプリ内通知（班長・町内管理者）","textChars":16,"textLines":1,"bbox":[558,660,335,28]}
+{"kind":"textbox","id":"sh/a5srq1kf","slide":1,"text":"承認後","textPreview":"承認後","textChars":3,"textLines":1,"bbox":[927,631,85,24]}
+{"kind":"textbox","id":"sh/dczq9cjm","slide":1,"text":"アプリ内通知（申請者）","textPreview":"アプリ内通知（申請者）","textChars":11,"textLines":1,"bbox":[927,660,290,28]}
+{"kind":"notes","id":"nt/2v6pha","slide":1,"text":"システムの登録画面、ルート、通知処理をもとに作成。登録時はメール確認リンクを送信。代表者の参加申請は班長・町内管理者へアプリ内通知。一般メンバーの世帯紐付け依頼は世帯主へアプリ内通知し、世帯主確認後は班長と町内管理者へ通知。町内管理者は世帯主確認待ちも直接承認でき、世帯主の確認も完了扱い。参加承認結果は申請者へアプリ内通知。メール通知は全通知ではなく、確認メール以外は通知設定・運用設定により送信される場合がある。"}

@@ -42,7 +42,7 @@
   </section>
   <section id="profile-panel-household" role="tabpanel" aria-labelledby="profile-tab-household" data-profile-panel="household" hidden>
     <% const profileHouseholds = typeof households !== 'undefined' ? households : []; const profileMembers = typeof membersByHousehold !== 'undefined' ? membersByHousehold : {}; const availableRegistrations = typeof availableHouseholdRegistrations !== 'undefined' ? availableHouseholdRegistrations : []; %>
-    <% const linkedHouseholds = typeof affiliatedHouseholds !== 'undefined' ? affiliatedHouseholds : []; const linkApplications = typeof householdLinkApplications !== 'undefined' ? householdLinkApplications : []; const memberInvitations = typeof invitationByMember !== 'undefined' ? invitationByMember : {}; %>
+    <% const linkedHouseholds = typeof affiliatedHouseholds !== 'undefined' ? affiliatedHouseholds : []; const memberInvitations = typeof invitationByMember !== 'undefined' ? invitationByMember : {}; %>
     <% linkedHouseholds.forEach((household) => { const ownMember = (typeof ownHouseholdMembers !== 'undefined' ? ownHouseholdMembers : []).find(member => String(member.household) === String(household._id)); %>
       <section class="profile-household form-card form-stack" id="household-<%= household._id %>"><div class="profile-household-heading"><div><p class="eyebrow"><%= household.association.name %></p><h2>所属する世帯</h2></div><span class="status-badge"><%= household.districtGroup?.name %></span></div>
         <p>世帯主：<%= household.representative?.displayname || household.representative?.username %></p><p><%= household.address?.postalCode %> <%= household.address?.street %> <%= household.address?.building || '' %></p><% if (household.phone) { %><p>電話番号：<%= household.phone %></p><% } %><p class="help-text">世帯情報やアカウントを持たないメンバーは世帯主が管理します。</p>
@@ -73,12 +73,6 @@
     <% profileHouseholds.forEach((household) => { const associationId = household.association._id; const householdMembers = profileMembers[String(household._id)] || []; %>
       <div class="profile-household" id="household-<%= household._id %>">
         <div class="profile-household-heading"><div><p class="eyebrow"><%= household.association.name %></p><h2>世帯情報</h2></div><span class="status-badge"><%= household.districtGroup?.name || '班未設定' %></span></div>
-        <% linkApplications.filter(application => String(application.household) === String(household._id)).forEach((application) => { const unlinkedMembers = householdMembers.filter(member => !member.isRepresentative && !member.user); %>
-          <section class="form-card form-stack household-link-request"><h3>同居人からの世帯紐付け申請</h3><strong><%= application.applicant?.displayname || application.applicant?.username %></strong><p><%= application.applicant?.email %></p><p class="help-text">同居する本人であることを確認してください。登録済みのメンバーを選ぶと、重複せずにアカウントを紐付けます。</p>
-            <form class="form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/applications/<%= application._id %>/confirm" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>紐付ける世帯メンバー<select name="memberId"><option value="">新しい世帯メンバーとして追加</option><% unlinkedMembers.forEach(member => { %><option value="<%= member._id %>" <%= member.email && member.email.toLowerCase() === application.applicant?.email?.toLowerCase() ? 'selected' : '' %>><%= member.name %></option><% }) %></select></label><div class="form-actions"><button class="button button-primary">同居人であることを確認</button></div></form>
-            <form action="/associations/<%= associationId %>/household/<%= household._id %>/applications/<%= application._id %>/reject" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">この世帯紐付け申請を拒否</button></form>
-          </section>
-        <% }) %>
         <form class="form-card form-stack" action="/associations/<%= associationId %>/household/<%= household._id %>/update" method="post">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" value="<%= household.address?.postalCode || '' %>" inputmode="numeric" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" value="<%= household.phone || '' %>" autocomplete="tel"></label></div>

@@ -1,0 +1,3173 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/2v6pha",
+    "id": "2v6pha",
+    "slide": 1,
+    "layoutId": "fb8de66e-3be4-430b-8b9a-06946737e6c1",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "d9b69069-31bc-4bd3-9b59-a948cde1dfb5",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#F7F7F2",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Hiragino Kaku Gothic ProN"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "fb8de66e-3be4-430b-8b9a-06946737e6c1",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "d9b69069-31bc-4bd3-9b59-a948cde1dfb5",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "d9b69069-31bc-4bd3-9b59-a948cde1dfb5",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/98bax0f2",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        12
+      ],
+      "geometry": "rect",
+      "fillColor": "#176B4D",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/m5krmlgr",
+      "id": "2",
+      "bbox": [
+        54,
+        31,
+        920,
+        50
+      ],
+      "geometry": "rect",
+      "text": "町内会への参加ガイド",
+      "textPreview": "町内会への参加ガイド",
+      "resolvedFontSize": 33.67,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 34,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "町内会への参加ガイド"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "町内会への参加ガイド",
+          "resolvedTextStyle": {
+            "fontSize": 34,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "町内会への参加ガイド",
+              "fontSize": 34,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/n6tsvqxc",
+      "id": "3",
+      "bbox": [
+        56,
+        83,
+        950,
+        31
+      ],
+      "geometry": "rect",
+      "text": "会員登録から参加申請まで  メールを確認しながら進めます",
+      "textPreview": "会員登録から参加申請まで  メールを確認しながら進めます",
+      "resolvedFontSize": 17.83,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#557064",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "会員登録から参加申請まで  メールを確認しながら進めます"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "会員登録から参加申請まで  メールを確認しながら進めます",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#557064"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "会員登録から参加申請まで  メールを確認しながら進めます",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#557064"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0ji9kvyl",
+      "id": "4",
+      "bbox": [
+        130,
+        185,
+        920,
+        4
+      ],
+      "geometry": "rect",
+      "fillColor": "#B7C9BE",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l4bat0f6",
+      "id": "5",
+      "bbox": [
+        106,
+        162,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#176B4D",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yh0rilgf",
+      "id": "6",
+      "bbox": [
+        106,
+        163,
+        48,
+        46
+      ],
+      "geometry": "rect",
+      "text": "1",
+      "textPreview": "1",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 22,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "1",
+              "fontSize": 22,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zi9srqx0",
+      "id": "7",
+      "bbox": [
+        40,
+        220,
+        180,
+        29
+      ],
+      "geometry": "rect",
+      "text": "登録画面",
+      "textPreview": "登録画面",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "登録画面"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "登録画面",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "登録画面",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kfmtwfyp",
+      "id": "8",
+      "bbox": [
+        30,
+        252,
+        200,
+        49
+      ],
+      "geometry": "rect",
+      "text": "ユーザー名・メール\nパスワードを入力",
+      "textPreview": "ユーザー名・メール | パスワードを入力",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ユーザー名・メール"
+          },
+          {
+            "index": 2,
+            "text": "パスワードを入力"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ユーザー名・メール",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ユーザー名・メール",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "パスワードを入力",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "パスワードを入力",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/50va5kfa",
+      "id": "9",
+      "bbox": [
+        336,
+        162,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#176B4D",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lwvadwf6",
+      "id": "10",
+      "bbox": [
+        336,
+        163,
+        48,
+        46
+      ],
+      "geometry": "rect",
+      "text": "2",
+      "textPreview": "2",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 22,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "2",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "2",
+              "fontSize": 22,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0vmtkrel",
+      "id": "11",
+      "bbox": [
+        270,
+        220,
+        180,
+        29
+      ],
+      "geometry": "rect",
+      "text": "メール確認",
+      "textPreview": "メール確認",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "メール確認"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "メール確認",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "メール確認",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zudsbmx0",
+      "id": "12",
+      "bbox": [
+        260,
+        252,
+        200,
+        49
+      ],
+      "geometry": "rect",
+      "text": "届いた確認メールの\nリンクを開く",
+      "textPreview": "届いた確認メールの | リンクを開く",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "届いた確認メールの"
+          },
+          {
+            "index": 2,
+            "text": "リンクを開く"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "届いた確認メールの",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "届いた確認メールの",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "リンクを開く",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "リンクを開く",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yt4bihwf",
+      "id": "13",
+      "bbox": [
+        566,
+        162,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#176B4D",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dsva9cfu",
+      "id": "14",
+      "bbox": [
+        566,
+        163,
+        48,
+        46
+      ],
+      "geometry": "rect",
+      "text": "3",
+      "textPreview": "3",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 22,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "3"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "3",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "3",
+              "fontSize": 22,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cr29g7e9",
+      "id": "15",
+      "bbox": [
+        500,
+        220,
+        180,
+        29
+      ],
+      "geometry": "rect",
+      "text": "ログイン",
+      "textPreview": "ログイン",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ログイン"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ログイン",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ログイン",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/b6ts7mxo",
+      "id": "16",
+      "bbox": [
+        490,
+        252,
+        200,
+        49
+      ],
+      "geometry": "rect",
+      "text": "登録したメールまたは\nユーザー名でログイン",
+      "textPreview": "登録したメールまたは | ユーザー名でログイン",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "登録したメールまたは"
+          },
+          {
+            "index": 2,
+            "text": "ユーザー名でログイン"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "登録したメールまたは",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "登録したメールまたは",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "ユーザー名でログイン",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ユーザー名でログイン",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q5krehw3",
+      "id": "17",
+      "bbox": [
+        796,
+        162,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#176B4D",
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xofalgvy",
+      "id": "18",
+      "bbox": [
+        796,
+        163,
+        48,
+        46
+      ],
+      "geometry": "rect",
+      "text": "4",
+      "textPreview": "4",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 22,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4",
+              "fontSize": 22,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wn6tsbet",
+      "id": "19",
+      "bbox": [
+        730,
+        220,
+        180,
+        29
+      ],
+      "geometry": "rect",
+      "text": "参加申請",
+      "textPreview": "参加申請",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "参加申請"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "参加申請",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "参加申請",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gjyl4jq1",
+      "id": "20",
+      "bbox": [
+        720,
+        252,
+        200,
+        49
+      ],
+      "geometry": "rect",
+      "text": "町内会・地区・班と\n世帯情報を入力",
+      "textPreview": "町内会・地区・班と | 世帯情報を入力",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "町内会・地区・班と"
+          },
+          {
+            "index": 2,
+            "text": "世帯情報を入力"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "町内会・地区・班と",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "町内会・地区・班と",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "世帯情報を入力",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "世帯情報を入力",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hk7mxo7m",
+      "id": "21",
+      "bbox": [
+        1026,
+        162,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#E9A63A",
+      "lineWidth": 0
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/uhg3298v",
+      "id": "22",
+      "bbox": [
+        1026,
+        163,
+        48,
+        46
+      ],
+      "geometry": "rect",
+      "text": "5",
+      "textPreview": "5",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 22,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "5"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "5",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "5",
+              "fontSize": 22,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fip4bepg",
+      "id": "23",
+      "bbox": [
+        960,
+        220,
+        180,
+        29
+      ],
+      "geometry": "rect",
+      "text": "承認を待つ",
+      "textPreview": "承認を待つ",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "承認を待つ"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "承認を待つ",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "承認を待つ",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sfel0zq5",
+      "id": "24",
+      "bbox": [
+        950,
+        252,
+        200,
+        49
+      ],
+      "geometry": "rect",
+      "text": "班長または町内管理者が\n参加を承認",
+      "textPreview": "班長または町内管理者が | 参加を承認",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "班長または町内管理者が"
+          },
+          {
+            "index": 2,
+            "text": "参加を承認"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "班長または町内管理者が",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "班長または町内管理者が",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "参加を承認",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "参加を承認",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 25,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tg7m947a",
+      "id": "25",
+      "bbox": [
+        56,
+        330,
+        1168,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#D5DED8",
+      "lineWidth": 0
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6dw3y98z",
+      "id": "26",
+      "bbox": [
+        56,
+        348,
+        390,
+        30
+      ],
+      "geometry": "rect",
+      "text": "参加申請画面のイメージ",
+      "textPreview": "参加申請画面のイメージ",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 20,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#163D30",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.85,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "参加申請画面のイメージ"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "参加申請画面のイメージ",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#163D30",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "参加申請画面のイメージ",
+              "fontSize": 20,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#163D30",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7e547upk",
+      "id": "27",
+      "bbox": [
+        452,
+        350,
+        440,
+        28
+      ],
+      "geometry": "rect",
+      "text": "登録方法で入力欄が切り替わります",
+      "textPreview": "登録方法で入力欄が切り替わります",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 15,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#557064",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "登録方法で入力欄が切り替わります"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "登録方法で入力欄が切り替わります",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#557064"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "登録方法で入力欄が切り替わります",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#557064"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 28,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kbelwzqt",
+      "id": "28",
+      "bbox": [
+        56,
+        391,
+        550,
+        199
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D7E0DA",
+      "lineWidth": 1
+    },
+    {
+      "order": 29,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5cnm547e",
+      "id": "29",
+      "bbox": [
+        56,
+        391,
+        550,
+        34
+      ],
+      "geometry": "rect",
+      "fillColor": "#E7F1EB",
+      "lineWidth": 0
+    },
+    {
+      "order": 30,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nml4fut0",
+      "id": "30",
+      "bbox": [
+        74,
+        395,
+        400,
+        25
+      ],
+      "geometry": "rect",
+      "text": "町内会への参加申請",
+      "textPreview": "町内会への参加申請",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 16,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#176B4D",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "町内会への参加申請"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "町内会への参加申請",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#176B4D",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "町内会への参加申請",
+              "fontSize": 16,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#176B4D",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 31,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mlcn6psv",
+      "id": "31",
+      "bbox": [
+        78,
+        438,
+        185,
+        23
+      ],
+      "geometry": "rect",
+      "text": "地区・班を選択",
+      "textPreview": "地区・班を選択",
+      "resolvedFontSize": 11.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "地区・班を選択"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "地区・班を選択",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "地区・班を選択",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 32,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/983mh4b6",
+      "id": "32",
+      "bbox": [
+        267,
+        437,
+        300,
+        28
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F8FAF8",
+      "lineColor": "#CDD8D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 33,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8nu58zal",
+      "id": "33",
+      "bbox": [
+        279,
+        440,
+        275,
+        22
+      ],
+      "geometry": "rect",
+      "text": "▼  地区・班を選択",
+      "textPreview": "▼  地区・班を選択",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#667A70",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "▼  地区・班を選択"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "▼  地区・班を選択",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#667A70"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "▼  地区・班を選択",
+              "fontSize": 13,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#667A70"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 34,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/va54jutc",
+      "id": "34",
+      "bbox": [
+        78,
+        478,
+        160,
+        23
+      ],
+      "geometry": "rect",
+      "text": "登録方法",
+      "textPreview": "登録方法",
+      "resolvedFontSize": 11.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "登録方法"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "登録方法",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "登録方法",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 35,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/a9wnapsr",
+      "id": "35",
+      "bbox": [
+        267,
+        477,
+        300,
+        30
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F8FAF8",
+      "lineColor": "#CDD8D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 36,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xcnml4bi",
+      "id": "36",
+      "bbox": [
+        279,
+        481,
+        275,
+        22
+      ],
+      "geometry": "rect",
+      "text": "世帯主として登録する  ▾",
+      "textPreview": "世帯主として登録する  ▾",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#667A70",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "世帯主として登録する  ▾"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "世帯主として登録する  ▾",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#667A70"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "世帯主として登録する  ▾",
+              "fontSize": 13,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#667A70"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 37,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wbe5czax",
+      "id": "37",
+      "bbox": [
+        78,
+        522,
+        194,
+        22
+      ],
+      "geometry": "rect",
+      "text": "メールアドレス  必須",
+      "textPreview": "メールアドレス  必須",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#40594F",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.74,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "メールアドレス  必須"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "メールアドレス  必須",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#40594F",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "メールアドレス  必須",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#40594F",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 38,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/je54net8",
+      "id": "38",
+      "bbox": [
+        267,
+        518,
+        300,
+        30
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#CDD8D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 39,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/idwne9sn",
+      "id": "39",
+      "bbox": [
+        280,
+        522,
+        275,
+        22
+      ],
+      "geometry": "rect",
+      "text": "name@example.jp",
+      "textPreview": "name@example.jp",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#87968F",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "name@example.jp"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "name@example.jp",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#87968F"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "name@example.jp",
+              "fontSize": 13,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#87968F"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 40,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ih47ad0z",
+      "id": "40",
+      "bbox": [
+        78,
+        556,
+        440,
+        22
+      ],
+      "geometry": "rect",
+      "text": "一般メンバーは世帯主メールも入力",
+      "textPreview": "一般メンバーは世帯主メールも入力",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#587064",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "一般メンバーは世帯主メールも入力"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "一般メンバーは世帯主メールも入力",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#587064"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "一般メンバーは世帯主メールも入力",
+              "fontSize": 13,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#587064"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 41,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3idojihk",
+      "id": "41",
+      "bbox": [
+        638,
+        391,
+        282,
+        199
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#EAF3ED",
+      "lineWidth": 0
+    },
+    {
+      "order": 42,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4jmpcni5",
+      "id": "42",
+      "bbox": [
+        660,
+        410,
+        235,
+        29
+      ],
+      "geometry": "rect",
+      "text": "世帯主として申請",
+      "textPreview": "世帯主として申請",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#176B4D",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.9,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "世帯主として申請"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "世帯主として申請",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#176B4D",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "世帯主として申請",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#176B4D",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 43,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5kv6lszq",
+      "id": "43",
+      "bbox": [
+        660,
+        449,
+        233,
+        58
+      ],
+      "geometry": "rect",
+      "text": "住所・生年月日などを入力\n申請後、承認されると参加完了",
+      "textPreview": "住所・生年月日などを入力 | 申請後、承認されると参加完了",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 15,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#314D40",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "住所・生年月日などを入力"
+          },
+          {
+            "index": 2,
+            "text": "申請後、承認されると参加完了"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "住所・生年月日などを入力",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#314D40"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "住所・生年月日などを入力",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#314D40"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "申請後、承認されると参加完了",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#314D40"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "申請後、承認されると参加完了",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#314D40"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 44,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qlo7ex0b",
+      "id": "44",
+      "bbox": [
+        660,
+        524,
+        235,
+        42
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 45,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rmxon2hg",
+      "id": "45",
+      "bbox": [
+        672,
+        530,
+        215,
+        27
+      ],
+      "geometry": "rect",
+      "text": "通知：承認結果が届きます",
+      "textPreview": "通知：承認結果が届きます",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#176B4D",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "通知：承認結果が届きます"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "通知：承認結果が届きます",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#176B4D",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "通知：承認結果が届きます",
+              "fontSize": 13,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#176B4D",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 46,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sn6pgni1",
+      "id": "46",
+      "bbox": [
+        938,
+        391,
+        286,
+        199
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFF3DF",
+      "lineWidth": 0
+    },
+    {
+      "order": 47,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dofqpszm",
+      "id": "47",
+      "bbox": [
+        960,
+        410,
+        245,
+        29
+      ],
+      "geometry": "rect",
+      "text": "一般メンバーとして申請",
+      "textPreview": "一般メンバーとして申請",
+      "resolvedFontSize": 16.17,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 17,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#966116",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.95,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "一般メンバーとして申請"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "一般メンバーとして申請",
+          "resolvedTextStyle": {
+            "fontSize": 17,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#966116",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "一般メンバーとして申請",
+              "fontSize": 17,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#966116",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 48,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6pk72t0r",
+      "id": "48",
+      "bbox": [
+        960,
+        447,
+        244,
+        70
+      ],
+      "geometry": "rect",
+      "text": "世帯主メールを入力\n世帯主確認後、班長または\n町内管理者が承認",
+      "textPreview": "世帯主メールを入力 | 世帯主確認後、班長または | 町内管理者が承認",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#57472D",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "世帯主メールを入力"
+          },
+          {
+            "index": 2,
+            "text": "世帯主確認後、班長または"
+          },
+          {
+            "index": 3,
+            "text": "町内管理者が承認"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "世帯主メールを入力",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#57472D"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "世帯主メールを入力",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#57472D"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "世帯主確認後、班長または",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#57472D"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "世帯主確認後、班長または",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#57472D"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "町内管理者が承認",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#57472D"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "町内管理者が承認",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#57472D"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 49,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7qtobyhc",
+      "id": "49",
+      "bbox": [
+        960,
+        529,
+        240,
+        42
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 50,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/94jahwju",
+      "id": "50",
+      "bbox": [
+        970,
+        533,
+        224,
+        34
+      ],
+      "geometry": "rect",
+      "text": "管理者承認なら世帯主確認も完了",
+      "textPreview": "管理者承認なら世帯主確認も完了",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 12,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#875A13",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "管理者承認なら世帯主確認も完了"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "管理者承認なら世帯主確認も完了",
+          "resolvedTextStyle": {
+            "fontSize": 12,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#875A13",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "管理者承認なら世帯主確認も完了",
+              "fontSize": 12,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#875A13",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 51,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ojq9or29",
+      "id": "51",
+      "bbox": [
+        0,
+        615,
+        1280,
+        105
+      ],
+      "geometry": "rect",
+      "fillColor": "#163D30",
+      "lineWidth": 0
+    },
+    {
+      "order": 52,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nihsfm1o",
+      "id": "52",
+      "bbox": [
+        54,
+        631,
+        160,
+        28
+      ],
+      "geometry": "rect",
+      "text": "届く通知",
+      "textPreview": "届く通知",
+      "resolvedFontSize": 15.33,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.85,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "届く通知"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "届く通知",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "届く通知",
+              "fontSize": 18,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 53,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mh8rm1kj",
+      "id": "53",
+      "bbox": [
+        215,
+        631,
+        85,
+        24
+      ],
+      "geometry": "rect",
+      "text": "登録時",
+      "textPreview": "登録時",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#A9D5BE",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.86,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "登録時"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "登録時",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#A9D5BE",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "登録時",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#A9D5BE",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 54,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x8jalgj6",
+      "id": "54",
+      "bbox": [
+        215,
+        660,
+        315,
+        28
+      ],
+      "geometry": "rect",
+      "text": "確認メール（登録したアドレス）",
+      "textPreview": "確認メール（登録したアドレス）",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 15,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "確認メール（登録したアドレス）"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "確認メール（登録したアドレス）",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "確認メール（登録したアドレス）",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 55,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w7a9sb2l",
+      "id": "55",
+      "bbox": [
+        558,
+        631,
+        85,
+        24
+      ],
+      "geometry": "rect",
+      "text": "申請時",
+      "textPreview": "申請時",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#A9D5BE",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.86,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "申請時"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "申請時",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#A9D5BE",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "申請時",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#A9D5BE",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 56,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/b61sj610",
+      "id": "56",
+      "bbox": [
+        558,
+        660,
+        335,
+        28
+      ],
+      "geometry": "rect",
+      "text": "アプリ内通知（班長・町内管理者）",
+      "textPreview": "アプリ内通知（班長・町内管理者）",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 15,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "アプリ内通知（班長・町内管理者）"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "アプリ内通知（班長・町内管理者）",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "アプリ内通知（班長・町内管理者）",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 57,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/a5srq1kf",
+      "id": "57",
+      "bbox": [
+        927,
+        631,
+        85,
+        24
+      ],
+      "geometry": "rect",
+      "text": "承認後",
+      "textPreview": "承認後",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 14,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#A9D5BE",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.86,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "承認後"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "承認後",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#A9D5BE",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "承認後",
+              "fontSize": 14,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#A9D5BE",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 58,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dczq9cjm",
+      "id": "58",
+      "bbox": [
+        927,
+        660,
+        290,
+        28
+      ],
+      "geometry": "rect",
+      "text": "アプリ内通知（申請者）",
+      "textPreview": "アプリ内通知（申請者）",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 15,
+        "typeface": "Hiragino Kaku Gothic ProN",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "アプリ内通知（申請者）"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "アプリ内通知（申請者）",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Hiragino Kaku Gothic ProN",
+            "color": "#FFFFFF"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "アプリ内通知（申請者）",
+              "fontSize": 15,
+              "typeface": "Hiragino Kaku Gothic ProN",
+              "color": "#FFFFFF"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

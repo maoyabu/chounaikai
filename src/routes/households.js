@@ -8,7 +8,7 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { DistrictGroup, Household, HouseholdMember } from '../models/organization.js';
 import { JoinApplication, Invitation, WithdrawalApplication } from '../models/workflow.js';
 import { ResidentRegistration } from '../models/residentRegistration.js';
-import { ensureCanApply, requestHouseholdLink, confirmHouseholdLink, decideJoinApplication, parseResidentProfile } from '../services/householdParticipationService.js';
+import { ensureCanApply, decideJoinApplication, parseResidentProfile } from '../services/householdParticipationService.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import crypto from 'node:crypto';
 import { loadLeaderHouseholdDeletion, deleteLeaderHousehold } from '../services/leaderHouseholdDeletionService.js';
@@ -76,12 +76,12 @@ householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, 
   try {
     if (!validId(req.params.associationId) || !validId(req.body.districtGroupId)) throw fail('申請内容を確認してください。');
     const mode = String(req.body.residentMode || 'representative');
-    if (!['representative', 'general'].includes(mode)) throw fail('登録方法を選択してください。');
-    if (mode === 'general') {
-      const application = await requestHouseholdLink({ associationId: req.params.associationId, districtGroupId: req.body.districtGroupId, user: req.user, headEmail: req.body.householdHeadEmail, body: req.body });
-      req.session.notice = '世帯への参加を申請しました。世帯主の確認後、班長または町内会管理者の承認を受けます。';
-      return res.redirect(`/associations/${application.association}/participation`);
-    }
+    if (mode !== 'representative') throw fail('町内会への参加申請は世帯主として行ってください。家族は世帯主からの招待をご利用ください。');
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const accountEmail = String(req.user.email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email) || email !== accountEmail) throw fail('会員登録済みのメールアドレスを入力してください。');
+    const registeredFamily = await HouseholdMember.exists({ association: req.params.associationId, email, isRepresentative: false, $or: [{ user: null }, { user: { $exists: false } }] });
+    if (registeredFamily) throw fail('このメールアドレスは世帯メンバーに登録されています。世帯主からの招待をご利用ください。', 409);
     await ensureCanApply(req.params.associationId, req.user._id);
     const residentProfile = parseResidentProfile(req.body, req.user);
     const [association, districtGroup, membership] = await Promise.all([
@@ -102,7 +102,7 @@ householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, 
     else { household.districtGroup = districtGroup._id; household.address = { postalCode, street, building: String(req.body.building || '').trim() }; household.phone = String(req.body.phone || '').trim(); household.active = true; await household.save(); }
     await HouseholdMember.findOneAndUpdate(
       { association: association._id, household: household._id, user: req.user._id },
-      { $set: { name: representativeName, nameKana: representativeKana, birthDate, gender, email: String(req.body.email || req.user.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), isRepresentative: true, relationship: '世帯代表者', startsAt: new Date() }, $unset: { endsAt: '' } },
+      { $set: { name: representativeName, nameKana: representativeKana, birthDate, gender, email, lineAccount: String(req.body.lineAccount || '').trim(), isRepresentative: true, relationship: '世帯代表者', startsAt: new Date() }, $unset: { endsAt: '' } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     await JoinApplication.findOneAndUpdate(
@@ -123,15 +123,6 @@ householdsRouter.get('/:associationId/participation', async (req, res, next) => 
     const application = await JoinApplication.findOne({ association: req.params.associationId, applicant: req.user._id }).populate('association', 'name').populate('districtGroup', 'name').lean();
     if (!application) throw fail('参加申請がありません。', 404);
     return res.render('participation-status', { title: '参加申請の状況', application });
-  } catch (error) { return next(error); }
-});
-
-for (const decision of ['confirm', 'reject']) householdsRouter.post('/:associationId/household/:householdId/applications/:applicationId/' + decision, verifyCsrfToken, async (req, res, next) => {
-  try {
-    if (![req.params.associationId, req.params.householdId, req.params.applicationId].every(validId) || (req.body.memberId && !validId(req.body.memberId))) throw fail('世帯紐付け申請を確認してください。');
-    await confirmHouseholdLink({ associationId: req.params.associationId, householdId: req.params.householdId, applicationId: req.params.applicationId, userId: req.user._id, memberId: req.body.memberId, approve: decision === 'confirm' });
-    req.session.notice = decision === 'confirm' ? '世帯への紐付けを確認しました。班長・町内会管理者の承認待ちになります。' : '世帯への紐付けを拒否しました。';
-    return res.redirect(`/profile?tab=household#household-${req.params.householdId}`);
   } catch (error) { return next(error); }
 });
 

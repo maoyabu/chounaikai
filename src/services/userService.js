@@ -2,7 +2,7 @@ import { User } from '../models/user.js';
 import { PendingUserRegistration } from '../models/pendingUserRegistration.js';
 import { createEmailVerification } from './emailVerificationService.js';
 
-export const registerUser = async ({ username, email, displayname, password, residentMode = 'representative', householdHeadEmail, householdInvitation, association, registrationPurpose }) => {
+export const registerUser = async ({ username, email, displayname, password, residentMode = 'representative', householdInvitation, association, registrationPurpose }) => {
   const normalized = {
     username: String(username || '').trim(),
     email: String(email || '').trim().toLowerCase(),
@@ -15,8 +15,7 @@ export const registerUser = async ({ username, email, displayname, password, res
   if (normalized.password.length < 8) {
     throw Object.assign(new Error('password_too_short'), { status: 400 });
   }
-  const headEmail = String(householdHeadEmail || '').trim().toLowerCase();
-  if (!['representative', 'general'].includes(residentMode) || (residentMode === 'general' && !householdInvitation && (!/^\S+@\S+\.\S+$/.test(headEmail) || headEmail === normalized.email))) {
+  if (!['representative', 'general'].includes(residentMode) || (residentMode === 'general' && !householdInvitation)) {
     throw Object.assign(new Error('invalid_household_head_email'), { status: 400 });
   }
   await PendingUserRegistration.deleteMany({
@@ -49,7 +48,7 @@ export const registerUser = async ({ username, email, displayname, password, res
     tokenDigest: verification.digest,
     expiresAt: verification.expiresAt,
     verificationSentAt: now,
-    residentMode, householdHeadEmail: residentMode === 'general' ? headEmail : undefined, householdInvitation, association, registrationPurpose
+    residentMode, householdInvitation, association, registrationPurpose
   });
   return { user: pendingRegistration, verificationToken: verification.token };
 };
