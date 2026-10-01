@@ -20,7 +20,7 @@
       <% applications.forEach((association) => { %><a class="admin-list-item" href="/associations/<%= association._id %>"><span class="list-icon">申</span><span class="list-main"><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small></span><span class="status-badge status-pending">承認待ち</span><span class="list-arrow">›</span></a><% }) %>
     </div></section>
   <% } %>
-  <% if (memberships.length === 0) { %>
+  <% if (memberships.length === 0 && !pendingJoins?.length) { %>
     <section class="empty-state">
       <div class="empty-mark" aria-hidden="true">町</div>
       <h2>参加中の町内会はありません</h2>
@@ -28,7 +28,7 @@
       <a class="button button-primary" href="/associations">存在する町内会を選んで参加申請する</a>
     </section>
   <% } %>
-  <% if (pendingJoins?.length) { %><section class="content-card join-section"><p class="eyebrow">参加申請</p><h2>参加申請を確認中</h2><div class="management-list"><% pendingJoins.forEach((application) => { %><div><span><%= application.status === 'awaiting_household' ? '世帯主の確認待ちです。' : '班長・町内会管理者の承認待ちです。' %></span><a class="button button-quiet button-small" href="/associations/<%= application.association %>/participation">申請状況を確認</a></div><% }) %></div></section><% } %>
+  <% if (pendingJoins?.length) { %><section class="content-card join-section"><p class="eyebrow">参加申請</p><h2>参加申請を確認中</h2><div class="management-list"><% pendingJoins.forEach((application) => { %><div><span><strong><%= application.association?.name || '町内会' %></strong><small><%= application.status === 'awaiting_household' ? '世帯主の確認待ちです。' : '班長・町内会管理者の承認待ちです。' %></small></span><a class="button button-quiet button-small" href="/associations/<%= application.association?._id || application.association %>/participation">申請状況を確認</a></div><% }) %></div></section><% } %>
   <% if (typeof residentRegistration !== 'undefined' && residentRegistration && !pendingJoins?.length && !memberships.length) { %><section class="content-card join-section"><h2>町内会への参加手続き</h2><p>世帯主として参加申請を続けてください。家族は世帯主が世帯情報に登録し、招待できます。</p><a class="button button-primary" href="/resident-onboarding">参加手続きを続ける</a></section><% } %>
   <% if (memberships.length === 0 && availableAssociations?.length) { %><section class="content-card join-section"><p class="eyebrow">町内会へ参加</p><h2>参加申請できる町内会</h2><div class="management-list"><% availableAssociations.forEach((association) => { %><div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small></span><a class="button button-primary button-small" href="/associations/<%= association._id %>/join">町内会と班を選択</a></div><% }) %></div></section><% } %>
   <% if (typeof financeReports !== 'undefined' && financeReports?.length) { %><section class="admin-section question-home-section finance-report-home finance-theme"><div class="section-heading"><h2>会計報告</h2><small>公開された町内会会計を確認できます。</small></div><div class="question-home-list"><% financeReports.forEach((box) => { %><a class="question-home-link" href="/associations/<%= box.association._id %>/finance/public"><span><strong class="dashboard-association-name"><%= box.association.name %></strong></span><span class="list-arrow" aria-hidden="true">›</span></a><% }) %></div></section><% } %>

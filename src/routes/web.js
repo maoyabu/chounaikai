@@ -528,7 +528,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
       membership.memberTags = memberTags.length ? memberTags : ['メンバー'];
     });
     const applications = await NeighborhoodAssociation.find({ requestedBy: req.user._id, status: 'pending', deletedAt: { $exists: false } }).sort({ createdAt: -1 }).lean();
-    const pendingJoins = await JoinApplication.find({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }).select('association status source').lean();
+    const pendingJoins = await JoinApplication.find({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }).populate('association', 'name').select('association status source').lean();
     const excludedIds = [...visibleMemberships.map((item) => item.association._id), ...pendingJoins.map((item) => item.association)];
     const [availableAssociations, unreadNotifications, readNotifications, unreadNotificationCount] = await Promise.all([
       NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false }, _id: { $nin: excludedIds } }).sort('name').lean(),
