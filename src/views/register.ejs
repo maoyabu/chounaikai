@@ -7,7 +7,7 @@
     <form action="/register" method="post" class="form-stack">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-columns">
-        <label>ユーザー名 <span class="required">必須</span><input name="username" value="<%= values.username || '' %>" autocomplete="username" required><small>既存の共通サービスでも使われる識別名です。</small></label>
+        <label>ユーザー名 <span class="required">必須</span><input name="username" value="<%= values.username || '' %>" autocomplete="username" pattern="[A-Za-z0-9!#$%&amp;'*+\-/=?^_`{|}~.]+" title="半角英数字と記号で入力してください。" required><small>半角英数字と記号で入力してください。既存の共通サービスでも使われる識別名です。</small></label>
         <label>氏名 <span class="<%= typeof invitation !== 'undefined' && invitation ? 'required' : 'optional' %>"><%= typeof invitation !== 'undefined' && invitation ? '必須' : '任意' %></span><input name="displayname" value="<%= values.displayname || (typeof invitation !== 'undefined' && invitation ? invitation.member.name : '') %>" autocomplete="name" <%= typeof invitation !== 'undefined' && invitation ? 'required' : '' %>><small>画面上で他の会員に表示される氏名です。</small></label>
       </div>
       <label>メールアドレス <span class="required">必須</span><input type="email" name="email" value="<%= values.email || '' %>" autocomplete="email" <%= typeof invitation !== 'undefined' && invitation ? 'readonly' : '' %> required></label>

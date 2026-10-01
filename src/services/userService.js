@@ -12,6 +12,9 @@ export const registerUser = async ({ username, email, displayname, password, res
   if (!normalized.username || !normalized.email || !normalized.email.includes('@')) {
     throw Object.assign(new Error('invalid_registration_fields'), { status: 400 });
   }
+  if (!/^[A-Za-z0-9!#$%&'*+\-/=?^_`{|}~.]+$/.test(normalized.username)) {
+    throw Object.assign(new Error('invalid_username'), { status: 400 });
+  }
   if (normalized.password.length < 8) {
     throw Object.assign(new Error('password_too_short'), { status: 400 });
   }

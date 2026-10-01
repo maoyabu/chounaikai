@@ -285,6 +285,7 @@ webRouter.post('/register', verifyCsrfToken, async (req, res, next) => {
   } catch (error) {
     const messages = {
       invalid_registration_fields: 'ユーザー名と有効なメールアドレスを入力してください。',
+      invalid_username: 'ユーザー名は半角英数字と記号で入力してください。',
       password_too_short: 'パスワードは8文字以上で入力してください。',
       account_already_exists: '同じユーザー名またはメールアドレスのアカウントがすでに存在します。',
       invalid_household_head_email: 'この登録方法は利用できません。世帯主からの招待をご利用ください。'
