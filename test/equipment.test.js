@@ -203,10 +203,13 @@ test('resident home hides private equipment and shows only published association
   }
 });
 
-test('officers retain calendar management links and residents cannot see wishlist calendar links', async () => {
+test('calendar links require lending enabled and exclude wishes for both officers and residents', async () => {
   for (const canAnswer of [true,false]) {
-    const entry={...item,lendable:true,wishlist:true};
-    const html=await ejs.renderFile('src/views/equipment-list.ejs',{...common,canAnswer,items:[entry],groups:equipmentGroups([entry]),tab:'all'});
-    assert.equal(html.includes(`href="${common.base}/${equipmentId}/loans"`),canAnswer);
+    for (const [lendable,wishlist] of [[false,false],[false,true],[true,true],[true,false]]) {
+      const entry={...item,lendable,wishlist};
+      const html=await ejs.renderFile('src/views/equipment-list.ejs',{...common,canAnswer,items:[entry],groups:equipmentGroups([entry]),tab:'all'});
+      assert.equal(html.includes(`href="${common.base}/${equipmentId}/loans"`),lendable && !wishlist);
+      assert.equal(html.includes('class="equipment-purchase-link"'),canAnswer);
+    }
   }
 });
