@@ -10,11 +10,11 @@
     <summary class="section-heading"><strong class="notification-heading">お知らせ</strong><span class="notification-summary-meta"><% if (typeof unreadNotificationCount !== 'undefined' && unreadNotificationCount > 0) { %><span class="status-badge question-unread notification-unread-tag">未読 <%= unreadNotificationCount %>件</span><% } %><span class="notification-chevron" aria-hidden="true">⌄</span></span></summary>
     <% if (notifications?.length) { %><div class="notification-list"><% notifications.forEach(item => { %>
       <article class="notification-card <%= item.readAt ? '' : 'notification-item-unread' %>">
-        <div class="notification-item-heading"><strong><% if (item.actionUrl) { %><a class="notification-card-link" href="<%= item.actionUrl %>"><%= item.title %></a><% } else { %><%= item.title %><% } %></strong>
+        <div class="notification-item-heading"><div class="notification-title-and-source"><strong><% if (item.actionUrl) { %><a class="notification-card-link" href="<%= item.actionUrl %>"><%= item.title %></a><% } else { %><%= item.title %><% } %></strong><% if (item.association?.name) { %><span class="status-badge notification-source-tag"><%= item.association.name %></span><% } %></div>
           <% if (item.pinned) { %><form class="notification-pin-action" action="<%= item.pinUrl %>" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="pinned" value="0"><input type="hidden" name="returnTo" value="home"><button class="notification-pin-icon" type="submit" aria-label="ピン留めを外す" title="ピン留めを外す"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5-4 1-3 5 1 3-2 2-4-4-6 6-1-1 6-6-4-4 2-2 3 1 5-3z"/></svg></button></form><% } %>
           <% if (!item.readAt) { %><span class="status-badge question-unread">未読</span><% } %>
         </div>
-        <p class="notification-body-preview"><%= item.body %></p><small><%= item.association?.name || '' %></small>
+        <p class="notification-body-preview"><%= item.body %></p>
         <% if (!item.pinned) { %><div class="notification-actions"><% if (item.readAt) { %><span class="status-badge">確認済み</span><% } else { %><form action="/notifications/<%= item._id %>/read" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-quiet button-small" type="submit">確認済みにする</button></form><% } %><form action="/notifications/<%= item._id %>/delete" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-danger-outline button-small" type="submit">削除</button></form></div><% } %>
       </article>
     <% }) %></div><% } else { %><div class="admin-empty"><p>お知らせはありません。</p></div><% } %>

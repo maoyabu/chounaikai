@@ -1401,3 +1401,7 @@ h1, h2, h3, h4, h5, h6,
 .notification-pin-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: .6rem; border: 0; border-radius: 50%; background: transparent; color: var(--green); cursor: pointer; }
 .notification-pin-icon:hover { background: var(--green-pale); }
 .notification-pin-icon svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
+
+.notification-title-and-source { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; min-width: 0; flex: 1; }
+.notification-title-and-source strong { min-width: 0; overflow-wrap: anywhere; }
+.notification-item-heading .notification-source-tag { flex: 0 1 auto; font-weight: 500; overflow-wrap: anywhere; background: #edf2ef; color: var(--muted); }
