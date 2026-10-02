@@ -1577,14 +1577,16 @@ h1, h2, h3, h4, h5, h6,
 .equipment-day-dialog .equipment-time-all-day input[type=checkbox] { width: 1rem; height: 1rem; min-height: 0; margin: 0; padding: 0; flex: 0 0 1rem; }
 .equipment-day-dialog .equipment-time-quantity input { width: min(100%, 12rem); }
 @media (max-width: 600px) {
-  .equipment-day-dialog { width: calc(100vw - 1rem); max-width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); }
-  .equipment-day-dialog > .section-heading { padding: .5rem 1rem; }
+  .equipment-day-dialog { width: 96vw; max-width: 96vw; margin-inline: auto; max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); overflow-x: hidden; }
+  .equipment-day-dialog > .section-heading { padding: .5rem 5px; }
   .equipment-day-dialog h2 { font-size: 1rem; }
-  .equipment-day-body { padding: 0 1rem 1rem; }
+  .equipment-day-body { min-width: 0; max-width: 100%; padding: 0 5px 1rem; }
+  .equipment-day-dialog .equipment-day-body :where(form, section, label, .equipment-form-grid, .equipment-time-scroll, #equipment-time-details, #equipment-day-blocks) { min-width: 0; max-width: 100%; }
   .equipment-day-dialog .equipment-time-form-grid { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
-  .equipment-day-dialog .equipment-time-form-grid input:not([type=checkbox]) { font-size: 16px; }
+  .equipment-day-dialog .equipment-time-form-grid input:not([type=checkbox]) { box-sizing: border-box; width: 100%; font-size: 16px; }
+  .equipment-day-dialog .equipment-time-form-grid input:is([type=date], [type=time]) { appearance: none; }
   .equipment-day-dialog .equipment-time-quantity input { width: 100%; }
-  .equipment-day-dialog .form-stack > .button { width: 100%; }
+  .equipment-day-dialog .form-stack > .button { min-width: 0; max-width: 100%; width: 100%; white-space: normal; overflow-wrap: anywhere; }
   .equipment-day-dialog .equipment-time-scale, .equipment-day-dialog .equipment-time-bar { min-width: 0; }
 }
 .equipment-calendar-day { position: relative; }
