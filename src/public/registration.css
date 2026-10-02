@@ -369,6 +369,15 @@ h1, h2, h3, h4, h5, h6,
 .association-manage-setting-link:hover { border-color: var(--green); box-shadow: 0 4px 14px rgba(21,50,39,.08); }
 .association-manage-setting-link > span:first-child { display: grid; gap: .25rem; }
 .association-manage-setting-link small { color: var(--muted); font-size: .78rem; line-height: 1.4; }
+.association-setting-green { --setting-color: #176b4d; --setting-dark: #0e4e38; --setting-pale: #e5f2eb; }
+.association-setting-blue { --setting-color: #347fa8; --setting-dark: #245b79; --setting-pale: #eef5fb; }
+.association-setting-yellow { --setting-color: #c39a20; --setting-dark: #806313; --setting-pale: #fff9df; }
+.association-setting-purple { --setting-color: #8854b0; --setting-dark: #653b86; --setting-pale: #f5eefb; }
+.association-setting-orange { --setting-color: #d97724; --setting-dark: #9a4d12; --setting-pale: #fff3e8; }
+.association-manage-setting-link:where(.association-setting-green, .association-setting-blue, .association-setting-yellow, .association-setting-purple, .association-setting-orange) { border-left: 4px solid var(--setting-color); }
+.association-manage-setting-link:where(.association-setting-green, .association-setting-blue, .association-setting-yellow, .association-setting-purple, .association-setting-orange) strong { color: var(--setting-dark); }
+.association-manage-setting-link:where(.association-setting-green, .association-setting-blue, .association-setting-yellow, .association-setting-purple, .association-setting-orange) > span:last-child { color: var(--setting-color); }
+.association-manage-setting-link:where(.association-setting-green, .association-setting-blue, .association-setting-yellow, .association-setting-purple, .association-setting-orange):is(:hover, :focus-visible) { border-color: var(--setting-color); background: var(--setting-pale); }
 .association-event-section { margin-bottom: 1.5rem; }
 .association-event-section-heading { align-items: center; gap: 1rem; }
 .association-event-navigation, .association-event-navigation form { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }

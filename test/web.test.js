@@ -257,15 +257,15 @@ test('email verification creates an expiring token and stores only its digest', 
 test('association management view exposes required management areas', async () => {
   const id = '507f1f77bcf86cd799439011';
   const html = await ejs.renderFile(path.join(dirname, '../src/views/association-manage.ejs'), {
-    title: '管理', csrfToken: 'test-token', notice: null, currentPath: `/associations/${id}/manage`,
+    title: '管理', assetVersion: 'test', showNotificationPrompt: false, pendingApplicationCount: 0, pendingGroupRequestCount: 0, csrfToken: 'test-token', notice: null, currentPath: `/associations/${id}/manage`,
     currentUser: { username: 'owner', email: 'owner@example.test' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027,
     departments: [], districtGroups: [], roles: [], officers: [], memberships: [], leaderAssignments: [], households: []
   });
   assert.match(html, /部/);
   assert.match(html, /班/);
   assert.match(html, /役員/);
-  assert.match(html, /基本設定を開く/);
-  assert.match(html, /年度設定を開く/);
+  assert.match(html, /<strong>基本設定<\/strong>/);
+  assert.match(html, /<strong>年度設定<\/strong>/);
   assert.match(html, /2027年度の役員一覧/);
   assert.match(html, /2027年度の班長一覧/);
   assert.match(html, /テスト町内会住人一覧/);
