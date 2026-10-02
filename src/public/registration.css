@@ -1425,3 +1425,11 @@ h1, h2, h3, h4, h5, h6,
   .announcement-title-row { align-items: flex-start; gap: .5rem; }
   .announcement-title-row .announcement-stars { font-size: .9rem; letter-spacing: 0; }
 }
+
+.announcement-footer-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .75rem; }
+.announcement-pin-form { margin: 0; }
+.announcement-confirm-action { margin-left: auto; }
+@media (max-width: 480px) {
+  .announcement-footer-actions { gap: .5rem; }
+  .announcement-footer-actions .button { padding: .65rem .6rem; font-size: .8rem; }
+}
