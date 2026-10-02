@@ -38,7 +38,7 @@ const residentAnnouncementForDistrict = async (associationId, announcementId, di
   const membershipIds = (await AssociationMembership.find({ association: associationId, districtGroup, status: 'active' }).select('user').lean()).map(item => item.user);
   const receipt = await OfficerAnnouncementReceipt.findOne({ announcement: announcement._id, recipient: userId }).lean();
   // 全住人宛ては、古いデータや受信票の欠落があっても班長が確認できるようにする。
-  if (!receipt && announcement.audience !== 'all') throw fail('この連絡を確認できません。', 403);
+  if (!receipt && (announcement.audience !== 'all' || (announcement.resolvedDistrictGroups?.length && !announcement.resolvedDistrictGroups.some(value => String(value) === String(districtGroup))))) throw fail('この連絡を確認できません。', 403);
   return { announcement, membershipIds };
 };
 
@@ -64,7 +64,7 @@ districtMessagesRouter.get('/:associationId/district-messages/officer-announceme
     const memberIds = (await AssociationMembership.find({ association: association._id, districtGroup: districtGroup._id, status: 'active' }).select('user').lean()).map(item => item.user);
     const receipts = await OfficerAnnouncementReceipt.find({ association: association._id, recipient: { $in: memberIds } }).select('announcement readAt').lean();
     const announcementIds = [...new Set(receipts.map(item => String(item.announcement)))];
-    const announcements = await OfficerAnnouncement.find({ association: association._id, mutedAt: { $exists: false }, audience: { $ne: 'leaders' }, $and: [{ $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }], $or: [{ audience: 'all' }, { _id: { $in: announcementIds } }] }).sort({ createdAt: -1 }).limit(50).lean();
+    const announcements = await OfficerAnnouncement.find({ association: association._id, mutedAt: { $exists: false }, audience: { $ne: 'leaders' }, $and: [{ $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }], $or: [{ audience: 'all', $or: [{ resolvedDistrictGroups: { $exists: false } }, { resolvedDistrictGroups: { $size: 0 } }, { resolvedDistrictGroups: districtGroup._id }] }, { _id: { $in: announcementIds } }] }).sort({ createdAt: -1 }).limit(50).lean();
     const rows = announcements.map(item => ({ ...item, recipientCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id)).length, unreadCount: receipts.filter(receipt => String(receipt.announcement) === String(item._id) && !receipt.readAt).length }));
     return res.render('district-officer-announcements', { title: `${districtGroup.name} 役員から住人への連絡`, association, districtGroup, announcements: rows });
   } catch (error) { return next(error); }

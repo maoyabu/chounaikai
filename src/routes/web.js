@@ -1,3 +1,4 @@
+import { loadAnnouncementPins } from '../services/officerAnnouncementService.js';
 import express from 'express';
 import passport from 'passport';
 import mongoose from 'mongoose';
@@ -562,11 +563,13 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const applications = await NeighborhoodAssociation.find({ requestedBy: req.user._id, status: 'pending', deletedAt: { $exists: false } }).sort({ createdAt: -1 }).lean();
     const pendingJoins = await JoinApplication.find({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }).populate('association', 'name').select('association status source').lean();
     const excludedIds = [...visibleMemberships.map((item) => item.association._id), ...pendingJoins.map((item) => item.association)];
+    const pins = await loadAnnouncementPins({ userId: req.user._id, associationIds: visibleMemberships.map(item => item.association._id) });
+    const visibleNotificationFilter = { recipient: req.user._id, $nor: [{ relatedType: 'OfficerAnnouncement', relatedId: { $in: pins.excludedAnnouncementIds } }] };
     const [availableAssociations, unreadNotifications, readNotifications, unreadNotificationCount] = await Promise.all([
       NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false }, _id: { $nin: excludedIds } }).sort('name').lean(),
-      Notification.find({ recipient: req.user._id, readAt: null }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
-      Notification.find({ recipient: req.user._id, readAt: { $ne: null } }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
-      Notification.countDocuments({ recipient: req.user._id, readAt: null })
+      Notification.find({ ...visibleNotificationFilter, readAt: null }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
+      Notification.find({ ...visibleNotificationFilter, readAt: { $ne: null } }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
+      Notification.countDocuments({ ...visibleNotificationFilter, readAt: null })
     ]);
     const notifications = [...unreadNotifications, ...readNotifications].slice(0, 20);
     const residentRegistration = await ResidentRegistration.findOne({ user: req.user._id }).lean();
@@ -609,6 +612,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const financeReports = visibleMemberships.filter((item) => item.association.financePublic).map((item) => ({ association: item.association }));
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
+    notifications.unshift(...pins.notifications);
     return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);

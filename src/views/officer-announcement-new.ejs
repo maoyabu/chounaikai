@@ -7,7 +7,35 @@
     <form class="form-stack" action="/associations/<%= association._id %>/announcements/officer" method="post" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label>送信先<select name="audience" required><option value="leaders">班長</option><option value="all">全住人</option></select></label>
-      <p class="help-text">送信時点で町内会に参加している対象者へ連絡します。個別住人への送信は今後追加予定です。</p>
+      <label>送信対象の地区・班<select name="recipientScope" id="announcement-recipient-scope"><option value="all">すべての地区・班</option><option value="selected">地区・班を指定</option></select></label>
+      <fieldset class="announcement-options" id="announcement-district-groups" hidden>
+        <legend>対象の地区（複数選択可）</legend>
+        <p class="help-text">地区を選ぶと、その地区の全班が対象になります。地区名をクリックすると、対象の班を絞り込めます。</p>
+        <% const locations = typeof districtGroups !== 'undefined' ? districtGroups : []; const districts = locations.filter(group => !group.parentDistrict); %>
+        <div class="announcement-district-list">
+          <% districts.forEach(district => { const children = locations.filter(group => String(group.parentDistrict) === String(district._id)); %>
+            <div data-announcement-district>
+              <div class="announcement-district-row">
+                <input type="checkbox" value="<%= district._id %>" data-district-check aria-label="<%= district.name %>を対象にする" disabled>
+                <button type="button" class="button button-quiet" data-open-district-dialog><%= district.name %></button>
+                <small data-district-summary>未選択</small>
+              </div>
+              <dialog class="officer-dialog" aria-labelledby="district-title-<%= district._id %>">
+                <div class="dialog-heading"><h3 id="district-title-<%= district._id %>"><%= district.name %>の対象班</h3><button type="button" class="dialog-close" data-close-district-dialog aria-label="閉じる">×</button></div>
+                <p class="help-text">送信対象から外す班のチェックを外してください。</p>
+                <div class="officer-recipient-list">
+                  <% children.forEach(group => { %><label><input type="checkbox" value="<%= group._id %>" data-group-check checked> <%= group.name %></label><% }) %>
+                </div>
+                <% if (!children.length) { %><p class="help-text">この地区には班が登録されていません。地区全体が対象になります。</p><% } %>
+                <div class="form-actions"><button type="button" class="button button-primary" data-close-district-dialog>完了</button></div>
+              </dialog>
+            </div>
+          <% }) %>
+        </div>
+        <div id="announcement-target-inputs"></div>
+        <% if (!districts.length) { %><p class="help-text">選択できる地区がありません。</p><% } %>
+      </fieldset>
+      <p class="help-text">送信時点で町内会に参加している対象者へ連絡します。地区・班を指定しない場合は町内会全体が対象です。</p>
       <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
       <label>タイトル<input name="title" maxlength="120" required></label>
       <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
@@ -20,4 +48,45 @@
   </section>
 </main>
 <script>(() => { const mode = document.getElementById('announcement-response-mode'); const options = document.getElementById('announcement-options'); const inputs = [...options.querySelectorAll('[data-announcement-option]')]; const update = () => { const enabled = mode.value !== 'none'; options.hidden = !enabled; inputs.forEach((input, index) => { input.disabled = !enabled; input.required = enabled && index < 2; }); }; mode.addEventListener('change', update); update(); })();</script>
+<script>(() => {
+  const scope = document.getElementById('announcement-recipient-scope');
+  const fieldset = document.getElementById('announcement-district-groups');
+  const targets = document.getElementById('announcement-target-inputs');
+  const districts = [...fieldset.querySelectorAll('[data-announcement-district]')].map(row => ({
+    row, check: row.querySelector('[data-district-check]'), groups: [...row.querySelectorAll('[data-group-check]')],
+    dialog: row.querySelector('dialog'), summary: row.querySelector('[data-district-summary]')
+  }));
+  const update = () => {
+    const enabled = scope.value === 'selected';
+    fieldset.hidden = !enabled;
+    targets.replaceChildren();
+    districts.forEach(district => {
+      district.check.disabled = !enabled;
+      const selected = district.groups.filter(input => input.checked);
+      district.summary.textContent = !district.check.checked ? '未選択' : !district.groups.length ? '地区全体' : `${selected.length} / ${district.groups.length}班を対象`;
+      if (!enabled || !district.check.checked) return;
+      const ids = selected.length === district.groups.length ? [district.check.value] : selected.map(input => input.value);
+      ids.forEach(value => { const input = document.createElement('input'); input.type = 'hidden'; input.name = 'targetDistrictGroupIds'; input.value = value; targets.append(input); });
+    });
+  };
+  districts.forEach(district => {
+    district.check.addEventListener('change', () => { if (district.check.checked) district.groups.forEach(input => { input.checked = true; }); update(); });
+    district.groups.forEach(input => input.addEventListener('change', update));
+    district.row.querySelector('[data-open-district-dialog]').addEventListener('click', () => {
+      if (!district.check.checked) { district.check.checked = true; district.groups.forEach(input => { input.checked = true; }); update(); }
+      district.dialog.showModal();
+    });
+    district.row.querySelectorAll('[data-close-district-dialog]').forEach(button => button.addEventListener('click', () => district.dialog.close()));
+  });
+  scope.addEventListener('change', update); update();
+  scope.form.addEventListener('submit', event => {
+    if (scope.value !== 'selected') return;
+    const empty = districts.find(district => district.check.checked && district.groups.length && !district.groups.some(input => input.checked));
+    if (empty || !targets.children.length) {
+      event.preventDefault();
+      alert(empty ? '選択した地区の班を1つ以上選択してください。地区を対象から外す場合は地区のチェックを外してください。' : '対象の地区を1つ以上選択してください。');
+      if (empty) empty.dialog.showModal(); else districts[0]?.check.focus();
+    }
+  });
+})();</script>
 <%- include('partials/foot') %>

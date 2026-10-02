@@ -1367,3 +1367,8 @@ h1, h2, h3, h4, h5, h6,
 .annual-plan-report h3 { margin: 0 0 .6rem; font-size: 1rem; }
 .annual-plan-report textarea { width: 100%; box-sizing: border-box; padding: .7rem .8rem; border: 1px solid #bdcac3; border-radius: .65rem; background: #fff; color: var(--ink); font: inherit; resize: vertical; }
 @media (max-width: 800px) { .member-directory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .member-directory-list .resident-row-static { flex-wrap: wrap; } .member-directory-list .resident-row-static > strong { flex-basis: 100%; } }
+
+.announcement-district-list { display: grid; gap: .65rem; }
+.announcement-district-row { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.announcement-district-row input { width: auto; margin: 0; }
+.announcement-district-row small { color: var(--muted); }

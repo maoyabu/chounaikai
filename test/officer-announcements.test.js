@@ -9,9 +9,10 @@ import { AssociationMembership } from '../src/models/associationMembership.js';
 import { AnnualOfficer } from '../src/models/annualOfficer.js';
 import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
 import { RoleDefinition } from '../src/models/role.js';
+import { DistrictGroup } from '../src/models/organization.js';
 import { Notification } from '../src/models/notification.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../src/models/officerAnnouncement.js';
-import { confirmAnnouncement, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, summarizeAnnouncementResponses } from '../src/services/officerAnnouncementService.js';
+import { confirmAnnouncement, setAnnouncementPin, loadAnnouncementPins, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, summarizeAnnouncementResponses } from '../src/services/officerAnnouncementService.js';
 import { officerAnnouncementsRouter } from '../src/routes/officerAnnouncements.js';
 
 const id = () => new mongoose.Types.ObjectId();
@@ -134,4 +135,84 @@ test('announcement mutations require CSRF and login', () => {
   assert.equal(writes.length, 3);
   for (const route of writes) assert.ok(route.stack.some(layer => layer.name === 'verifyCsrfToken'));
   assert.ok(officerAnnouncementsRouter.stack.some(layer => layer.name === 'requireLogin'));
+});
+
+for (const audience of ['all', 'leaders']) {
+  test(`district selection restricts ${audience} recipients and includes child groups`, async t => {
+    access(t);
+    const district = id(), group = id(), otherDistrict = id();
+    t.mock.method(DistrictGroup, 'find', filter => {
+      assert.equal(String(filter.association), String(association));
+      assert.equal(filter.active, true);
+      return query([{ _id: district }, { _id: group, parentDistrict: district }, { _id: otherDistrict }]);
+    });
+    t.mock.method(AnnualLeaderAssignment, 'find', () => query([{ representative: leader }, { representative: another }]));
+    t.mock.method(AssociationMembership, 'find', filter => {
+      if (filter.user) {
+        assert.deepEqual(filter.districtGroup.$in.map(String), [district, group].map(String));
+        return query([{ user: leader }, { user: leader }]);
+      }
+      return query([{ user: leader }, { user: another }]);
+    });
+    t.mock.method(OfficerAnnouncement, 'create', async value => ({ _id: announcementId, ...value }));
+    let receipts;
+    t.mock.method(OfficerAnnouncementReceipt, 'insertMany', async values => { receipts = values; });
+    t.mock.method(Notification, 'insertMany', async () => []);
+    const result = await publishAnnouncement({ associationId: association, userId: officer, audience,
+      recipientScope: 'selected', targetDistrictGroupIds: [String(district), String(district)],
+      urgency: 3, title: '回覧板', body: '地区のお知らせ', responseMode: 'none' });
+    assert.deepEqual(result.announcement.targetDistrictGroups, [String(district)]);
+    assert.equal(result.recipientCount, 1);
+    assert.equal(String(receipts[0].recipient), String(leader));
+  });
+}
+
+test('district selection rejects empty, invalid and foreign district IDs before publishing', async t => {
+  access(t);
+  t.mock.method(DistrictGroup, 'find', () => query([]));
+  const base = { associationId: association, userId: officer, audience: 'all', recipientScope: 'selected', urgency: 3, title: '連絡', body: '内容', responseMode: 'none' };
+  for (const targetDistrictGroupIds of [[], ['invalid'], [String(id())]]) {
+    await assert.rejects(publishAnnouncement({ ...base, targetDistrictGroupIds }), { status: 400 });
+  }
+});
+
+test('pins are personal and unpin records dismissal without changing read status', async t => {
+  access(t);
+  const receiptId = id();
+  t.mock.method(OfficerAnnouncementReceipt, 'findOne', () => query({ _id: receiptId }));
+  t.mock.method(OfficerAnnouncement, 'findOne', () => query({ _id: announcementId, channel: 'resident' }));
+  const updates = [];
+  t.mock.method(OfficerAnnouncementReceipt, 'updateOne', async (filter, update) => updates.push({ filter, update }));
+  await setAnnouncementPin({ associationId: association, announcementId, userId: leader, pinned: true });
+  assert.equal(String(updates[0].filter.recipient), String(leader));
+  assert.ok(updates[0].update.$set.pinnedAt instanceof Date);
+  assert.equal(updates[0].update.$unset.pinDismissedAt, 1);
+  assert.equal(updates[0].update.$set.readAt, undefined);
+  await setAnnouncementPin({ associationId: association, announcementId, userId: leader, pinned: false });
+  assert.ok(updates[1].update.$set.pinDismissedAt instanceof Date);
+  assert.equal(updates[1].update.$unset.pinnedAt, 1);
+});
+
+test('only recipients can pin resident messages', async t => {
+  access(t);
+  t.mock.method(OfficerAnnouncementReceipt, 'findOne', () => query(null));
+  await assert.rejects(setAnnouncementPin({ associationId: association, announcementId, userId: another, pinned: true }), { status: 403 });
+});
+
+test('home pins request newest first and suppress duplicate and dismissed notifications', async t => {
+  const newest = id(), older = id(), dismissed = id();
+  t.mock.method(OfficerAnnouncementReceipt, 'find', filter => {
+    assert.equal(String(filter.recipient), String(leader));
+    assert.deepEqual(filter.association.$in, [association]);
+    return { populate() { return this; }, sort(order) { assert.equal(order.pinnedAt, -1); return this; }, lean: async () => [
+      { _id: newest, pinnedAt: new Date(2000), association: { _id: association }, announcement: { _id: newest, title: '新しいピン', body: '内容' } },
+      { _id: older, pinnedAt: new Date(1000), association: { _id: association }, announcement: { _id: older, title: '古いピン', body: '内容' } },
+      { _id: dismissed, pinDismissedAt: new Date(), association: { _id: association }, announcement: { _id: dismissed } },
+      { _id: id(), pinnedAt: new Date(), announcement: null }
+    ] };
+  });
+  const result = await loadAnnouncementPins({ userId: leader, associationIds: [association] });
+  assert.deepEqual(result.notifications.map(item => item.title), ['新しいピン', '古いピン']);
+  assert.deepEqual(result.excludedAnnouncementIds, [newest, older, dismissed]);
+  assert.match(result.notifications[0].pinUrl, /\/pin$/);
 });

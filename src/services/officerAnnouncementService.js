@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
-import { Department } from '../models/organization.js';
+import { Department, DistrictGroup } from '../models/organization.js';
 import { OfficerContactGroup } from '../models/officerContactGroup.js';
 import { Notification } from '../models/notification.js';
 import { createNotifications } from './notificationService.js';
@@ -41,7 +41,7 @@ export const requireDistrictMember = async (associationId, userId) => {
 };
 export const isCurrentDistrictLeader = async (associationId, districtGroup, userId) => Boolean(await AnnualLeaderAssignment.exists({ association: associationId, districtGroup, representative: userId, fiscalYear: fiscalYear(), cancelledAt: null }));
 
-export const publishAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
+export const publishAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], recipientScope = 'all', targetDistrictGroupIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
   const districtMembership = channel === 'district' ? await requireDistrictMember(associationId, userId) : null;
   const groupMembership = channel === 'association_group' ? await AssociationGroupMembership.findOne({ association: associationId, group: associationGroupId, user: userId, status: 'active' }) : null;
   if (!districtMembership && !groupMembership) await requireAnnouncementOfficer(associationId, userId);
@@ -54,6 +54,20 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
   const choices = (Array.isArray(options) ? options : [options]).map(value => String(value ?? '').trim()).filter(Boolean);
   if (responseMode === 'none' && choices.length) throw fail('回答なしの場合、選択肢は設定できません。');
   if (responseMode !== 'none' && (choices.length < 2 || choices.length > 5 || choices.some(value => value.length > 100) || new Set(choices).size !== choices.length)) throw fail('選択肢は重複しない2〜5件、各100文字以内で入力してください。');
+  let selectedDistrictGroupIds = [], resolvedDistrictGroupIds = [];
+  if (channel === 'resident') {
+    if (!['all', 'selected'].includes(recipientScope)) throw fail('送信対象の地区・班を選択してください。');
+    if (recipientScope === 'selected') {
+      const values = Array.isArray(targetDistrictGroupIds) ? targetDistrictGroupIds : [targetDistrictGroupIds];
+      selectedDistrictGroupIds = [...new Set(values.map(String))];
+      if (!selectedDistrictGroupIds.length || selectedDistrictGroupIds.some(value => !mongoose.isValidObjectId(value))) throw fail('地区・班を1つ以上選択してください。');
+      const groups = await DistrictGroup.find({ association: associationId, active: true }).select('_id parentDistrict').lean();
+      const validIds = new Set(groups.map(group => String(group._id)));
+      if (selectedDistrictGroupIds.some(value => !validIds.has(value))) throw fail('この町内会の有効な地区・班を選択してください。');
+      const selected = new Set(selectedDistrictGroupIds);
+      resolvedDistrictGroupIds = groups.filter(group => selected.has(String(group._id)) || (group.parentDistrict && selected.has(String(group.parentDistrict)))).map(group => group._id);
+    }
+  }
   const now = new Date();
   let recipientIds, targetDepartment, targetOfficer, targetOfficers, targetGroup;
   if (channel === 'association_group') {
@@ -107,7 +121,7 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
     const memberships = await AssociationMembership.find({ association: associationId, status: 'active' }).select('user').lean();
     recipientIds = memberships.map(item => item.user);
   }
-  const active = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: recipientIds } }).select('user').lean();
+  const active = await AssociationMembership.find({ association: associationId, status: 'active', ...(resolvedDistrictGroupIds.length ? { districtGroup: { $in: resolvedDistrictGroupIds } } : {}), user: { $in: recipientIds } }).select('user').lean();
   const recipients = [...new Map(active.map(item => [String(item.user), item.user])).values()];
   if (audience === 'officer_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の役員から送信先を選択してください。');
   if (audience === 'district_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の班員から送信先を選択してください。');
@@ -116,7 +130,7 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
   try {
     const expiresAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
     for (const file of (files || [])) uploaded.push({ ...(await uploadAnnouncementAttachment(file, associationId)), expiresAt });
-    const announcement = await OfficerAnnouncement.create({ association: associationId, sender: userId, channel, audience, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
+    const announcement = await OfficerAnnouncement.create({ association: associationId, sender: userId, channel, audience, targetDistrictGroups: selectedDistrictGroupIds, resolvedDistrictGroups: resolvedDistrictGroupIds, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
       title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices, attachments: uploaded });
     try {
       await OfficerAnnouncementReceipt.insertMany(recipients.map(recipient => ({ announcement: announcement._id, association: associationId, recipient })));
@@ -216,4 +230,27 @@ export const summarizeAnnouncementResponses = (announcement, receipts) => {
   const percentage = count => receipts.length ? Math.round(count * 1000 / receipts.length) / 10 : 0;
   return { choices: choices.map(choice => ({ ...choice, percentage: percentage(choice.respondents.length) })),
     unanswered, unansweredPercentage: percentage(unanswered.length), answeredCount: receipts.length - unanswered.length, recipientCount: receipts.length };
+};
+
+export const setAnnouncementPin = async ({ associationId, announcementId, userId, pinned }) => {
+  const { receipt } = await loadRecipientAnnouncement({ associationId, announcementId, userId, channel: 'resident' });
+  await OfficerAnnouncementReceipt.updateOne({ _id: receipt._id, association: associationId, recipient: userId }, pinned
+    ? { $set: { pinnedAt: new Date() }, $unset: { pinDismissedAt: 1 } }
+    : { $set: { pinDismissedAt: new Date() }, $unset: { pinnedAt: 1 } });
+};
+
+export const loadAnnouncementPins = async ({ userId, associationIds }) => {
+  const receipts = await OfficerAnnouncementReceipt.find({ recipient: userId, association: { $in: associationIds },
+    $or: [{ pinnedAt: { $ne: null } }, { pinDismissedAt: { $ne: null } }] })
+    .populate({ path: 'announcement', match: { mutedAt: { $exists: false }, $or: [{ channel: 'resident' }, { channel: { $exists: false } }] } })
+    .populate('association', 'name').sort({ pinnedAt: -1, _id: -1 }).lean();
+  return {
+    excludedAnnouncementIds: receipts.filter(receipt => receipt.announcement).map(receipt => receipt.announcement._id),
+    notifications: receipts.filter(receipt => receipt.pinnedAt && receipt.announcement).map(receipt => ({
+      _id: receipt._id, pinned: true, pinnedAt: receipt.pinnedAt, readAt: receipt.readAt,
+      title: receipt.announcement.title, body: receipt.announcement.body, association: receipt.association,
+      actionUrl: `/associations/${receipt.association._id}/announcements/${receipt.announcement._id}`,
+      actionLabel: 'メッセージを確認', pinUrl: `/associations/${receipt.association._id}/announcements/${receipt.announcement._id}/pin`
+    }))
+  };
 };

@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
+import { DistrictGroup } from '../models/organization.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { loadQuestionBoxAccess } from '../services/questionBoxService.js';
-import { confirmAnnouncement, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, requireAnnouncementOfficer, summarizeAnnouncementResponses, updateAnnouncementVisibility } from '../services/officerAnnouncementService.js';
+import { confirmAnnouncement, setAnnouncementPin, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, requireAnnouncementOfficer, summarizeAnnouncementResponses, updateAnnouncementVisibility } from '../services/officerAnnouncementService.js';
 import { acceptAnnouncementAttachments, repairMojibakeFilename } from '../services/announcementAttachmentService.js';
 
 export const officerAnnouncementsRouter = express.Router();
@@ -29,7 +30,8 @@ officerAnnouncementsRouter.get('/:associationId/announcements/officer', async (r
 officerAnnouncementsRouter.get('/:associationId/announcements/officer/new', async (req, res, next) => {
   try {
     const association = await requireAnnouncementOfficer(req.params.associationId, req.user._id);
-    return res.render('officer-announcement-new', { title: '役員から連絡を送る', association });
+    const districtGroups = await DistrictGroup.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean();
+    return res.render('officer-announcement-new', { title: '役員から連絡を送る', association, districtGroups });
   } catch (error) { return next(error); }
 });
 
@@ -98,5 +100,14 @@ officerAnnouncementsRouter.post('/:associationId/announcements/:announcementId/c
     const announcement = await confirmAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, selectedOptions: req.body.selectedOptions, channel: 'resident' });
     req.session.notice = announcement.responseMode === 'none' ? '連絡を確認しました。' : '連絡に回答しました。';
     return res.redirect('/dashboard');
+  } catch (error) { return next(error); }
+});
+
+officerAnnouncementsRouter.post('/:associationId/announcements/:announcementId/pin', verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!['1', '0'].includes(req.body.pinned)) throw Object.assign(new Error('ピン留めの操作を確認してください。'), { status: 400 });
+    await setAnnouncementPin({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, pinned: req.body.pinned === '1' });
+    req.session.notice = req.body.pinned === '1' ? 'メッセージをピン留めしました。' : 'ピン留めを外しました。';
+    return res.redirect(req.body.returnTo === 'home' ? '/dashboard?notifications=open' : `/associations/${req.params.associationId}/announcements/${req.params.announcementId}`);
   } catch (error) { return next(error); }
 });
