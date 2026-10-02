@@ -1372,3 +1372,16 @@ h1, h2, h3, h4, h5, h6,
 .announcement-district-row { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
 .announcement-district-row input { width: auto; margin: 0; }
 .announcement-district-row small { color: var(--muted); }
+
+.announcement-attachments { width: 100%; min-width: 0; margin-top: 1rem; }
+.announcement-image { margin: 1rem 0; }
+.announcement-image-trigger { display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.announcement-image-trigger img { display: block; width: 100%; height: auto; border-radius: .5rem; }
+.announcement-image-trigger:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.announcement-image figcaption { margin-top: .4rem; overflow-wrap: anywhere; font-size: .85rem; }
+.announcement-image-dialog { box-sizing: border-box; width: min(1200px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); padding: 1rem; border: 0; border-radius: .75rem; background: var(--surface); }
+.announcement-image-dialog::backdrop { background: rgba(0, 0, 0, .75); }
+.announcement-image-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+.announcement-image-dialog-heading strong { min-width: 0; overflow-wrap: anywhere; }
+.announcement-image-dialog-heading button { flex-shrink: 0; }
+.announcement-image-dialog > img { display: block; width: 100%; height: auto; }

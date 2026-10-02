@@ -1,0 +1,43 @@
+<% if (announcement.attachments?.length) { %>
+  <section class="announcement-attachments" data-announcement-attachments>
+    <h2>添付ファイル</h2>
+    <% announcement.attachments.forEach(file => { const isImage = /^image\//i.test(file.mimeType || '') || (!file.mimeType && file.resourceType === 'image'); %>
+      <% if (isImage) { %>
+        <figure class="announcement-image">
+          <button type="button" class="announcement-image-trigger" data-announcement-image aria-label="<%= file.originalName %>を拡大表示" aria-haspopup="dialog">
+            <img src="<%= file.url %>" alt="<%= file.originalName %>" loading="lazy">
+          </button>
+          <figcaption><%= file.originalName %></figcaption>
+        </figure>
+      <% } else { %>
+        <p><a href="<%= file.url %>" target="_blank" rel="noopener"><%= file.originalName %></a></p>
+      <% } %>
+    <% }) %>
+    <dialog class="announcement-image-dialog" aria-label="添付画像の拡大表示">
+      <div class="announcement-image-dialog-heading"><strong data-image-caption></strong><button type="button" class="dialog-close" data-close-image aria-label="閉じる">×</button></div>
+      <img data-expanded-image alt="">
+    </dialog>
+  </section>
+  <script>(() => {
+    document.querySelectorAll('[data-announcement-attachments]').forEach(section => {
+      if (section.dataset.imageViewerReady) return;
+      section.dataset.imageViewerReady = '1';
+      const dialog = section.querySelector('dialog');
+      const expanded = dialog.querySelector('[data-expanded-image]');
+      const caption = dialog.querySelector('[data-image-caption]');
+      section.querySelectorAll('[data-announcement-image]').forEach(button => button.addEventListener('click', () => {
+        const image = button.querySelector('img');
+        expanded.src = image.src;
+        expanded.alt = image.alt;
+        caption.textContent = image.alt;
+        dialog.showModal();
+      }));
+      dialog.querySelector('[data-close-image]').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', event => {
+        const bounds = dialog.getBoundingClientRect();
+        if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close();
+      });
+      dialog.addEventListener('close', () => { expanded.removeAttribute('src'); });
+    });
+  })();</script>
+<% } %>
