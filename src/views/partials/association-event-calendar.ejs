@@ -3,7 +3,7 @@
   <% if (typeof associationName !== 'undefined' && associationName) { %><p class="association-event-association"><%= associationName %></p><% } %>
   <div class="association-event-months">
     <% months.forEach(month => { %>
-      <div class="association-event-month"><h3><%= month.label %></h3><div class="association-event-days"><% ['日','月','火','水','木','金','土'].forEach(day => { %><span class="association-event-weekday"><%= day %></span><% }); %>
+      <div class="association-event-month"><h3><%= month.label %></h3><div class="association-event-days"><% ['月','火','水','木','金','土','日'].forEach(day => { %><span class="association-event-weekday"><%= day %></span><% }); %>
         <% month.cells.forEach(date => { const dayEvents = date ? events.filter(event => event.startDate <= date && event.endDate >= date) : []; %>
           <% if (date) { %><button type="button" class="association-event-day <%= dayEvents.length ? 'has-event' : '' %>" title="<%= dayEvents.map(event => event.title).join('、') %>" data-calendar-events="<%= encodeURIComponent(JSON.stringify(dayEvents.map(event => ({ title: event.title, category: event.category, startDate: event.startDate, endDate: event.endDate, startTime: event.startTime, endTime: event.endTime })))) %>"><span><%= Number(date.slice(-2)) %></span><span class="association-event-dots"><% dayEvents.slice(0, 3).forEach(event => { %><i style="background-color:<%= event.color %>"></i><% }); %></span></button><% } else { %><span class="association-event-day is-empty"></span><% } %>
         <% }); %>

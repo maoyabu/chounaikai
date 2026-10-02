@@ -106,7 +106,7 @@ equipmentRouter.get('/:associationId/equipment/:equipmentId/loans', handler(asyn
   const today = japanDate(); const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.month)) ? String(req.query.month) : today.slice(0, 7);
   const start = `${month}-01`, index = monthIndex(month), next = monthString(index + 1), end = new Date(Date.parse(`${next}-01`) - 86400000).toISOString().slice(0, 10);
   const loans = await EquipmentLoan.find({ association: req.params.associationId, equipment: item._id }).lean();
-  const cells = Array(new Date(start).getUTCDay()).fill(null);
+  const cells = Array((new Date(start).getUTCDay() + 6) % 7).fill(null);
   for (let day = 1; day <= Number(end.slice(-2)); day++) {
     const date = `${month}-${String(day).padStart(2, '0')}`, segments = equipmentDaySchedule(item, loans, date);
     const capacity = Math.max(0, ...segments.map(segment => segment.available));

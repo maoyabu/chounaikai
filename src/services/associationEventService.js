@@ -37,7 +37,7 @@ export const calendarMonths = (now = new Date()) => {
   for (let offset = 0; offset < 3; offset++) {
     const year = now.getFullYear(), month = now.getMonth() + offset;
     const first = new Date(year, month, 1), last = new Date(year, month + 1, 0);
-    const cells = Array(first.getDay()).fill(null);
+    const cells = Array((first.getDay() + 6) % 7).fill(null);
     for (let day = 1; day <= last.getDate(); day++) cells.push(`${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
     months.push({ label: `${first.getFullYear()}年${first.getMonth() + 1}月`, cells });
   }
