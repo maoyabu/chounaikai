@@ -1582,3 +1582,9 @@ h1, h2, h3, h4, h5, h6,
 .equipment-title-guide .equipment-guide { position: absolute; z-index: 20; top: calc(100% + .75rem); left: 0; width: min(440px, calc(100vw - 3rem)); box-sizing: border-box; box-shadow: 0 6px 20px #0f172a1a; }
 .equipment-title-guide .equipment-guide[hidden] { display: none; }
 .equipment-title-guide .equipment-guide::before { content: ''; position: absolute; top: -7px; left: 20px; width: 12px; height: 12px; transform: rotate(45deg); background: #eff6ff; border-left: 1px solid #dbeafe; border-top: 1px solid #dbeafe; }
+.equipment-loan-home { background: #fffdf5; border-color: #eadca9; }
+.equipment-loan-home .section-heading { background: #fff3c4; border-color: #eadca9; }
+.equipment-loan-home .section-heading h2 { color: #886116; }
+.equipment-loan-home .question-home-link { background: #fffdf5; border-color: #eadca9; }
+.equipment-loan-home .question-home-link:hover { background: #fff8dc; }
+.equipment-loan-home .list-arrow { color: #886116; }
