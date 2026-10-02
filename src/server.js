@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { runEquipmentReminders } from './services/equipmentService.js';
 import mongoose from 'mongoose';
 import { loadConfig } from './config/env.js';
 import { connectDatabase } from './db/connect.js';
@@ -25,6 +26,16 @@ try {
   // 旧バージョンの user 一意インデックスが残っていると、会員未紐付け
   // （user=null）の役員を複数登録できないため、スキーマ定義に合わせて同期する。
   try { await AnnualOfficer.syncIndexes(); } catch (error) { console.error('Annual officer indexes could not be synchronized:', error.message); }
+  let equipmentRemindersRunning = false;
+  const equipmentReminders = async () => {
+    if (equipmentRemindersRunning) return;
+    equipmentRemindersRunning = true;
+    try { await runEquipmentReminders(); }
+    catch (error) { console.error('Equipment reminders failed:', error.message); }
+    finally { equipmentRemindersRunning = false; }
+  };
+  await equipmentReminders();
+  setInterval(equipmentReminders, 60 * 60 * 1000).unref();
   const cleanupExpiredAttachments = async () => {
     try {
       const count = await deleteExpiredAnnouncementAttachments();

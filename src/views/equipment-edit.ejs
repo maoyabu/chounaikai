@@ -1,0 +1,3 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow equipment-page"><a class="back-link" href="<%= base %>">← 設備・備品管理へ戻る</a><section class="page-heading"><h1><%= title %></h1></section><section class="content-card">
+<%- include('partials/equipment-editor', { item, choices, base, modal: false }) %></section></main><script src="/assets/equipment-editor.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

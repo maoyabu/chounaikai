@@ -1,3 +1,4 @@
+import { AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder } from '../models/equipment.js';
 import mongoose from 'mongoose';
 import { Group } from '../models/group.js';
 import { User } from '../models/user.js';
@@ -149,6 +150,9 @@ export const permanentlyDeleteAssociation = async ({ association }) => {
     QuestionThread.deleteMany({ association: associationId }), OfficerAnnouncement.deleteMany({ association: associationId }),
     OfficerAnnouncementReceipt.deleteMany({ association: associationId }),
     OfficerContactGroup.deleteMany({ association: associationId }), AssociationEvent.deleteMany({ association: associationId }),
+    AssociationEquipment.deleteMany({ association: associationId }), EquipmentSettings.deleteMany({ association: associationId }),
+    EquipmentInventory.deleteMany({ association: associationId }), EquipmentLoan.deleteMany({ association: associationId }),
+    EquipmentPurchase.deleteMany({ association: associationId }), EquipmentReminder.deleteMany({ association: associationId }),
     AuditLog.deleteMany({ association: associationId })
   ]);
   if (groupId) {

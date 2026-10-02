@@ -1,3 +1,4 @@
+import { EquipmentSettings } from '../models/equipment.js';
 import { loadAnnouncementPins } from '../services/officerAnnouncementService.js';
 import express from 'express';
 import passport from 'passport';
@@ -581,6 +582,11 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
           notification.actionUrl = `/associations/${notification.association._id}/questions/officer`;
           notification.actionLabel = '質問を確認';
         }
+        if (['equipment_inventory', 'equipment_expiry', 'equipment_loan'].includes(notification.type)) {
+          const equipmentBase = `/associations/${notification.association._id}/equipment`;
+          notification.actionUrl = notification.type === 'equipment_inventory' ? `${equipmentBase}/inventory` : notification.type === 'equipment_expiry' ? `${equipmentBase}/purchase-list` : notification.relatedId ? `${equipmentBase}/${notification.relatedId}/loans` : equipmentBase;
+          notification.actionLabel = '設備・備品を確認';
+        }
         if (notification.type === 'join_application_received' && res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id))) {
           notification.actionUrl = `/associations/${notification.association._id}/manage/applications`;
           notification.actionLabel = '参加申請を確認';
@@ -609,11 +615,14 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
         notification.actionUrl = `/associations/${notification.association._id}/leader?tab=applications#application-${notification.relatedId}`;
       }
     }
+    const privateEquipmentSettings = await EquipmentSettings.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, loanPublic: false }).select('association').lean();
+    const privateEquipmentIds = new Set(privateEquipmentSettings.map(setting => String(setting.association)));
+    const equipmentMemberships = visibleMemberships.filter(item => !privateEquipmentIds.has(String(item.association._id)));
     const financeReports = visibleMemberships.filter((item) => item.association.financePublic).map((item) => ({ association: item.association }));
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
     notifications.unshift(...pins.notifications);
-    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

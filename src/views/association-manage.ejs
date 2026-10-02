@@ -24,6 +24,7 @@
       <p>町内会の基本情報と年度ごとの担当を設定します。</p>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/managers"><span><strong>町内会管理者を指定</strong><small>管理者の追加・解除</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/groups"><span><strong>町内会内グループを管理<% if (pendingGroupRequestCount) { %> <span class="pending-count-badge"><%= pendingGroupRequestCount %>件</span><% } %></strong><small>作成申請・責任者の設定</small></span><span aria-hidden="true">→</span></a>
+      <a class="association-manage-setting-link" href="/associations/<%= association._id %>/equipment/settings"><span><strong>設備・備品管理の設定</strong><small>棚卸し周期・スタート年月・消費期限アラート</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/notifications"><span><strong>通知設定</strong><small>項目ごとのPush・メール通知のON／OFF</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/basic"><span><strong>基本設定を開く</strong><small>役職・部会・班・町内会名</small></span><span aria-hidden="true">→</span></a>
       <a class="association-manage-setting-link" href="/associations/<%= association._id %>/manage/annual"><span><strong>年度設定を開く</strong><small>年度役員・所属部・班長</small></span><span aria-hidden="true">→</span></a>

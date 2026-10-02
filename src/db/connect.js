@@ -1,3 +1,4 @@
+import { AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder } from '../models/equipment.js';
 import mongoose from 'mongoose';
 import { Household, HouseholdMember } from '../models/organization.js';
 
@@ -52,6 +53,13 @@ export const connectDatabase = async (mongoUri, nodeEnv = 'development') => {
   // Existing installations may still have a non-sparse unique index, which
   // treats every unregistered household's null representative as a duplicate.
   await ensureHouseholdRepresentativeIndex();
+  // Create equipment collections before transactions; enforce reminder and
+  // inventory uniqueness even when production disables automatic indexes.
+  const equipmentModels = [AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder];
+  for (const model of equipmentModels) {
+    await model.createCollection();
+    await model.createIndexes();
+  }
   return mongoose.connection;
 };
 

@@ -1,0 +1,49 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell equipment-page equipment-list-page">
+<% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+<a class="back-link" href="/associations/<%= association._id %>/<%= canAnswer ? 'officer' : '' %>">← <%= canAnswer ? '役員メニュー' : '町内会' %>へ戻る</a>
+<header class="equipment-list-header">
+  <div class="equipment-heading-copy"><div class="equipment-title-guide"><h1>設備・備品管理</h1><button type="button" class="equipment-guide-icon" id="equipment-guide-toggle" aria-label="設備・備品管理のガイド" aria-expanded="false" aria-controls="equipment-guide">?</button>  <div class="equipment-guide" id="equipment-guide" role="region" aria-label="設備・備品管理のガイド" hidden>
+    <p>設備・備品を保管場所ごとに確認できます。タブでストック・防災対策・購入希望を切り替えます。</p>
+    <% if (canAnswer) { %><p>「設備・備品を追加」から登録し、カード下部の鉛筆で編集、ゴミ箱で削除できます。購入リンクから商品ページを開けます。</p><p>棚卸しリストで数量と確認状況を記録し、そろそろ購入リストで期限の近い備品や不足分を確認します。</p><% } %>
+    <p>貸出可能な備品は、カードの「貸出カレンダー」から空きを確認して申し込めます。</p>
+  </div>
+</div><p><%= association.name %>の設備・備品を保管場所ごとに管理</p></div>
+  <% if (canAnswer) { %><div class="equipment-header-links"><a class="equipment-header-pill equipment-inventory-pill" href="<%= base %>/inventory"><%- include('partials/equipment-icon', { icon: 'check-square' }) %>棚卸しリスト</a><a class="equipment-header-pill equipment-purchase-pill" href="<%= base %>/purchase-list"><%- include('partials/equipment-icon', { icon: 'shopping-bag' }) %>そろそろ購入リスト</a></div><% } %>
+</header>
+<div class="equipment-filter-bar">
+  <nav class="equipment-filter-tabs" aria-label="備品の表示切替"><% [['all','すべて'],['stock','ストック'],['disaster','防災対策'],['wishlist','ウィッシュリスト']].forEach(([key,label]) => { %><a class="equipment-filter-tab <%= tab === key ? 'is-active' : '' %>" href="<%= base %>?tab=<%= key %>" <%- tab === key ? 'aria-current="page"' : '' %>><%= label %></a><% }) %></nav>
+  <% if (canAnswer) { %><a class="equipment-add-button" data-equipment-editor="new" href="<%= base %>/new?tab=<%= tab %>"><span aria-hidden="true">＋</span> 設備・備品を追加</a><% } %>
+</div>
+<% if (!groups.length) { %><div class="content-card"><p>設備・備品はまだありません。</p></div><% } %>
+<% groups.forEach(place => { %><section class="content-card equipment-place"><div class="section-heading"><h2><%= place.name %></h2><% if (canAnswer) { %><a class="button button-quiet button-small" data-equipment-editor="new" href="<%= base %>/new?place=<%= encodeURIComponent(place.name) %>&tab=<%= tab %>">＋ この場所に追加</a><% } %></div>
+<div class="equipment-card-grid">
+<% place.groups.flatMap(group => group.items).forEach(item => { %>
+  <article class="equipment-card">
+    <div class="equipment-card-main">
+      <% if (item.productImageUrl) { %><img src="<%= item.productImageUrl %>" alt="<%= item.name %>の画像" loading="lazy"><% } else { %><span class="equipment-placeholder">No Image</span><% } %>
+      <div class="equipment-card-details">
+        <div class="equipment-card-title-row">
+          <button type="button" class="equipment-card-name" data-equipment-name aria-expanded="false" title="<%= item.name %>"><%= item.name %></button>
+
+        </div>
+        <% if (item.note) { %><p class="equipment-card-note" title="<%= item.note %>"><%= item.note %></p><% } %>
+        <p class="equipment-card-quantity"><%= item.quantity %><%= item.unit %></p>
+        <p class="equipment-card-owner">所有：町内会</p>
+        <% if (item.quantity < item.minimumQuantity) { %><span class="equipment-warning">不足 <%= item.minimumQuantity - item.quantity %><%= item.unit %></span><% } %>
+        <div class="equipment-tags"><% if (item.disasterCategory) { %><span class="equipment-tag-disaster"><%= item.disasterCategory %></span><% } %><% if (item.stockCategory) { %><span class="equipment-tag-stock"><%= item.stockCategory %></span><% } %><% if (item.wishlist) { %><span class="equipment-tag-wishlist">購入希望</span><% } %></div>
+        <% if (item.maintenance) { %><p class="equipment-card-note" title="<%= item.maintenance %>"><%= item.maintenance %></p><% } %>
+        <% if (item.expiryDate) { %><p class="equipment-card-note">期限：<%= item.expiryDate %></p><% } %>
+      </div>
+    </div>
+    <div class="equipment-card-actions"><div class="equipment-card-links"><a class="equipment-calendar-link" href="<%= base %>/<%= item._id %>/loans"><%- include('partials/equipment-icon', { icon: 'calendar' }) %><span>貸出カレンダー</span></a><% if (canAnswer && item.productUrl) { %><a class="equipment-purchase-link" href="<%= base %>/<%= item._id %>/purchase" target="_blank" rel="noopener"><%- include('partials/equipment-icon', { icon: 'shopping-cart' }) %><span>購入</span></a><% } %></div>
+          <% if (canAnswer) { %><div class="equipment-card-tools">
+            <a class="equipment-icon-action" data-equipment-editor="edit" href="<%= base %>/<%= item._id %>/edit" aria-label="<%= item.name %>を編集" title="編集"><%- include('partials/equipment-icon', { icon: 'pencil' }) %></a>
+            <form action="<%= base %>/<%= item._id %>/delete" method="post" data-equipment-delete><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="equipment-icon-action equipment-icon-delete" type="submit" aria-label="<%= item.name %>を削除" title="削除"><%- include('partials/equipment-icon', { icon: 'trash-2' }) %></button></form>
+          </div><% } %>
+    </div>
+  </article>
+<% }) %>
+</div></section><% }) %>
+<% if (canAnswer) { %><dialog class="equipment-editor-dialog" id="equipment-editor-dialog" aria-labelledby="equipment-editor-title"><div class="equipment-editor-heading"><h2 id="equipment-editor-title">設備・備品を追加</h2><button type="button" class="dialog-close" data-close-equipment-dialog aria-label="閉じる">×</button></div><div data-equipment-editor-content></div></dialog><script src="/assets/equipment-editor.js?v=<%= assetVersion %>" defer></script><% } %>
+</main><script>document.querySelectorAll('[data-equipment-name]').forEach(button=>button.addEventListener('click',()=>{const expanded=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(expanded));button.classList.toggle('is-expanded',expanded)}));</script><script>(()=>{const button=document.getElementById('equipment-guide-toggle'),guide=document.getElementById('equipment-guide'),anchor=button.closest('.equipment-title-guide');const close=()=>{guide.hidden=true;button.setAttribute('aria-expanded','false')};button.addEventListener('click',()=>{const expanded=button.getAttribute('aria-expanded')!=='true';guide.hidden=!expanded;button.setAttribute('aria-expanded',String(expanded))});document.addEventListener('click',event=>{if(!anchor.contains(event.target))close()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!guide.hidden){close();button.focus()}})})();</script><script>document.querySelectorAll('[data-equipment-delete]').forEach(form=>form.addEventListener('submit',event=>{if(!confirm('この設備・備品を削除しますか？'))event.preventDefault()}));</script><%- include('partials/foot') %>

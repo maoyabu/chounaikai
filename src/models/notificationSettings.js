@@ -7,6 +7,7 @@ export const notificationCategories = [
   ['withdrawal', '退会申請・承認結果'], ['question', '質問・再質問・回答'],
   ['assignment', '班長・役員の任命'], ['group_request', 'グループ作成・参加申請と承認結果'],
   ['event', '町内会行事の登録・変更・削除'], ['group_event', 'グループ行事の登録・変更・削除'],
+  ['equipment_inventory', '設備・備品の棚卸し'], ['equipment_expiry', '設備・備品の期限アラート'], ['equipment_loan', '設備・備品の貸出申込み・承認'],
   ['department_plan', '部会の目標・実施報告']
 ];
 export const notificationCategory = type => {
