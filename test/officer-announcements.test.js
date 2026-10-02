@@ -12,7 +12,7 @@ import { RoleDefinition } from '../src/models/role.js';
 import { DistrictGroup } from '../src/models/organization.js';
 import { Notification } from '../src/models/notification.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../src/models/officerAnnouncement.js';
-import { confirmAnnouncement, setAnnouncementPin, loadAnnouncementPins, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, summarizeAnnouncementResponses } from '../src/services/officerAnnouncementService.js';
+import { confirmAnnouncement, editResidentAnnouncement, setAnnouncementPin, loadAnnouncementPins, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, summarizeAnnouncementResponses } from '../src/services/officerAnnouncementService.js';
 import { officerAnnouncementsRouter } from '../src/routes/officerAnnouncements.js';
 
 const id = () => new mongoose.Types.ObjectId();
@@ -215,4 +215,32 @@ test('home pins request newest first and suppress duplicate and dismissed notifi
   assert.deepEqual(result.notifications.map(item => item.title), ['新しいピン', '古いピン']);
   assert.deepEqual(result.excludedAnnouncementIds, [newest, older, dismissed]);
   assert.match(result.notifications[0].pinUrl, /\/pin$/);
+});
+
+test('editing reconciles recipients, retention and changed answers in one transaction', async t => {
+  access(t);
+  const existing = { _id: announcementId, sender: officer, channel: 'resident', updatedAt: new Date(), responseMode: 'single', options: ['はい', 'いいえ'], attachments: [{ publicId: 'kept', url: 'https://example.test/a.png', mimeType: 'image/png', expiresAt: new Date(0) }] };
+  t.mock.method(OfficerAnnouncement, 'findOne', () => query(existing));
+  t.mock.method(AssociationMembership, 'find', () => query([{ user: leader }]));
+  t.mock.method(mongoose.connection, 'transaction', async callback => callback('session'));
+  let saved, reset, removed, writes;
+  t.mock.method(OfficerAnnouncement, 'updateOne', async (_filter, update, options) => { saved = update.$set; assert.equal(options.session, 'session'); return { matchedCount: 1 }; });
+  t.mock.method(OfficerAnnouncementReceipt, 'deleteMany', async filter => { removed = filter; });
+  t.mock.method(OfficerAnnouncementReceipt, 'bulkWrite', async values => { writes = values; });
+  t.mock.method(OfficerAnnouncementReceipt, 'updateMany', async (_filter, update) => { reset = update; });
+  t.mock.method(Notification, 'deleteMany', async () => {});
+  t.mock.method(Notification, 'insertMany', async () => []);
+  await editResidentAnnouncement({ associationId: association, announcementId, userId: officer, audience: 'all', recipientScope: 'all', urgency: 3, title: '編集後', body: '更新', responseMode: 'multiple', options: ['参加', '欠席'], attachmentRetentionDays: '90' });
+  assert.equal(saved.title, '編集後');
+  assert.equal(saved.attachmentRetentionDays, 90);
+  assert.ok(saved.attachments[0].expiresAt > new Date());
+  assert.deepEqual(removed.recipient.$nin, [leader]);
+  assert.equal(writes[0].updateOne.upsert, true);
+  assert.deepEqual(reset.$unset, { selectedOptions: 1, respondedAt: 1, readAt: 1 });
+});
+
+test('editing rejects another sender before mutation', async t => {
+  access(t);
+  t.mock.method(OfficerAnnouncement, 'findOne', () => query({ _id: announcementId, sender: another, channel: 'resident' }));
+  await assert.rejects(editResidentAnnouncement({ associationId: association, announcementId, userId: officer }), { status: 403 });
 });

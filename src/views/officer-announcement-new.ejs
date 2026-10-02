@@ -1,13 +1,14 @@
+<% const editing = typeof editingAnnouncement !== 'undefined' ? editingAnnouncement : null; const selectedLocations = new Set((editing?.targetDistrictGroups || []).map(String)); %>
 <%- include('partials/head') %>
 <%- include('partials/header') %>
 <main class="page-shell communication-theme page-narrow">
   <a class="back-link" href="/associations/<%= association._id %>/announcements/officer">← 町内会役員から住人への連絡へ戻る</a>
-  <section class="page-heading"><h1>役員から連絡を送る</h1></section>
+  <section class="page-heading"><h1><%= editing ? 'メッセージを編集' : '役員から連絡を送る' %></h1></section>
   <section class="content-card announcement-card">
-    <form class="form-stack" action="/associations/<%= association._id %>/announcements/officer" method="post" enctype="multipart/form-data">
+    <form class="form-stack" action="/associations/<%= association._id %>/announcements/officer<%= editing ? `/${editing._id}/edit` : '' %>" method="post" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <label>送信先<select name="audience" required><option value="leaders">班長</option><option value="all">全住人</option></select></label>
-      <label>送信対象の地区・班<select name="recipientScope" id="announcement-recipient-scope"><option value="all">すべての地区・班</option><option value="selected">地区・班を指定</option></select></label>
+      <label>送信先<select name="audience" required><option value="leaders" <%= editing?.audience === 'leaders' ? 'selected' : '' %>>班長</option><option value="all" <%= editing?.audience === 'all' ? 'selected' : '' %>>全住人</option></select></label>
+      <label>送信対象の地区・班<select name="recipientScope" id="announcement-recipient-scope"><option value="all">すべての地区・班</option><option value="selected" <%= selectedLocations.size ? 'selected' : '' %>>地区・班を指定</option></select></label>
       <fieldset class="announcement-options" id="announcement-district-groups" hidden>
         <legend>対象の地区（複数選択可）</legend>
         <p class="help-text">地区を選ぶと、その地区の全班が対象になります。地区名をクリックすると、対象の班を絞り込めます。</p>
@@ -16,7 +17,7 @@
           <% districts.forEach(district => { const children = locations.filter(group => String(group.parentDistrict) === String(district._id)); %>
             <div data-announcement-district>
               <div class="announcement-district-row">
-                <input type="checkbox" value="<%= district._id %>" data-district-check aria-label="<%= district.name %>を対象にする" disabled>
+                <input type="checkbox" value="<%= district._id %>" data-district-check <%= selectedLocations.has(String(district._id)) || children.some(group => selectedLocations.has(String(group._id))) ? 'checked' : '' %> aria-label="<%= district.name %>を対象にする" disabled>
                 <button type="button" class="button button-quiet" data-open-district-dialog><%= district.name %></button>
                 <small data-district-summary>未選択</small>
               </div>
@@ -24,7 +25,7 @@
                 <div class="dialog-heading"><h3 id="district-title-<%= district._id %>"><%= district.name %>の対象班</h3><button type="button" class="dialog-close" data-close-district-dialog aria-label="閉じる">×</button></div>
                 <p class="help-text">送信対象から外す班のチェックを外してください。</p>
                 <div class="officer-recipient-list">
-                  <% children.forEach(group => { %><label><input type="checkbox" value="<%= group._id %>" data-group-check checked> <%= group.name %></label><% }) %>
+                  <% children.forEach(group => { %><label><input type="checkbox" value="<%= group._id %>" data-group-check <%= !editing || selectedLocations.has(String(district._id)) || selectedLocations.has(String(group._id)) ? 'checked' : '' %>> <%= group.name %></label><% }) %>
                 </div>
                 <% if (!children.length) { %><p class="help-text">この地区には班が登録されていません。地区全体が対象になります。</p><% } %>
                 <div class="form-actions"><button type="button" class="button button-primary" data-close-district-dialog>完了</button></div>
@@ -36,14 +37,16 @@
         <% if (!districts.length) { %><p class="help-text">選択できる地区がありません。</p><% } %>
       </fieldset>
       <p class="help-text">送信時点で町内会に参加している対象者へ連絡します。地区・班を指定しない場合は町内会全体が対象です。</p>
-      <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
-      <label>タイトル<input name="title" maxlength="120" required></label>
-      <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
+      <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === (editing?.urgency || 3) ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
+      <label>タイトル<input name="title" value="<%= editing?.title || '' %>" maxlength="120" required></label>
+      <label>内容<textarea name="body" rows="8" maxlength="5000" required><%= editing?.body || '' %></textarea></label>
+      <% if (editing) { %><fieldset class="announcement-options"><legend>現在の添付ファイル</legend><p class="help-text">差し替えるファイルに削除チェックを付け、新しいファイルを選択してください。削除しないファイルは保持されます。</p><% (editing.attachments || []).forEach(file => { %><label class="announcement-option"><input type="checkbox" name="removeAttachmentIds" value="<%= file.publicId %>"><span><%= file.originalName %>を削除</span></label><% }) %></fieldset><% } %>
       <label>添付ファイル（3個まで、1個15MB以下）<input type="file" name="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"></label>
-      <label>添付資料の保存期限<select name="attachmentRetentionDays"><option value="7">7日間</option><option value="30" selected>30日間</option><option value="90">90日間</option><option value="180">180日間</option><option value="365">1年間</option></select></label>
-      <label>回答方法<select name="responseMode" id="announcement-response-mode"><option value="none">回答なし（確認のみ）</option><option value="single">選択肢から1つ</option><option value="multiple">選択肢から複数</option></select></label>
-      <fieldset class="announcement-options" id="announcement-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" data-announcement-option></label><% } %></fieldset>
-      <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
+      <label>添付資料の保存期限<select name="attachmentRetentionDays"><option value="7" <%= (editing?.attachmentRetentionDays || 30) === 7 ? 'selected' : '' %>>7日間</option><option value="30" <%= (editing?.attachmentRetentionDays || 30) === 30 ? 'selected' : '' %>>30日間</option><option value="90" <%= (editing?.attachmentRetentionDays || 30) === 90 ? 'selected' : '' %>>90日間</option><option value="180" <%= (editing?.attachmentRetentionDays || 30) === 180 ? 'selected' : '' %>>180日間</option><option value="365" <%= (editing?.attachmentRetentionDays || 30) === 365 ? 'selected' : '' %>>1年間</option></select></label>
+      <% if (editing) { %><p class="help-text">保存期間は編集時点から適用します。送信対象から外した住人はこのメッセージを閲覧できなくなります。回答方法・選択肢を変更すると、既存の回答と確認状態をリセットし、再回答を依頼します。</p><% } %>
+      <label>回答方法<select name="responseMode" id="announcement-response-mode"><option value="none" <%= editing?.responseMode === 'none' ? 'selected' : '' %>>回答なし（確認のみ）</option><option value="single" <%= editing?.responseMode === 'single' ? 'selected' : '' %>>選択肢から1つ</option><option value="multiple" <%= editing?.responseMode === 'multiple' ? 'selected' : '' %>>選択肢から複数</option></select></label>
+      <fieldset class="announcement-options" id="announcement-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" value="<%= editing?.options?.[number - 1] || '' %>" data-announcement-option></label><% } %></fieldset>
+      <div class="form-actions"><button class="button button-primary" type="submit"><%= editing ? '変更を保存' : '連絡を送信' %></button></div>
     </form>
   </section>
 </main>

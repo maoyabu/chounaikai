@@ -16,6 +16,7 @@ const announcementSchema = new mongoose.Schema({
   urgency: { type: Number, min: 1, max: 5, required: true },
   title: { type: String, required: true, trim: true, maxlength: 120 },
   body: { type: String, required: true, maxlength: 5000 },
+  attachmentRetentionDays: { type: Number, enum: [7, 30, 90, 180, 365], default: 30 },
   attachments: [{
     url: { type: String, required: true },
     publicId: { type: String, required: true },

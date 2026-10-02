@@ -41,7 +41,7 @@ export const requireDistrictMember = async (associationId, userId) => {
 };
 export const isCurrentDistrictLeader = async (associationId, districtGroup, userId) => Boolean(await AnnualLeaderAssignment.exists({ association: associationId, districtGroup, representative: userId, fiscalYear: fiscalYear(), cancelledAt: null }));
 
-export const publishAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], recipientScope = 'all', targetDistrictGroupIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
+const prepareAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], recipientScope = 'all', targetDistrictGroupIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
   const districtMembership = channel === 'district' ? await requireDistrictMember(associationId, userId) : null;
   const groupMembership = channel === 'association_group' ? await AssociationGroupMembership.findOne({ association: associationId, group: associationGroupId, user: userId, status: 'active' }) : null;
   if (!districtMembership && !groupMembership) await requireAnnouncementOfficer(associationId, userId);
@@ -126,12 +126,19 @@ export const publishAnnouncement = async ({ associationId, userId, channel = 're
   if (audience === 'officer_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の役員から送信先を選択してください。');
   if (audience === 'district_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の班員から送信先を選択してください。');
   if (!recipients.length) throw fail('送信できる対象者がいません。');
+  return { recipients, retentionDays, data: { association: associationId, sender: userId, channel, audience, targetDistrictGroups: selectedDistrictGroupIds, resolvedDistrictGroups: resolvedDistrictGroupIds, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
+    title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices } };
+};
+
+export const publishAnnouncement = async (input) => {
+  const { recipients, retentionDays, data } = await prepareAnnouncement(input);
+  const { associationId, channel = 'resident', files = [] } = input;
+  const level = data.urgency;
   const uploaded = [];
   try {
     const expiresAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
-    for (const file of (files || [])) uploaded.push({ ...(await uploadAnnouncementAttachment(file, associationId)), expiresAt });
-    const announcement = await OfficerAnnouncement.create({ association: associationId, sender: userId, channel, audience, targetDistrictGroups: selectedDistrictGroupIds, resolvedDistrictGroups: resolvedDistrictGroupIds, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
-      title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices, attachments: uploaded });
+    for (const file of files) uploaded.push({ ...(await uploadAnnouncementAttachment(file, associationId)), expiresAt });
+    const announcement = await OfficerAnnouncement.create({ ...data, attachmentRetentionDays: retentionDays, attachments: uploaded });
     try {
       await OfficerAnnouncementReceipt.insertMany(recipients.map(recipient => ({ announcement: announcement._id, association: associationId, recipient })));
     } catch (error) {
@@ -253,4 +260,43 @@ export const loadAnnouncementPins = async ({ userId, associationIds }) => {
       actionLabel: 'メッセージを確認', pinUrl: `/associations/${receipt.association._id}/announcements/${receipt.announcement._id}/pin`
     }))
   };
+};
+
+export const editResidentAnnouncement = async ({ associationId, announcementId, userId, files = [], ...input }) => {
+  if (!mongoose.isValidObjectId(announcementId)) throw fail('連絡を確認できません。', 404);
+  await requireAnnouncementOfficer(associationId, userId);
+  const existing = await OfficerAnnouncement.findOne({ _id: announcementId, association: associationId }).lean();
+  if (!existing || (existing.channel || 'resident') !== 'resident') throw fail('連絡を確認できません。', 404);
+  if (String(existing.sender) !== String(userId)) throw fail('投稿者本人だけが変更できます。', 403);
+  const { recipients, retentionDays, data } = await prepareAnnouncement({ ...input, associationId, userId, channel: 'resident', files });
+  if (![7, 30, 90, 180, 365].includes(retentionDays)) throw fail('添付資料の保存期限を選択してください。');
+  const removedIds = [...new Set((Array.isArray(input.removeAttachmentIds) ? input.removeAttachmentIds : input.removeAttachmentIds ? [input.removeAttachmentIds] : []).map(String))];
+  if (removedIds.some(value => !(existing.attachments || []).some(file => file.publicId === value))) throw fail('削除する添付ファイルを確認してください。');
+  const kept = (existing.attachments || []).filter(file => !removedIds.includes(file.publicId));
+  if (kept.length + files.length > 3) throw fail('添付ファイルは3個まで登録できます。');
+  const responseChanged = existing.responseMode !== data.responseMode || JSON.stringify(existing.options) !== JSON.stringify(data.options);
+  const uploaded = [];
+  const expiresAt = new Date(Date.now() + retentionDays * 86400000);
+  try {
+    for (const file of files) uploaded.push({ ...(await uploadAnnouncementAttachment(file, associationId)), expiresAt });
+    await mongoose.connection.transaction(async session => {
+      const changed = await OfficerAnnouncement.updateOne({ _id: announcementId, association: associationId, sender: userId, updatedAt: existing.updatedAt },
+        { $set: { ...data, attachments: [...kept.map(file => ({ ...file, expiresAt })), ...uploaded], attachmentRetentionDays: retentionDays, editedAt: new Date() } }, { session });
+      if (!changed.matchedCount) throw fail('別の編集が保存されました。画面を開き直してください。', 409);
+      await OfficerAnnouncementReceipt.deleteMany({ announcement: announcementId, recipient: { $nin: recipients } }, { session });
+      await OfficerAnnouncementReceipt.bulkWrite(recipients.map(recipient => ({ updateOne: {
+        filter: { announcement: announcementId, recipient }, update: { $setOnInsert: { association: associationId } }, upsert: true
+      } })), { session });
+      if (responseChanged) await OfficerAnnouncementReceipt.updateMany({ announcement: announcementId }, { $unset: { selectedOptions: 1, respondedAt: 1, readAt: 1 } }, { session });
+      await Notification.deleteMany({ relatedType: 'OfficerAnnouncement', relatedId: announcementId, recipient: { $nin: recipients } }, { session });
+    });
+  } catch (error) {
+    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType)));
+    throw error;
+  }
+  await Promise.allSettled((existing.attachments || []).filter(file => removedIds.includes(file.publicId)).map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType)));
+  try {
+    await createNotifications(recipients.map(recipient => ({ association: associationId, recipient, type: 'officer_announcement',
+      title: `連絡が更新されました：${data.title}`, body: responseChanged ? '回答方法が変更されました。内容を確認して、もう一度回答してください。' : 'メッセージの内容を確認してください。', relatedType: 'OfficerAnnouncement', relatedId: announcementId })));
+  } catch (error) { console.error('Announcement edit notification failed', error); }
 };

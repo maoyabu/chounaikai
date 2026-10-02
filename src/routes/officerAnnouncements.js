@@ -6,7 +6,7 @@ import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/offic
 import { DistrictGroup } from '../models/organization.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { loadQuestionBoxAccess } from '../services/questionBoxService.js';
-import { confirmAnnouncement, setAnnouncementPin, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, requireAnnouncementOfficer, summarizeAnnouncementResponses, updateAnnouncementVisibility } from '../services/officerAnnouncementService.js';
+import { confirmAnnouncement, editResidentAnnouncement, setAnnouncementPin, loadRecipientAnnouncement, publishAnnouncement, remindAnnouncement, requireAnnouncementOfficer, summarizeAnnouncementResponses, updateAnnouncementVisibility } from '../services/officerAnnouncementService.js';
 import { acceptAnnouncementAttachments, repairMojibakeFilename } from '../services/announcementAttachmentService.js';
 
 export const officerAnnouncementsRouter = express.Router();
@@ -42,6 +42,16 @@ officerAnnouncementsRouter.post('/:associationId/announcements/officer', acceptA
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = `${recipientCount}人に連絡を送りました。`;
     return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${announcement._id}`);
+  } catch (error) { return next(error); }
+});
+
+officerAnnouncementsRouter.get('/:associationId/announcements/officer/:announcementId/edit', async (req, res, next) => {
+  try {
+    const association = await requireAnnouncementOfficer(req.params.associationId, req.user._id);
+    const announcement = await OfficerAnnouncement.findOne({ _id: checkedId(req.params.announcementId), association: association._id, sender: req.user._id, $or: [{ channel: 'resident' }, { channel: { $exists: false } }] }).lean();
+    if (!announcement) throw Object.assign(new Error('投稿者本人だけが編集できます。'), { status: 403 });
+    const districtGroups = await DistrictGroup.find({ association: association._id, active: true }).sort({ sortOrder: 1, name: 1 }).lean();
+    return res.render('officer-announcement-new', { title: 'メッセージを編集', association, districtGroups, editingAnnouncement: announcement });
   } catch (error) { return next(error); }
 });
 
@@ -83,7 +93,14 @@ officerAnnouncementsRouter.get('/:associationId/announcements', async (req, res,
   } catch (error) { return next(error); }
 });
 
-officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announcementId/edit', verifyCsrfToken, async (req, res, next) => { try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, title: req.body.title, body: req.body.body }); req.session.notice = '連絡を編集しました。'; return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${req.params.announcementId}`); } catch (error) { return next(error); } });
+officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announcementId/edit', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
+  try {
+    await editResidentAnnouncement({ ...req.body, associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, files: req.files,
+      options: req.body.responseMode === 'none' ? [] : [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
+    req.session.notice = '連絡を編集しました。';
+    return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${req.params.announcementId}`);
+  } catch (error) { return next(error); }
+});
 officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announcementId/mute', verifyCsrfToken, async (req, res, next) => { try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: true }); req.session.notice = '連絡をミュートしました。'; return res.redirect(`/associations/${req.params.associationId}/announcements/officer`); } catch (error) { return next(error); } });
 officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announcementId/unmute', verifyCsrfToken, async (req, res, next) => { try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: false }); req.session.notice = '連絡を復活しました。'; return res.redirect(`/associations/${req.params.associationId}/announcements/officer`); } catch (error) { return next(error); } });
 
