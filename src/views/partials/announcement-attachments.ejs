@@ -1,6 +1,5 @@
 <% if (announcement.attachments?.length) { %>
   <section class="announcement-attachments" data-announcement-attachments>
-    <h2>添付ファイル</h2>
     <% const images = announcement.attachments.filter(file => /^image\//i.test(file.mimeType || '') || (!file.mimeType && file.resourceType === 'image')); const documents = announcement.attachments.filter(file => !images.includes(file)); %>
     <% if (images.length) { %><div class="announcement-image-carousel" data-image-carousel>
       <div class="announcement-image-track" data-image-track tabindex="0" role="region" aria-label="添付画像（左右にスライド）">
@@ -13,7 +12,7 @@
         </figure>
       <% }) %>
       </div>
-      <% if (images.length > 1) { %><div class="announcement-image-navigation"><button type="button" class="button button-quiet button-small" data-image-previous aria-label="前の画像">‹</button><span data-image-position aria-live="polite">1 / <%= images.length %></span><button type="button" class="button button-quiet button-small" data-image-next aria-label="次の画像">›</button></div><% } %>
+
     </div><% } %>
     <% documents.forEach(file => { %>
         <p><a href="<%= file.url %>" target="_blank" rel="noopener"><%= file.originalName %></a></p>
@@ -46,23 +45,3 @@
     });
   })();</script>
 <% } %>
-<script>(() => {
-  document.querySelectorAll('[data-image-carousel]').forEach(carousel => {
-    if (carousel.dataset.ready) return;
-    carousel.dataset.ready = '1';
-    const track = carousel.querySelector('[data-image-track]');
-    const slides = [...track.querySelectorAll('.announcement-image')];
-    const previous = carousel.querySelector('[data-image-previous]');
-    const next = carousel.querySelector('[data-image-next]');
-    if (!previous || !next) return;
-    const position = carousel.querySelector('[data-image-position]');
-    const index = () => Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / (track.clientWidth || 1))));
-    const update = () => { const current = index(); position.textContent = `${current + 1} / ${slides.length}`; previous.disabled = current === 0; next.disabled = current === slides.length - 1; };
-    const move = step => track.scrollTo({ left: Math.max(0, Math.min(slides.length - 1, index() + step)) * track.clientWidth, behavior: 'smooth' });
-    previous.addEventListener('click', () => move(-1));
-    next.addEventListener('click', () => move(1));
-    track.addEventListener('scroll', update, { passive: true });
-    track.addEventListener('keydown', event => { if (event.target !== track || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return; event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1); });
-    update();
-  });
-})();</script>

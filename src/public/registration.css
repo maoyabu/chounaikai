@@ -1412,3 +1412,16 @@ h1, h2, h3, h4, h5, h6,
   .notification-card .notification-title-and-source { flex-basis: 100%; }
   .notification-item-heading > .notification-actions { margin-left: auto; }
 }
+
+.announcement-date { display: block; margin: .3rem 0; color: var(--muted); font-size: .75rem; }
+.announcement-title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.announcement-title-row h1 { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.announcement-title-row .announcement-stars { flex: 0 0 auto; margin: 0; white-space: nowrap; }
+.announcement-image-track { gap: .75rem; }
+.announcement-image-track .announcement-image { flex: 0 0 calc((100% - 1.5rem) / 3); }
+.announcement-image-track .announcement-image-trigger img { aspect-ratio: 4 / 3; object-fit: contain; background: #f2f5f3; }
+.announcement-image-track .announcement-image figcaption { font-size: .75rem; }
+@media (max-width: 600px) {
+  .announcement-title-row { align-items: flex-start; gap: .5rem; }
+  .announcement-title-row .announcement-stars { font-size: .9rem; letter-spacing: 0; }
+}
