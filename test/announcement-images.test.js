@@ -43,3 +43,21 @@ test('image click opens selected image in modal and close clears image source', 
   listeners.click({ target: dialog, clientX: 0, clientY: 0 });
   assert.equal(dialog.open, false);
 });
+
+test('multiple images use one horizontal track with next and previous controls', async () => {
+  const html = await ejs.renderFile('src/views/partials/announcement-attachments.ejs', { announcement: { ...announcement, attachments: [announcement.attachments[0], { ...announcement.attachments[0], url: 'https://example.test/two.png' }] } });
+  assert.equal((html.match(/class="announcement-image-track"/g) || []).length, 1);
+  assert.equal((html.match(/class="announcement-image"/g) || []).length, 2);
+  const callbacks = {};
+  const previous = { addEventListener(name, callback) { callbacks.previous = callback; } };
+  const next = { addEventListener(name, callback) { callbacks.next = callback; } };
+  const position = {};
+  const track = { scrollLeft: 0, clientWidth: 400, querySelectorAll: () => [{}, {}],
+    addEventListener(name, callback) { callbacks[name] = callback; }, scrollTo({ left }) { this.scrollLeft = left; callbacks.scroll(); } };
+  const carousel = { dataset: {}, querySelector: selector => ({ '[data-image-track]': track, '[data-image-previous]': previous, '[data-image-next]': next, '[data-image-position]': position })[selector] };
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  vm.runInNewContext(scripts[1][1], { document: { querySelectorAll: () => [carousel] } });
+  assert.equal(previous.disabled, true);
+  callbacks.next(); assert.equal(track.scrollLeft, 400); assert.equal(position.textContent, '2 / 2'); assert.equal(next.disabled, true);
+  callbacks.previous(); assert.equal(track.scrollLeft, 0); assert.equal(position.textContent, '1 / 2');
+});

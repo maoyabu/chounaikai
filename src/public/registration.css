@@ -1385,3 +1385,19 @@ h1, h2, h3, h4, h5, h6,
 .announcement-image-dialog-heading strong { min-width: 0; overflow-wrap: anywhere; }
 .announcement-image-dialog-heading button { flex-shrink: 0; }
 .announcement-image-dialog > img { display: block; width: 100%; height: auto; }
+
+.announcement-image-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
+.announcement-image-track .announcement-image { flex: 0 0 100%; min-width: 0; margin: 0; scroll-snap-align: start; }
+.announcement-image-navigation { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: .65rem; }
+.announcement-image-navigation button:disabled { opacity: .35; cursor: default; }
+.notification-card { position: relative; min-width: 0; }
+.notification-card-link { color: inherit; text-decoration: none; }
+.notification-card-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.notification-card-link:focus-visible { outline: none; }
+.notification-card-link:focus-visible::after { outline: 3px solid var(--green); outline-offset: -3px; }
+.notification-inbox .notification-body-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notification-card .notification-actions, .notification-pin-action { position: relative; z-index: 2; }
+.notification-pin-action { margin: 0 0 0 auto; }
+.notification-pin-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: .6rem; border: 0; border-radius: 50%; background: transparent; color: var(--green); cursor: pointer; }
+.notification-pin-icon:hover { background: var(--green-pale); }
+.notification-pin-icon svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
