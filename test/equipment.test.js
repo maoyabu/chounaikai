@@ -166,12 +166,12 @@ test('equipment editing rejects concurrent stock changes and protects active loa
   t.mock.method(EquipmentLoan, 'find', () => q([{ status: 'approved', startDate: '2026-11-01', endDate: '2026-11-02', quantity: 10 }]));
   await assert.rejects(saveEquipment({ associationId: association, userId: user, equipmentId, input: { ...baseInput, lendable: 'on', quantity: '5' } }), /貸出申込みに必要な数量/);
 });
-test('resident calendar links and icons stay visible with purchase URLs and disabled lending', async () => {
+test('resident calendar links require lending enabled regardless of purchase URLs', async () => {
   for (const lendable of [true, false]) {
     const entry = { ...item, lendable, productUrl: 'https://example.test/product' };
     const html = await ejs.renderFile('src/views/equipment-list.ejs', { ...common, canAnswer: false, items: [entry], groups: equipmentGroups([entry]), tab: 'all' });
-    assert.match(html, new RegExp(`href="${common.base}/${equipmentId}/loans"`));
-    assert.match(html, /class="equipment-calendar-link"[^>]*>\s*<svg[\s\S]*?<span>貸出カレンダー<\/span>/);
+    assert.equal(html.includes(`href="${common.base}/${equipmentId}/loans"`), lendable);
+    if (lendable) assert.match(html, /class="equipment-calendar-link"[^>]*>\s*<svg[\s\S]*?<span>貸出カレンダー<\/span>/);
     assert.doesNotMatch(html, /class="equipment-purchase-link"/);
     const calendar = await ejs.renderFile('src/views/equipment-loans.ejs', { ...common, canAnswer: false, item: entry, cells: [], requests: [], month: '2026-10', previous: '2026-09', next: '2026-11', today: '2026-10-02' });
     assert.equal(calendar.includes('id="equipment-day-loan"'), lendable);
@@ -200,5 +200,13 @@ test('resident home hides private equipment and shows only published association
     const html=await ejs.renderFile('src/views/dashboard.ejs',{...common,currentPath:'/dashboard',currentRoleTags:[],memberships:[membership],equipmentMemberships:published?[membership]:[],applications:[],pendingJoins:[],availableAssociations:[],notifications:[]});
     assert.equal(html.includes('設備・備品の貸出'),published);
     assert.equal(html.includes(`href="/associations/${association}/equipment"`),published);
+  }
+});
+
+test('officers retain calendar management links and residents cannot see wishlist calendar links', async () => {
+  for (const canAnswer of [true,false]) {
+    const entry={...item,lendable:true,wishlist:true};
+    const html=await ejs.renderFile('src/views/equipment-list.ejs',{...common,canAnswer,items:[entry],groups:equipmentGroups([entry]),tab:'all'});
+    assert.equal(html.includes(`href="${common.base}/${equipmentId}/loans"`),canAnswer);
   }
 });

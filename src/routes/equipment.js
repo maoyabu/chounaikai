@@ -101,7 +101,7 @@ equipmentRouter.post('/:associationId/equipment/:equipmentId/receive', verifyCsr
 
 equipmentRouter.get('/:associationId/equipment/:equipmentId/loans', handler(async (req, res) => {
   const access = await equipmentAccess(req.params.associationId, req.user._id);
-  const item = await AssociationEquipment.findOne({ _id: checkedEquipmentId(req.params.equipmentId), association: req.params.associationId, deletedAt: null }).lean();
+  const item = await AssociationEquipment.findOne({ _id: checkedEquipmentId(req.params.equipmentId), association: req.params.associationId, deletedAt: null, ...(access.canAnswer ? {} : { lendable: true, wishlist: { $ne: true } }) }).lean();
   if (!item) throw equipmentError('貸出可能な備品を確認できません。', 404);
   const today = japanDate(); const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.month)) ? String(req.query.month) : today.slice(0, 7);
   const start = `${month}-01`, index = monthIndex(month), next = monthString(index + 1), end = new Date(Date.parse(`${next}-01`) - 86400000).toISOString().slice(0, 10);
