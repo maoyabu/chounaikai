@@ -1616,3 +1616,13 @@ h1, h2, h3, h4, h5, h6,
 .equipment-loan-home .question-home-link { background: #fffdf5; border-color: #eadca9; }
 .equipment-loan-home .question-home-link:hover { background: #fff8dc; }
 .equipment-loan-home .list-arrow { color: #886116; }
+
+/* 役員機能のメニュー配色 */
+.officer-functions-section .officer-function-blue { border-left: 4px solid #2879b0; }
+.officer-function-blue strong { color: #205c86; }
+.officer-function-blue .list-arrow { color: #2879b0; }
+.officer-function-blue:hover, .officer-function-blue:focus-visible { background: #edf6fd; }
+.officer-functions-section .officer-function-green { border-left: 4px solid var(--green); }
+.officer-function-green strong { color: var(--green-dark); }
+.officer-function-green .list-arrow { color: var(--green); }
+.officer-function-green:hover, .officer-function-green:focus-visible { background: var(--green-pale); }
