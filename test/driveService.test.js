@@ -36,3 +36,15 @@ test('Google errors never expose upstream tokens or messages', async () => {
  const original = globalThis.fetch; globalThis.fetch = async () => new Response(JSON.stringify({ error: 'secret' }), { status: 403 });
  try { await assert.rejects(makeDriveClient('token').meta('root'), error => error.status === 400 && !error.message.includes('secret')); } finally { globalThis.fetch = original; }
 });
+test('Drive distinguishes disabled API and quota from folder permissions without exposing upstream data', async t => {
+ let payload;
+ t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify(payload), {status:403}));
+ for (const reason of ['accessNotConfigured','SERVICE_DISABLED']) {
+  payload={error:{message:'private information',errors:[{reason}],details:[{reason}]}};
+  await assert.rejects(makeDriveClient('secret-token').meta('root'), error => error.status===400 && error.message.includes('Google Drive APIを有効') && !error.message.includes('private information'));
+ }
+ payload={error:{errors:[{reason:'userRateLimitExceeded'}]}};
+ await assert.rejects(makeDriveClient('token').meta('root'), /利用制限/);
+ payload={error:{errors:[{reason:'insufficientFilePermissions'}]}};
+ await assert.rejects(makeDriveClient('token').meta('root'), /登録フォルダ/);
+});

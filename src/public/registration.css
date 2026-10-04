@@ -1626,3 +1626,16 @@ h1, h2, h3, h4, h5, h6,
 .officer-function-green strong { color: var(--green-dark); }
 .officer-function-green .list-arrow { color: var(--green); }
 .officer-function-green:hover, .officer-function-green:focus-visible { background: var(--green-pale); }
+
+.officer-menu-layout .question-home-link .officer-menu-title { display: flex; align-items: flex-start; gap: .6rem; }
+.officer-menu-title > span { min-width: 0; }
+.officer-menu-icon { flex: 0 0 24px; margin-top: .05rem; }
+.officer-menu-layout .question-home-link small { margin-left: calc(24px + .6rem); }
+
+.association-manage-layout .manage-menu-title { display: flex; align-items: flex-start; gap: .6rem; }
+.manage-menu-title > span { min-width: 0; overflow-wrap: anywhere; }
+.association-manage-setting-link > span:first-child { min-width: 0; flex: 1; }
+.association-manage-setting-link small { margin-left: calc(24px + .6rem); }
+
+.dashboard-shell .section-heading .dashboard-section-title { display: flex; align-items: flex-start; gap: .6rem; min-width: 0; }
+.dashboard-section-title > span { min-width: 0; overflow-wrap: anywhere; }

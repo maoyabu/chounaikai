@@ -50,7 +50,21 @@ export const driveClient = async connection => {
 export const makeDriveClient = token => {
   const request = async (endpoint, options = {}) => {
     const response = await fetch(`https://www.googleapis.com/${endpoint}`, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30000) });
-    if (!response.ok) { await response.body?.cancel(); throw driveError(response.status === 404 ? 'ファイルが見つかりません。移動・削除された可能性があります。' : response.status === 403 ? 'Google Driveの権限が不足しています。管理者に確認してください。' : 'Google Driveに接続できません。時間をおいてお試しください。', response.status === 404 ? 404 : 400); }
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      const reasons = [
+        ...(Array.isArray(data?.error?.errors) ? data.error.errors.map(item => item.reason) : []),
+        ...(Array.isArray(data?.error?.details) ? data.error.details.map(item => item.reason) : [])
+      ];
+      let message = response.status === 404 ? 'ファイルが見つかりません。移動・削除された可能性があります。' : response.status === 403 ? 'Google Driveの権限が不足しています。接続したアカウントが登録フォルダにアクセスできるか確認してください。' : 'Google Driveに接続できません。時間をおいてお試しください。';
+      if (reasons.some(reason => ['accessNotConfigured', 'SERVICE_DISABLED'].includes(reason))) {
+        message = '接続に使用しているGoogle CloudプロジェクトでGoogle Drive APIを有効にしてください。「APIとサービス」の「ライブラリ」から有効化後、もう一度接続してください。';
+      } else if (reasons.some(reason => ['rateLimitExceeded', 'userRateLimitExceeded', 'quotaExceeded', 'RATE_LIMIT_EXCEEDED'].includes(reason)) || response.status === 429) {
+        message = 'Google Driveの利用制限に達しました。時間をおいて再度お試しください。';
+      }
+      // Never expose upstream messages, request URLs or OAuth credentials.
+      throw driveError(message, response.status === 404 ? 404 : 400);
+    }
     return response;
   };
   const meta = async id => (await request(`drive/v3/files/${driveId(id)}?${new URLSearchParams({ fields: 'id,name,mimeType,parents,trashed,size,capabilities,modifiedTime', supportsAllDrives: 'true' })}`)).json();
