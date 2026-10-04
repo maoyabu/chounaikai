@@ -10,3 +10,24 @@ document.getElementById('drive-upload')?.addEventListener('submit', event => {
   form.querySelector('button').disabled = true;
   document.getElementById('drive-upload-status').textContent = 'アップロード中です。完了するまでお待ちください。';
 });
+
+document.getElementById('drive-copy-uri')?.addEventListener('click', async event => {
+  const input = document.getElementById('drive-callback-uri');
+  const status = document.getElementById('drive-copy-status');
+  const button = event.currentTarget;
+  button.disabled = true;
+  status.textContent = '';
+  try {
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(input.value); copied = true; } catch { /* Try manual selection below. */ }
+    }
+    if (!copied) {
+      input.focus(); input.select(); input.setSelectionRange(0, input.value.length);
+      copied = document.execCommand('copy');
+    }
+    status.textContent = copied ? 'コピーしました' : 'コピーできませんでした。URLを選択してコピーしてください。';
+  } catch {
+    status.textContent = 'コピーできませんでした。URLを選択してコピーしてください。';
+  } finally { button.disabled = false; }
+});
