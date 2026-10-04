@@ -1,0 +1,10 @@
+<% const kind = mimeType === 'application/vnd.google-apps.folder' ? 'folder' : mimeType.includes('pdf') ? 'pdf' : /spreadsheet|excel/.test(mimeType) ? 'excel' : 'document'; %>
+<svg class="drive-icon drive-icon-<%= kind %>" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+<% if (kind === 'folder') { %>
+  <path d="M3 8a2 2 0 0 1 2-2h8l3 4h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" fill="currentColor"/>
+<% } else { %>
+  <path d="M7 3h12l6 6v20H7Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M19 3v7h6" fill="none" stroke="currentColor" stroke-width="2"/>
+  <% if (kind === 'excel') { %><path d="M11 15h10v9H11Zm0 4h10m-5-4v9" fill="none" stroke="currentColor" stroke-width="1.5"/><% } else if (kind === 'pdf') { %><text x="16" y="23" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">PDF</text><% } else { %><path d="M11 15h10m-10 5h10m-10 5h7" stroke="currentColor" stroke-width="1.5"/><% } %>
+<% } %>
+</svg>

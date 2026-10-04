@@ -3,8 +3,8 @@
 
 /* Association documents */
 .drive-breadcrumbs{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.2rem 0;overflow-wrap:anywhere}
-.drive-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid #dde4e9}
+.drive-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.5rem 0;border-bottom:1px solid #dde4e9}
 .drive-item[hidden]{display:none}.drive-item-name{display:grid;gap:.35rem;min-width:0;overflow-wrap:anywhere}.drive-item-name small{color:#596979}
-.drive-file-type{font-size:.8rem;color:#496173}.drive-item-actions{display:flex;flex-wrap:wrap;gap:.5rem;flex-shrink:0}.drive-item-actions .button{min-height:44px}
+.drive-item-title{display:flex;align-items:center;gap:.65rem;min-width:0;text-decoration:none}.drive-item-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.drive-item-title:hover strong{text-decoration:underline}.drive-icon{flex:0 0 30px}.drive-icon-folder{color:#c28b20}.drive-icon-excel{color:var(--green)}.drive-icon-pdf{color:#b34238}.drive-icon-document{color:#496173}.drive-item-name{flex:1}.drive-item-name small{padding-left:calc(30px + .65rem)}.drive-items{margin-top:.5rem}.drive-item-actions{display:flex;flex-wrap:wrap;gap:.5rem;flex-shrink:0}.drive-item-actions .button{min-height:44px}
 .drive-pdf{width:100%;height:75vh;border:1px solid #d6e0e8;background:#fff}.drive-sheet{overflow:auto;max-height:65vh}.drive-sheet td,.drive-sheet th{padding:.5rem;border:1px solid #dae2e8;min-width:5rem;max-width:24rem;overflow-wrap:anywhere;white-space:pre-wrap}.drive-sheet th{position:sticky;left:0;background:#eef3f7}.drive-sheet caption{text-align:left}.drive-disconnect{margin-top:2rem}
-@media(max-width:700px){.drive-item{align-items:flex-start;flex-direction:column}.drive-item-actions{width:100%}.drive-item-actions .button{flex:1}}
+@media(max-width:700px){.drive-item{align-items:flex-start;flex-direction:column}.drive-item-name{width:100%}.drive-item-actions{width:100%}.drive-item-actions .button{flex:1}}
