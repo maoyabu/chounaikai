@@ -104,3 +104,7 @@
 # パスワードの再設定
 
 ログイン画面の「パスワードを忘れた方」から、登録済みメールアドレスへ再設定リンクを送信できます。既存のSMTP設定とPUBLIC_BASE_URLを使用します。リンクは1時間・1回限り有効で、トークンは専用のpassword_resetsコレクションにSHA-256ハッシュで保存します。再送は同一アカウントにつき1分間隔です。共通usersコレクションのsalt/hashのみを更新するため、共通アカウントを利用する他サービスのパスワードも変更されます。
+
+## Google Driveドキュメント管理
+
+町内会管理の「Google Drive連携設定」に各町内会のOAuthクライアントと共有フォルダを登録します。役員メニューの「町内会ドキュメント管理」から資料を操作できます。サーバーには `DRIVE_ENCRYPTION_KEY` と公開URLの設定が必要です。設定・Google審査・対応形式は [GOOGLE_DRIVE.md](GOOGLE_DRIVE.md)、管理者向けの1枚資料は [準備手順PowerPoint](src/public/documents/google-drive-setup.pptx) を参照してください。

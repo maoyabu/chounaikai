@@ -1,0 +1,48 @@
+# 町内会ドキュメント管理
+
+各町内会のGoogle OAuthクライアントと町内会アカウントを使用する。町内会ごとの接続情報は別コレクションに保存し、役員への操作は登録した起点フォルダ配下に限定する。Googleの許可自体はDrive全体なので、町内会専用のGoogleアカウントを使用する。
+
+## システム運用担当者の設定
+
+1. `PUBLIC_BASE_URL`を実際の公開HTTPSオリジンに設定する。ローカル検証のみlocalhostのHTTPを許可。
+2. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` で鍵を1回発行し、`DRIVE_ENCRYPTION_KEY`に64文字の16進数として設定する。全インスタンスで同じ鍵を使用し、秘密管理基盤で保管する。鍵を失うと既存の接続情報を復号できない。鍵の変更時には全町内会のシークレット再登録・再接続が必要。
+3. GoogleのOAuth・Drive APIへのサーバーからのHTTPS通信を許可する。
+4. `npm start`で起動する。新しいDriveConnectionモデルはMongoDBに保存される。秘密情報はAES-256-GCMで暗号化し、町内会IDを追加認証データに使用する。通常のMongooseクエリではシークレット・更新トークンを取得しない。
+
+## 町内会管理者の準備
+
+管理画面の「Google Drive連携設定」に対応。配布資料は `src/public/documents/google-drive-setup.pptx`（1枚、補足は発表者ノート）。
+
+1. Google Driveで共有資料の起点フォルダを決める。接続する町内会アカウントが編集可能なフォルダを選ぶ。既存の下位フォルダ・資料をそのまま利用できる。
+2. [Google Cloud](https://console.cloud.google.com/)で町内会用のプロジェクトを作成し、「APIとサービス」のライブラリからGoogle Drive APIを有効にする。
+3. Google Auth Platformでアプリ名、サポートメール、開発者連絡先と対象ユーザーを設定する。Gmailは外部。テスト時は接続する町内会アカウントをテストユーザーに追加する。「データアクセス」に `https://www.googleapis.com/auth/drive` を追加する。
+4. 「クライアント」でOAuthクライアントを作成。種別は「ウェブアプリケーション」。システムの設定画面に表示する「承認済みのリダイレクトURI」をGoogle側に完全一致で登録する。町内会IDを含むため、町内会ごとに異なる。
+5. 発行したクライアントID、シークレット、共有フォルダURL（またはID）をシステムに保存する。GoogleパスワードやAPIキーは登録しない。
+6. 「Googleアカウントで接続」を押し、町内会アカウントで許可する。接続時にフォルダの編集権限を検証し、接続済みのメールアドレスを表示する。
+7. 役員メニューの「町内会ドキュメント管理」で検証用のExcel・PDFを閲覧、アップロード、ダウンロード、削除する。削除はゴミ箱移動。復元はGoogle Driveで行う。
+
+### 公開・審査
+
+`drive`は制限付きスコープ。既存資料を含めた操作にはこれを使用する。`drive.file`はアプリで作成・選択したファイルに限定され、登録した既存フォルダ配下の全資料を自動的に操作できる許可ではない。
+
+外部アプリの「テスト」状態では通常更新トークンが7日で失効する。本番に移行する際にはGoogleの公開設定、審査・セキュリティ評価の要否を運用担当者と確認する。例外を適用できるかはアカウント・公開対象・利用範囲によって異なる。単に公開設定を変えるだけで審査が不要になるわけではない。
+
+## 役員の操作
+
+- 当年度の役員または町内会管理者であり、その町内会の有効な会員であることが必要。連携設定の変更にはさらに `association.manage` 権限が必要。
+- フォルダ名で移動。パンくずで上位へ戻る。検索は現在のページ（最大100件）の名前に限定。続きは「次の100件」。ショートカットは表示・操作しない。
+- PDFは画面内で表示。xlsx/Google Sheetsは各シート先頭200行・30列、全体30,000セルまでの文字表示。書式・画像・グラフを省略し数式は保存済み結果を使用。xlsやその他のファイルはダウンロードして閲覧。Google Docs/SlidesはPDF、Sheetsはxlsxとしてダウンロード。
+- アップロードはPDF・xlsx・xls、1件20MBまで。同名でも新しい別ファイルを追加し、既存資料を上書きしない。保存先を画面に表示。フォルダ作成やフォルダ削除はこの画面の対象外。
+- 削除確認後にGoogleのゴミ箱へ移動。Google側のファイル権限に応じてボタンを表示。共有ドライブでは権限により削除できない場合がある。
+- 各役員のGoogle認証は不要。Google Drive側の操作主体は接続済みの町内会アカウントとなる。
+- 接続解除はシステム内の更新トークンを消去する。Google側の許可はGoogleアカウントの「サードパーティとの接続」から取り消す。資料は削除しない。
+
+## 検証
+
+`node --test test/driveService.test.js test/documents.test.js`。外部APIはモックで検証する。実際のGoogle認証・共有ドライブの権限・PDF表示は、運用環境の認証情報を登録して確認が必要。
+
+公式資料（2026-10-04確認）：
+- [OAuthウェブサーバーフロー](https://developers.google.com/identity/protocols/oauth2/web-server)
+- [Drive APIのスコープ](https://developers.google.com/workspace/drive/api/guides/api-specific-auth)
+- [更新トークンの期限](https://developers.google.com/identity/protocols/oauth2)
+- [制限付きスコープの審査](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)

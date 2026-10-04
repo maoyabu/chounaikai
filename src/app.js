@@ -1,4 +1,5 @@
 import express from 'express';
+import { documentsRouter } from './routes/documents.js';
 import { equipmentRouter } from './routes/equipment.js';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
@@ -79,6 +80,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development' }) 
   app.use('/associations', districtMessagesRouter);
   app.use('/associations', managementRouter);
   app.use('/associations', equipmentRouter);
+  app.use('/associations', documentsRouter);
   app.use('/associations', householdsRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/associations', associationsRouter);
