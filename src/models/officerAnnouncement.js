@@ -4,7 +4,7 @@ const announcementSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   channel: { type: String, enum: ['resident', 'officer', 'district', 'association_group'], required: true, default: 'resident' },
-  audience: { type: String, enum: ['leaders', 'all', 'officers_all', 'department', 'officer_individual', 'officer_group', 'district_all', 'district_individual'], required: true },
+  audience: { type: String, enum: ['leaders', 'all', 'officers_all', 'department', 'officer_individual', 'officer_group', 'district_all', 'district_individual', 'group_all'], required: true },
   targetDistrictGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' }],
   resolvedDistrictGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' }],
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
@@ -18,6 +18,8 @@ const announcementSchema = new mongoose.Schema({
   body: { type: String, required: true, maxlength: 5000 },
   attachmentRetentionDays: { type: Number, enum: [7, 30, 90, 180, 365], default: 30 },
   attachments: [{
+    storage: { type: String, enum: ['drive', 'cloudinary'] },
+    fileId: String,
     url: { type: String, required: true },
     publicId: { type: String, required: true },
     originalName: { type: String, required: true, maxlength: 255 },

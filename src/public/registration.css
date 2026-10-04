@@ -1639,3 +1639,24 @@ h1, h2, h3, h4, h5, h6,
 
 .dashboard-shell .section-heading .dashboard-section-title { display: flex; align-items: flex-start; gap: .6rem; min-width: 0; }
 .dashboard-section-title > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* 町内会・システム管理者共通の連絡フォーム */
+.communication-theme .system-contact-dialog {
+  width: min(760px, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--ink);
+  overflow-y: auto;
+}
+.system-contact-dialog .dialog-heading { align-items: center; margin-bottom: 1.25rem; }
+.system-contact-dialog .dialog-heading h2 { margin: 0; font-size: 1.35rem; }
+.system-contact-dialog .dialog-close { flex-shrink: 0; }
+.system-contact-dialog .form-stack textarea { min-height: 220px; resize: vertical; line-height: 1.7; }
+.system-contact-dialog .form-stack .help-text { margin: 0; }
+@media (max-width: 480px) {
+  .communication-theme .system-contact-dialog { padding: 1.1rem; }
+  .system-contact-dialog .form-stack textarea { min-height: 180px; }
+}

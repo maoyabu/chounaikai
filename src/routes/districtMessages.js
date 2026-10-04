@@ -1,3 +1,4 @@
+import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -101,10 +102,10 @@ districtMessagesRouter.get('/:associationId/district-messages/new', async (req, 
   } catch (error) { return next(error); }
 });
 
-districtMessagesRouter.post('/:associationId/district-messages', verifyCsrfToken, async (req, res, next) => {
+districtMessagesRouter.post('/:associationId/district-messages', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
   try {
     await context(req.params.associationId, req.user._id);
-    const { announcement, recipientCount } = await publishAnnouncement({ associationId: req.params.associationId, userId: req.user._id, channel: 'district', audience: req.body.audience,
+    const { announcement, recipientCount } = await publishAnnouncement({ files: req.files, attachmentRetentionDays: req.body.attachmentRetentionDays || 30, associationId: req.params.associationId, userId: req.user._id, channel: 'district', audience: req.body.audience,
       targetOfficerIds: req.body.recipientIds, urgency: req.body.urgency, title: req.body.title, body: req.body.body, responseMode: req.body.responseMode,
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = `${recipientCount}人の班員に連絡を送りました。`;

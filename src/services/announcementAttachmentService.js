@@ -1,3 +1,5 @@
+import { attachmentContext, saveMessageAttachments } from './messageAttachmentService.js';
+import { assertDriveItem, driveId } from './driveService.js';
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { OfficerAnnouncement } from '../models/officerAnnouncement.js';
@@ -42,37 +44,33 @@ const configureCloudinary = () => {
 };
 
 export const uploadAnnouncementAttachment = async (file, associationId) => {
-  configureCloudinary();
-  return new Promise((resolve, reject) => {
-    const isImage = file.mimetype.startsWith('image/');
-    const extension = String(file.originalname || '').match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase() || 'bin';
-    const stream = cloudinary.uploader.upload_stream({
-      folder: 'association_announcement_attachments',
-      public_id: `association_${associationId}_${Date.now()}_${Math.random().toString(36).slice(2)}${isImage ? '' : `.${extension}`}`,
-      resource_type: isImage ? 'image' : 'raw',
-      ...(isImage ? { format: file.mimetype.split('/')[1] === 'jpeg' ? 'jpg' : file.mimetype.split('/')[1] } : {})
-    }, (error, result) => error ? reject(error) : resolve({
-      url: result.secure_url, publicId: result.public_id, resourceType: isImage ? 'image' : 'raw', originalName: repairMojibakeFilename(file.originalname),
-      mimeType: file.mimetype, bytes: file.size
-    }));
-    stream.end(file.buffer);
-  });
+  const ctx = await attachmentContext(associationId);
+  const [saved] = await saveMessageAttachments([file], ctx);
+  return { ...saved, storage: 'drive', publicId: `drive:${saved.fileId}`, resourceType: file.mimetype.startsWith('image/') ? 'image' : 'raw',
+    originalName: repairMojibakeFilename(file.originalname),
+    url: `/associations/${associationId}/message-attachments/${saved.fileId}` };
 };
 
-export const deleteAnnouncementAttachment = async (publicId, resourceType = 'raw') => {
+export const deleteAnnouncementAttachment = async (publicId, resourceType = 'raw', associationId) => {
   if (!publicId) return;
+  if (publicId.startsWith('drive:')) {
+    const ctx = await attachmentContext(associationId), id = driveId(publicId.slice(6));
+    await assertDriveItem(ctx.client, ctx.root, id, { allowRoot: false });
+    await (await ctx.client.request(`drive/v3/files/${id}?supportsAllDrives=true`, { method: 'DELETE' })).body?.cancel();
+    return;
+  }
   configureCloudinary();
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 };
 
 // Cloudinary側の削除とDB側の参照削除を同じ定期処理で行う。
 export const deleteExpiredAnnouncementAttachments = async (now = new Date()) => {
-  const announcements = await OfficerAnnouncement.find({ 'attachments.expiresAt': { $lte: now } }).select('_id attachments').lean();
+  const announcements = await OfficerAnnouncement.find({ 'attachments.expiresAt': { $lte: now } }).select('_id association attachments').lean();
   let deleted = 0;
   for (const announcement of announcements) {
     const expired = announcement.attachments.filter(file => file.expiresAt && new Date(file.expiresAt) <= now);
     if (!expired.length) continue;
-    const results = await Promise.allSettled(expired.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType)));
+    const results = await Promise.allSettled(expired.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType, announcement.association)));
     const deletedIds = expired.filter((_file, index) => results[index].status === 'fulfilled').map(file => file.publicId);
     if (deletedIds.length) {
       await OfficerAnnouncement.updateOne({ _id: announcement._id }, { $pull: { attachments: { publicId: { $in: deletedIds } } } });

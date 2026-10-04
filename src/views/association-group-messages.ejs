@@ -9,7 +9,7 @@
     </div>
     <div class="group-messages-communications">
       <section class="admin-section question-home-section"><div class="section-heading"><h2>連絡メニュー</h2></div><a class="question-home-link" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages/inbox"><span><strong>届いたグループの連絡</strong><small>確認と回答を行う</small></span><% if (unreadCount) { %><span class="status-badge question-unread">未確認 <%= unreadCount %>件</span><% } %><span>›</span></a></section>
-      <section class="admin-section question-home-section"><div class="section-heading"><h2>送信した連絡</h2></div><% if (!announcements.length) { %><div class="admin-empty"><p>送信した連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach(item => { %><div class="question-home-link"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %></small></span></div><% }) %></div><% } %></section>
+      <section class="admin-section question-home-section"><div class="section-heading"><h2>送信した連絡</h2></div><% if (!announcements.length) { %><div class="admin-empty"><p>送信した連絡はありません。</p></div><% } else { %><div class="question-home-list"><% announcements.forEach(item => { %><div class="question-home-link"><span><strong><%= item.title %></strong><small><%= new Date(item.createdAt).toLocaleString('ja-JP') %></small></span><%- include('partials/announcement-attachments', { announcement: item }) %></div><% }) %></div><% } %></section>
     </div>
   </div>
 </main>

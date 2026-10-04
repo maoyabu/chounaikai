@@ -592,6 +592,10 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
           notification.actionLabel = '参加申請を確認';
         }
       }
+      if (notification.type === 'system_contact' && notification.association && notification.relatedId) {
+        notification.actionUrl = req.user.isAdmin ? `/admin/system-contacts/${notification.relatedId}` : `/associations/${notification.association._id}/manage/system-contacts/${notification.relatedId}`;
+        notification.actionLabel = 'システム管理者への連絡を確認';
+      }
       if (notification.type === 'withdrawal_leader_requested' && notification.association && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
         notification.actionUrl = `/associations/${notification.association._id}/leader?tab=withdrawals#withdrawal-${notification.relatedId}`;
         notification.actionLabel = '班長メニューの退会申請を開く';

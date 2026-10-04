@@ -3,7 +3,7 @@
 <main class="page-shell communication-theme group-communication-theme page-narrow">
   <a class="back-link" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages">← グループ内の連絡へ戻る</a>
   <section class="page-heading"><div><p class="eyebrow"><%= group.name %></p><h1>グループ内の連絡を送る</h1></div></section>
-  <section class="content-card announcement-card"><form class="form-stack" action="/associations/<%= group.association %>/groups/<%= group._id %>/messages" method="post">
+  <section class="content-card announcement-card"><form class="form-stack" action="/associations/<%= group.association %>/groups/<%= group._id %>/messages" method="post" enctype="multipart/form-data">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <label>送信先<select required><option>グループの参加メンバー全員</option></select></label>
     <label>緊急度<select name="urgency" required><% for (let level = 1; level <= 5; level++) { %><option value="<%= level %>" <%= level === 3 ? 'selected' : '' %>><%= '★'.repeat(level) %><%= level === 5 ? ' 緊急' : '' %></option><% } %></select></label>
@@ -11,6 +11,9 @@
     <label>内容<textarea name="body" rows="8" maxlength="5000" required></textarea></label>
     <label>回答方法<select name="responseMode" id="group-response-mode"><option value="none">回答なし（確認のみ）</option><option value="single">選択肢から1つ</option><option value="multiple">選択肢から複数</option></select></label>
     <fieldset class="announcement-options" id="group-options" hidden><legend>選択肢（2〜5件）</legend><p class="help-text">回答方法を選んだ場合、最初の2件は必須です。</p><% for (let number = 1; number <= 5; number++) { %><label>選択肢 <%= number %><input name="option<%= number %>" maxlength="100" data-group-option></label><% } %></fieldset>
+    <label>添付ファイル（3個まで、1個15MB以下）<input type="file" name="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"></label>
+    <label>添付資料の保存期限<select name="attachmentRetentionDays"><option value="7">7日間</option><option value="30" selected>30日間</option><option value="90">90日間</option><option value="180">180日間</option><option value="365">1年間</option></select></label>
+    <p class="help-text">添付資料は町内会のGoogle Driveの「メッセージ添付フォルダ」に保存されます。</p>
     <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
   </form></section>
 </main>

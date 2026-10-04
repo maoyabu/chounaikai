@@ -1,4 +1,6 @@
+import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
+import { systemContactsRouter } from './routes/systemContacts.js';
 import { documentsRouter } from './routes/documents.js';
 import { equipmentRouter } from './routes/equipment.js';
 import session from 'express-session';
@@ -69,6 +71,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development' }) 
 
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
+  app.use('/', systemContactsRouter);
+  app.use('/associations', messageAttachmentsRouter);
   app.use('/associations', associationEventsRouter);
   app.use('/associations', associationGroupsRouter);
   app.use('/associations', associationFinanceRouter);

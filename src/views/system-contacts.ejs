@@ -1,0 +1,23 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell communication-theme">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="<%= system ? '/admin' : '/associations/' + association._id + '/manage' %>">← 管理者メニューへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= system ? 'システム管理' : association.name %></p><h1>町内会役員からシステム管理者への連絡</h1><p>機能改善の要望や相談について、町内会とシステム管理者でやり取りします。</p></div><% if (!system) { %><button type="button" class="button button-primary" data-system-contact-open="new-system-contact-dialog">新しい連絡を送る</button><% } %></section>
+  <% if (!system) { %>
+  <dialog class="officer-dialog system-contact-dialog" id="new-system-contact-dialog" aria-labelledby="new-system-contact-heading">
+    <div class="dialog-heading"><h2 id="new-system-contact-heading">新しい連絡を送る</h2><button type="button" class="dialog-close" data-system-contact-close aria-label="閉じる">×</button></div>
+    <form action="<%= baseUrl %>" method="post" enctype="multipart/form-data" class="form-stack">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>緊急度<select name="urgency"><% for (let i = 1; i <= 5; i++) { %><option value="<%= i %>" <%= i === 3 ? 'selected' : '' %>><%= '★'.repeat(i) %><%= i === 5 ? ' 緊急' : '' %></option><% } %></select></label>
+      <label>タイトル<input name="title" required maxlength="120"></label>
+      <label>内容<textarea name="body" rows="8" required maxlength="5000"></textarea></label>
+      <label>添付ファイル（3個まで、1個15MB以下）<input type="file" name="attachments" multiple></label>
+      <p class="help-text">添付資料は町内会のGoogle Driveの「メッセージ添付フォルダ」に保存されます。</p>
+      <div class="form-actions"><button class="button button-primary" type="submit">連絡を送信</button></div>
+    </form>
+  </dialog><script src="/assets/system-contacts.js?v=<%= assetVersion %>" defer></script><% } %>
+  <section class="admin-section question-home-section"><div class="section-heading"><h2><%= system ? '町内会から届いた連絡' : '送信した連絡' %></h2></div>
+    <% if (!threads.length) { %><div class="admin-empty"><p>連絡はありません。</p></div><% } %>
+    <div class="question-home-list"><% threads.forEach(item => { %><a class="question-home-link" href="<%= baseUrl %>/<%= item._id %>"><span><strong><%= item.title %></strong><small><%= item.association?.name || '町内会' %> ・ <%= new Date(item.updatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %> ・ 緊急度 <%= '★'.repeat(item.urgency) %></small><small><%= item.status === 'resolved' ? '対応済み' : '対応中' %></small></span><% if (!(system ? item.systemReadAt : item.associationReadAt)) { %><span class="status-badge status-pending">未確認</span><% } %><span class="list-arrow" aria-hidden="true">›</span></a><% }) %></div>
+  </section>
+</main><%- include('partials/foot') %>

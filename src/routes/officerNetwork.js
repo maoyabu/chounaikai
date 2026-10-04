@@ -1,3 +1,4 @@
+import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -63,9 +64,9 @@ officerNetworkRouter.get('/:associationId/officer-network/new', async (req, res,
   } catch (error) { return next(error); }
 });
 
-officerNetworkRouter.post('/:associationId/officer-network', verifyCsrfToken, async (req, res, next) => {
+officerNetworkRouter.post('/:associationId/officer-network', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
   try {
-    const { announcement, recipientCount } = await publishAnnouncement({ associationId: req.params.associationId, userId: req.user._id,
+    const { announcement, recipientCount } = await publishAnnouncement({ files: req.files, attachmentRetentionDays: req.body.attachmentRetentionDays || 30, associationId: req.params.associationId, userId: req.user._id,
       channel: 'officer', audience: req.body.audience, targetId: req.body.targetId, targetOfficerIds: req.body.targetOfficerIds, urgency: req.body.urgency,
       title: req.body.title, body: req.body.body, responseMode: req.body.responseMode,
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });

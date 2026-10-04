@@ -10,6 +10,7 @@
         <div class="association-manage-section-heading"><div><p class="eyebrow">受付・承認</p><h2 id="manage-applications-heading">参加申請</h2></div></div>
         <a class="settings-entry-card association-manage-application" href="/associations/<%= association._id %>/manage/applications"><span class="settings-step">参加申請<% if (pendingApplicationCount) { %><span class="pending-count-badge"><%= pendingApplicationCount %>件</span><% } %></span><h3 class="manage-menu-title"><%- include('partials/officer-menu-icon', { icon: 'approval' }) %><span>住人の参加申請・世帯主からの招待</span></h3><p>招待元と世帯の確認状況を確認して、参加を承認できます。</p><strong>参加申請を確認 →</strong></a>
       </section>
+      <section class="association-manage-section" aria-labelledby="manage-system-contact-heading"><a class="settings-entry-card" href="/associations/<%= association._id %>/manage/system-contacts"><h3 class="manage-menu-title" id="manage-system-contact-heading"><%- include('partials/officer-menu-icon', { icon: 'announcement' }) %><span>町内会役員からシステム管理者への連絡</span></h3><p>町内会を代表して、機能改善の要望や相談を送り、返信を確認します。</p><strong>連絡を開く →</strong></a></section>
       <section class="association-manage-section" aria-labelledby="manage-directories-heading">
         <div class="association-manage-section-heading"><div><p class="eyebrow">確認・検索</p><h2 id="manage-directories-heading">各種一覧</h2></div><span><%= fiscalYear %>年度</span></div>
         <div class="association-manage-directory-grid">

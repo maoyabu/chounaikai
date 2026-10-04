@@ -1,3 +1,4 @@
+import { persistEventImage, deleteEventImage } from '../services/eventAttachmentService.js';
 import express from 'express';
 import { notifyEvent } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
@@ -84,8 +85,7 @@ associationEventsRouter.post('/:associationId/events', requireLogin, acceptEvent
   try {
     const association = await officerAccess(req);
     const values = eventValues(req.body);
-    if (req.file) values.image = await uploadPublicPhoto(req.file, association._id, `event-${Date.now()}`);
-    const createdEvent = await AssociationEvent.create({ association: association._id, ...values });
+    const createdEvent = await persistEventImage({ file: req.file, association: association._id, persist: image => AssociationEvent.create({ association: association._id, ...values, ...(image ? { image } : {}) }) });
     await notifyEvent(createdEvent, '登録');
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $addToSet: { eventCategories: values.category } });
     req.session.notice = '行事を登録しました。';
@@ -98,9 +98,14 @@ associationEventsRouter.post('/:associationId/events/:eventId', requireLogin, ac
     const association = await officerAccess(req);
     if (!mongoose.isValidObjectId(req.params.eventId)) throw notFound();
     const values = eventValues(req.body);
-    if (req.file) values.image = await uploadPublicPhoto(req.file, association._id, `event-${req.params.eventId}`);
-    const event = await AssociationEvent.findOneAndUpdate({ _id: req.params.eventId, association: association._id }, { $set: values });
-    if (!event) throw notFound();
+    const previous = await AssociationEvent.findOne({ _id: req.params.eventId, association: association._id }).lean();
+    if (!previous) throw notFound();
+    const event = await persistEventImage({ file: req.file, association: association._id, previousImage: previous.image, persist: async image => {
+      if (image) values.image = image;
+      const updated = await AssociationEvent.findOneAndUpdate({ _id: req.params.eventId, association: association._id }, { $set: values });
+      if (!updated) throw notFound();
+      return updated;
+    } });
     await notifyEvent({ ...event.toObject(), ...values, visible: event.visible || values.visible }, '変更');
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $addToSet: { eventCategories: values.category } });
     req.session.notice = '行事を更新しました。';
@@ -131,6 +136,7 @@ associationEventsRouter.post('/:associationId/events/:eventId/delete', requireLo
     const deletedEvent = await AssociationEvent.findOne({ _id: req.params.eventId, association: association._id }).lean();
     const result = await AssociationEvent.deleteOne({ _id: req.params.eventId, association: association._id });
     if (!result.deletedCount) throw notFound();
+    await deleteEventImage(deletedEvent?.image, association._id).catch(() => {});
     await notifyEvent(deletedEvent, '削除');
     req.session.notice = '行事を削除しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);

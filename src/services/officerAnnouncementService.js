@@ -152,7 +152,7 @@ export const publishAnnouncement = async (input) => {
     } catch (error) { console.error('Officer announcement notification failed', error); }
     return { announcement, recipientCount: recipients.length };
   } catch (error) {
-    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId)));
+    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType, associationId)));
     throw error;
   }
 };
@@ -291,10 +291,10 @@ export const editResidentAnnouncement = async ({ associationId, announcementId, 
       await Notification.deleteMany({ relatedType: 'OfficerAnnouncement', relatedId: announcementId, recipient: { $nin: recipients } }, { session });
     });
   } catch (error) {
-    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType)));
+    await Promise.allSettled(uploaded.map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType, associationId)));
     throw error;
   }
-  await Promise.allSettled((existing.attachments || []).filter(file => removedIds.includes(file.publicId)).map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType)));
+  await Promise.allSettled((existing.attachments || []).filter(file => removedIds.includes(file.publicId)).map(file => deleteAnnouncementAttachment(file.publicId, file.resourceType, associationId)));
   try {
     await createNotifications(recipients.map(recipient => ({ association: associationId, recipient, type: 'officer_announcement',
       title: `連絡が更新されました：${data.title}`, body: responseChanged ? '回答方法が変更されました。内容を確認して、もう一度回答してください。' : 'メッセージの内容を確認してください。', relatedType: 'OfficerAnnouncement', relatedId: announcementId })));
