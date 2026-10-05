@@ -1,6 +1,7 @@
 # Heroku本番スラッグに含めないテスト・開発用ファイル
 test/
-scripts/
+# 本番のデータ移行にも scripts/migratePersonalData.js を使用するため、
+# scripts ディレクトリ全体は除外しない。
 coverage/
 .env.example
 README.md
