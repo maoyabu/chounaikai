@@ -8,7 +8,7 @@
     "dev": "node --watch-path=src src/server.js",
     "test": "node --test",
     "audit:legacy": "node scripts/auditLegacyData.js",
-    "security:check": "node scripts/checkSecurityConfig.js"
+    "security:check": "node src/cli/checkSecurityConfig.js"
   },
   "engines": {
     "node": ">=20"

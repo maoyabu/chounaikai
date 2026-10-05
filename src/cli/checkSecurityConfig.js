@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { loadConfig } from '../src/config/env.js';
+import { loadConfig } from '../config/env.js';
 
 let client;
 try {
