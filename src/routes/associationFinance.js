@@ -124,7 +124,9 @@ associationFinanceRouter.get('/:associationId/finance/annual/export', async (req
     const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet('年度集計'); sheet.addRow(['項目', '予算', ...months.map((month) => `${month}月`), '累計', '累計差']); rows.forEach((values) => sheet.addRow([...values, values[1] - values[values.length - 1]])); sheet.columns.forEach((column, index) => { column.width = index === 0 ? 22 : 13; }); sheet.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalDpi: 300, verticalDpi: 300 }; sheet.pageMargins = { left: 0.25, right: 0.25, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 }; sheet.views = [{ state: 'frozen', ySplit: 1 }]; sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E4E38' } }; sheet.getRow(1).alignment = { horizontal: 'center', vertical: 'middle' }; sheet.eachRow((row, rowNumber) => { if (rowNumber > 1) { const name = row.getCell(1).value; const subtotal = name === '収入' || name === '支出'; row.font = { bold: subtotal, color: { argb: 'FF17231F' } }; row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: subtotal ? 'FFC7E3D4' : (rowNumber % 2 === 0 ? 'FFE5F2EB' : 'FFFFFFFF') } }; row.alignment = { vertical: 'middle' }; row.eachCell((cell, columnNumber) => { cell.border = { top: { style: 'thin', color: { argb: 'FFCBD9D1' } }, bottom: { style: 'thin', color: { argb: 'FFCBD9D1' } }, left: { style: 'thin', color: { argb: 'FFCBD9D1' } }, right: { style: 'thin', color: { argb: 'FFCBD9D1' } } }; if (columnNumber > 1) { cell.alignment = { horizontal: 'right', vertical: 'middle' }; cell.numFmt = '#,##0'; } }); } }); sheet.getColumn(2).numFmt = '#,##0';
     const balanceRow = sheet.getRows(1, sheet.rowCount).find((currentRow) => currentRow.getCell(1).value === '収支');
     if (balanceRow) { balanceRow.font = { bold: true, color: { argb: 'FF17231F' } }; balanceRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8DCAE' } }; }); }
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`${association.name}-${year}年度集計.xlsx`)}`); return res.send(await workbook.xlsx.writeBuffer());
+    const workbookBuffer = await workbook.xlsx.writeBuffer();
+    await req.auditPersonalData?.({ category: 'finance', resource: 'finance-annual-export', action: 'export', data: { association } });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`${association.name}-${year}年度集計.xlsx`)}`); return res.send(workbookBuffer);
   } catch (error) { return next(error); }
 });
 
@@ -169,6 +171,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/export', async (re
     sheet.getColumn('amount').numFmt = '#,##0';
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
     const workbookBuffer = await workbook.xlsx.writeBuffer();
+    await req.auditPersonalData?.({ category: 'finance', resource: 'finance-entries-export', action: 'export', data: { association, entries } });
     const filename = encodeURIComponent(`${association.name}-会計入力一覧.xlsx`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);

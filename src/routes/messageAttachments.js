@@ -51,6 +51,7 @@ const streamFile = async (req, res, file, inline = true) => {
   if (item.mimeType === FOLDER_MIME || item.capabilities?.canDownload === false) throw fail();
   const safeImage = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(item.mimeType);
   const response = await ctx.client.request(`drive/v3/files/${driveId(file.fileId)}?alt=media&supportsAllDrives=true`);
+  await req.auditPersonalData?.({ category: 'documents', resource: 'message-or-event-attachment', action: inline && safeImage ? 'view' : 'download', targets: [`file:${file.fileId}`] });
   res.set({ 'Content-Type': inline && safeImage ? item.mimeType : 'application/octet-stream', 'Content-Disposition': `${inline && safeImage ? 'inline' : 'attachment'}; filename="attachment"; filename*=UTF-8''${encodeURIComponent(file.originalName || item.name)}`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
   await pipeline(Readable.fromWeb(response.body), res);
 };

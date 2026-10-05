@@ -1,6 +1,8 @@
 import { AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder } from '../models/equipment.js';
 import mongoose from 'mongoose';
 import { MfaCredential, MfaEvent } from '../models/mfaCredential.js';
+import { PrivacyAccessLog } from '../models/privacyAccessLog.js';
+import { SiteSecuritySettings } from '../models/siteSecuritySettings.js';
 import { mongoSecurityOptions } from '../config/security.js';
 import { RATE_LIMIT_COLLECTION } from '../middleware/authRateLimit.js';
 import { Household, HouseholdMember } from '../models/organization.js';
@@ -58,9 +60,9 @@ export const connectDatabase = async (mongoUri, nodeEnv = 'development', mongoOp
   // Existing installations may still have a non-sparse unique index, which
   // treats every unregistered household's null representative as a duplicate.
   await ensureHouseholdRepresentativeIndex();
-  // Create MFA and equipment collections; enforce credential, reminder and
-  // inventory uniqueness even when production disables automatic indexes.
-  const indexedModels = [MfaCredential, MfaEvent, AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder];
+  // Create MFA, privacy audit and equipment collections/indexes even when
+  // production disables automatic indexes.
+  const indexedModels = [MfaCredential, MfaEvent, PrivacyAccessLog, SiteSecuritySettings, AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder];
   for (const model of indexedModels) {
     await model.createCollection();
     await model.createIndexes();

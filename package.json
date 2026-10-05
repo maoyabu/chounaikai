@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "node --watch-path=src src/server.js",
     "test": "node --test",
+    "test:security": "node --test test/security-config.test.js test/security-http.test.js test/mfa.test.js test/privacy-audit.test.js test/production-errors.test.js",
     "audit:legacy": "node scripts/auditLegacyData.js",
     "security:check": "node src/cli/checkSecurityConfig.js"
   },

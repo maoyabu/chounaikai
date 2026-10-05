@@ -13,6 +13,7 @@ associationsRouter.get('/', async (req, res, next) => {
   try {
     const memberships = await AssociationMembership.find({ user: req.user._id, status: 'active' }).select('association');
     const associations = await NeighborhoodAssociation.find({ _id: { $in: memberships.map((item) => item.association) }, deletedAt: { $exists: false } }).lean();
+    await req.auditPersonalData?.({ category: 'registration', resource: 'api-associations', data: { associations } });
     res.json({ associations });
   } catch (error) {
     next(error);
@@ -58,6 +59,7 @@ associationsRouter.get('/:associationId', async (req, res, next) => {
     const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' });
     const isApplicant = String(association.requestedBy) === String(req.user._id);
     if ((!membership && !req.user.isAdmin && !isApplicant) || (association.deletedAt && !req.user.isAdmin)) return res.status(404).json({ error: 'association_not_found' });
+    await req.auditPersonalData?.({ category: 'registration', resource: 'api-association-detail', data: { association, membership } });
     return res.json({ association, membership });
   } catch (error) {
     return next(error);

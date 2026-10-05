@@ -106,6 +106,7 @@ documentsRouter.get('/:associationId/documents/files/:fileId/download', handler(
   const ctx = await context(req), item = await assertDriveItem(ctx.client, ctx.connection.rootFolderId, req.params.fileId, { allowRoot: false });
   if (item.mimeType === FOLDER_MIME) throw driveError('フォルダはダウンロードできません。');
   const { response, mime, name } = await content(ctx.client, item);
+  await req.auditPersonalData?.({ category: 'documents', resource: 'document-download', action: 'download', data: { association: ctx.association }, targets: [`file:${item.id}`] });
   res.set({ 'Content-Type': mime, 'Content-Disposition': `attachment; filename="document"; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
   try { await pipeline(Readable.fromWeb(response.body), res); } catch (error) { if (!res.headersSent) throw error; }
 }));
@@ -133,6 +134,7 @@ documentsRouter.get('/:associationId/documents/files/:fileId/pdf', handler(async
   const ctx = await context(req), item = await assertDriveItem(ctx.client, ctx.connection.rootFolderId, req.params.fileId, { allowRoot: false });
   if (!['application/pdf', 'application/vnd.google-apps.document', 'application/vnd.google-apps.presentation'].includes(item.mimeType)) throw driveError('PDF形式で閲覧できません。');
   const { response } = await content(ctx.client, item);
+  await req.auditPersonalData?.({ category: 'documents', resource: 'document-pdf', data: { association: ctx.association }, targets: [`file:${item.id}`] });
   res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="document.pdf"', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "sandbox; frame-ancestors 'self'" });
   try { await pipeline(Readable.fromWeb(response.body), res); } catch (error) { if (!res.headersSent) throw error; }
 }));

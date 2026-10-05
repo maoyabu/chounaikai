@@ -7,6 +7,7 @@ import { enforceAdminMfa, mfaVerified, recentPrimaryAuth, safeMfaReturnTo } from
 import { mfaEncryptionKey } from '../src/config/mfa.js';
 import { authRatePolicy, createAuthRateLimiter, createMemoryRateStore } from '../src/middleware/authRateLimit.js';
 import { verifyCsrfToken } from '../src/middleware/csrf.js';
+import { createSiteSecurityService, applySiteMfaPolicy } from '../src/services/siteSecurityService.js';
 
 const key = crypto.randomBytes(32);
 const user = { _id: '507f1f77bcf86cd799439011', isAdmin: true, email: 'admin@example.invalid', hash: 'password-hash' };
@@ -222,9 +223,14 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import { User } from '../src/models/user.js';
 import { ResidentRegistration } from '../src/models/residentRegistration.js';
+import { RoleAssignment } from '../src/models/role.js';
+import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
+import { AnnualOfficer } from '../src/models/annualOfficer.js';
+import { AssociationMembership } from '../src/models/associationMembership.js';
+import { AssociationGroupMembership } from '../src/models/associationGroup.js';
 import { createApp } from '../src/app.js';
 
-async function withMfaApp(task) {
+async function withMfaApp(task, siteSecurityService = { async get() { return { mfaEnabled: true, revision: 'initial' }; } }) {
   const f = fixture();
   const admin = { ...user, username: 'test-admin', authenticate(password, callback) {
     const result = { user: password === 'test-password' ? this : false };
@@ -251,7 +257,9 @@ async function withMfaApp(task) {
     };
   };
   ResidentRegistration.findOne = () => ({ async lean() { return null; } });
-  const app = createApp({ mongoUri: 'mongodb://127.0.0.1:27017/unused', sessionSecret: 'mfa-http-test', mfaService: f.service, rateLimitStore: { async increment() { return 1; } } });
+  const menuReads = [[RoleAssignment, 'find'], [AnnualLeaderAssignment, 'find'], [AnnualOfficer, 'find'], [AssociationMembership, 'findOne'], [AssociationGroupMembership, 'find']].map(([model, method]) => [model, method, model[method]]);
+  for (const [model, method] of menuReads) model[method] = () => ({ populate() { return this; }, sort() { return this; }, async lean() { return method === 'findOne' ? null : []; } });
+  const app = createApp({ mongoUri: 'mongodb://127.0.0.1:27017/unused', sessionSecret: 'mfa-http-test', mfaService: f.service, siteSecurityService, privacyAuditWriter: async () => {}, rateLimitStore: { async increment() { return 1; } } });
   const server = http.createServer(app);
   try {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
@@ -271,6 +279,7 @@ async function withMfaApp(task) {
   } finally {
     await new Promise(resolve => server.close(resolve));
     MongoStore.create = original.create; User.findOne = original.findOne; User.findById = original.findById; ResidentRegistration.findOne = original.registration;
+    for (const [model, method, originalRead] of menuReads) model[method] = originalRead;
   }
 }
 
@@ -284,6 +293,7 @@ test('HTTP: admin web login enrolls with CSRF, local QR, one-time codes and rota
     assert.equal(primary.status, 302); assert.equal(primary.location, '/mfa/setup');
     const denied = await browser.request('/api/auth/me');
     assert.equal(denied.status, 403); assert.equal(denied.json().error, 'mfa_required');
+    assert.equal((await browser.request('/admin/privacy-audit')).location, '/mfa/setup');
     assert.equal((await browser.request('/admin')).location, '/mfa/setup');
     const setup = (await browser.request('/api/auth/mfa/setup')).json();
     const html = await browser.request('/mfa/setup');
@@ -377,4 +387,106 @@ test('HTTP: browser enrollment renders recovery codes once and continues the ori
     const final = await browser.request('/login/complete');
     assert.equal(final.location, '/dashboard');
   });
+});
+
+function sitePolicyFixture() {
+  let settings = null;
+  const Settings = {
+    findById() { return { async lean() { return settings ? structuredClone(settings) : null; } }; },
+    findOneAndUpdate(filter, update, options) { return { async lean() {
+      if (settings && settings.revision !== filter.revision) {
+        if (options.upsert) throw Object.assign(new Error('duplicate'), { code: 11000 });
+        return null;
+      }
+      if (!settings && !options.upsert) return null;
+      settings ||= { _id: 'site', history: [] };
+      Object.assign(settings, update.$set); settings.history.push(structuredClone(update.$push.history));
+      return structuredClone(settings);
+    } }; }
+  };
+  return createSiteSecurityService(Settings);
+}
+
+test('site MFA policy defaults to enabled, updates atomically with history and rejects stale writes', async () => {
+  const policy = sitePolicyFixture();
+  assert.equal((await policy.get()).mfaEnabled, true);
+  const results = await Promise.allSettled(Array.from({ length: 5 }, () => policy.change({ enabled: false, revision: 'initial', actor: user })));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.ok(results.filter(result => result.status === 'rejected').every(result => result.reason.status === 409));
+  const disabled = await policy.get(); assert.equal(disabled.history.length, 1); assert.equal(disabled.history[0].before, true);
+  const enabled = await policy.change({ enabled: true, revision: disabled.revision, actor: user });
+  assert.equal(enabled.history.length, 2); assert.notEqual(enabled.revision, disabled.revision);
+});
+
+test('site MFA policy disables enrolled challenges, retains enrollment and fails closed on database errors', async () => {
+  const policy = sitePolicyFixture(), f = fixture();
+  await enroll(f);
+  const mfa = applySiteMfaPolicy(f.service, policy);
+  assert.equal((await mfa.getState(user)).required, true);
+  await policy.change({ enabled: false, revision: 'initial', actor: user });
+  const state = await mfa.getState(user);
+  assert.equal(state.required, false); assert.equal(state.credential, null);
+  assert.ok((await mfa.getEnrollmentState(user)).credential.enabledAt); assert.equal(f.rows.size, 1);
+  await assert.rejects(applySiteMfaPolicy(f.service, { async get() { throw new Error('offline'); } }).getState(user), /offline/);
+  await assert.rejects(createSiteSecurityService({ findById() { return { async lean() { return { mfaEnabled: null, revision: 'bad' }; } }; } }).get(), /invalid/);
+  assert.equal(authRatePolicy({ method: 'POST', path: '/ADMIN/SECURITY/MFA/' }), 'mfa');
+});
+
+test('HTTP: site administrator toggles MFA with password, CSRF and factor; all admin logins follow policy', async () => {
+  const policy = sitePolicyFixture();
+  await withMfaApp(async ({ client, f }) => {
+    const browser = client();
+    await browser.request('/api/auth/login', { method: 'POST', body: { identifier: 'test-admin', password: 'test-password' } });
+    const setup = (await browser.request('/api/auth/mfa/setup')).json();
+    const code = await generate({ secret: setup.secret, epoch: Math.floor(f.now() / 1000) });
+    const enrollment = (await browser.request('/api/auth/mfa/setup', { method: 'POST', body: { _csrf: setup.csrfToken, code } })).json();
+    const settings = await browser.request('/admin/security');
+    assert.equal(settings.status, 200); assert.ok(settings.text.includes('現在：使用する'));
+    const previouslyVerified = client();
+    await previouslyVerified.request('/api/auth/login', { method: 'POST', body: { identifier: 'test-admin', password: 'test-password' } });
+    const previousState = (await previouslyVerified.request('/api/auth/mfa')).json();
+    await previouslyVerified.request('/api/auth/mfa/verify', { method: 'POST', body: { _csrf: previousState.csrfToken, recoveryCode: enrollment.codes[3] } });
+    assert.equal((await previouslyVerified.request('/api/auth/me')).status, 200);
+    const body = { enabled: 'false', revision: 'initial', currentPassword: 'test-password', recoveryCode: enrollment.codes[0] };
+    assert.equal((await browser.request('/admin/security/mfa', { method: 'POST', body })).status, 403);
+    assert.equal((await browser.request('/admin/security/mfa', { method: 'POST', body: { ...body, _csrf: enrollment.csrfToken, currentPassword: 'wrong' } })).status, 400);
+    assert.equal((await browser.request('/admin/security/mfa', { method: 'POST', body: { ...body, _csrf: enrollment.csrfToken, recoveryCode: '' } })).status, 400);
+    assert.equal((await policy.get()).mfaEnabled, true);
+    const switched = await browser.request('/admin/security/mfa', { method: 'POST', body: { ...body, _csrf: enrollment.csrfToken } });
+    assert.equal(switched.status, 302); assert.equal((await policy.get()).mfaEnabled, false);
+    assert.equal((await browser.request('/admin/security')).status, 200);
+    assert.ok(f.rows.get(user._id).encryptedSecret); assert.equal(f.rows.size, 1);
+    const adminAgain = client();
+    for (const identifier of ['test-admin', 'manager']) {
+      const current = identifier === 'test-admin' ? adminAgain : client();
+      const login = await current.request('/api/auth/login', { method: 'POST', body: { identifier, password: 'test-password' } });
+      assert.equal(login.status, 200); assert.equal((await current.request('/api/auth/me')).status, 200);
+    }
+    assert.equal((await adminAgain.request('/api/auth/mfa/setup')).status, 403);
+    const disabled = await policy.get();
+    const enable = await browser.request('/admin/security/mfa', { method: 'POST', body: { _csrf: enrollment.csrfToken, enabled: 'true', revision: disabled.revision, currentPassword: 'test-password', recoveryCode: enrollment.codes[1] } });
+    assert.equal(enable.status, 302); assert.equal((await policy.get()).mfaEnabled, true);
+    assert.equal((await browser.request('/admin/security')).location, '/mfa/verify');
+    assert.equal((await adminAgain.request('/api/auth/me')).status, 403);
+    assert.equal((await previouslyVerified.request('/api/auth/me')).status, 403);
+    const verification = (await browser.request('/api/auth/mfa')).json();
+    await browser.request('/api/auth/mfa/verify', { method: 'POST', body: { _csrf: verification.csrfToken, recoveryCode: enrollment.codes[2] } });
+    assert.equal((await browser.request('/admin/security')).status, 200);
+    assert.equal((await policy.get()).history.length, 2);
+  }, policy);
+});
+
+test('HTTP: non-admin cannot toggle policy, and an unenrolled admin can enable it while currently off', async () => {
+  const policy = sitePolicyFixture(); await policy.change({ enabled: false, revision: 'initial', actor: user });
+  await withMfaApp(async ({ client }) => {
+    const resident = client(); await resident.request('/api/auth/login', { method: 'POST', body: { identifier: 'resident', password: 'test-password' } });
+    assert.equal((await resident.request('/admin/security')).status, 403);
+    assert.equal((await resident.request('/admin/security/mfa', { method: 'POST' })).status, 403);
+    const admin = client(); await admin.request('/api/auth/login', { method: 'POST', body: { identifier: 'test-admin', password: 'test-password' } });
+    const settings = await admin.request('/admin/security'); assert.equal(settings.status, 200);
+    const csrf = settings.text.match(/name="_csrf" value="([^"]+)"/)[1];
+    const revision = (await policy.get()).revision;
+    const result = await admin.request('/admin/security/mfa', { method: 'POST', body: { _csrf: csrf, enabled: 'true', revision, currentPassword: 'test-password' } });
+    assert.equal(result.status, 302); assert.equal((await admin.request('/admin/security')).location, '/mfa/setup');
+  }, policy);
 });

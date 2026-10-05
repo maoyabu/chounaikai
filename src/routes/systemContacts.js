@@ -85,6 +85,7 @@ for (const system of [false, true]) {
     const item = await assertDriveItem(ctx.client, ctx.root, attachment.fileId, { allowRoot: false });
     if (item.mimeType === FOLDER_MIME) throw fail('添付ファイルを確認できません。', 404);
     const response = await ctx.client.request(`drive/v3/files/${driveId(attachment.fileId)}?alt=media&supportsAllDrives=true`);
+    await req.auditPersonalData?.({ category: 'documents', resource: 'system-contact-attachment', action: 'download', data: { association: thread.association, thread }, targets: [`file:${attachment.fileId}`] });
     res.set({ 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="attachment"; filename*=UTF-8''${encodeURIComponent(attachment.originalName)}`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     await pipeline(Readable.fromWeb(response.body), res);
   }));

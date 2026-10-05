@@ -55,9 +55,11 @@ equipmentRouter.get('/:associationId/equipment/inventory', handler(async (req, r
 equipmentRouter.get('/:associationId/equipment/inventory.xlsx', handler(async (req, res) => {
   const { association } = await equipmentAccess(req.params.associationId, req.user._id, true), data = await inventoryData(req.params.associationId);
   const workbook = buildEquipmentInventoryWorkbook({ association, ...data });
+  const workbookBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  await req.auditPersonalData?.({ category: 'equipment', resource: 'equipment-inventory-export', action: 'export', data: { association, ...data } });
   res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.set('Content-Disposition', `attachment; filename="equipment-inventory.xlsx"; filename*=UTF-8''${encodeURIComponent(`${data.period}設備・備品棚卸し.xlsx`)}`);
-  res.send(Buffer.from(await workbook.xlsx.writeBuffer()));
+  res.send(workbookBuffer);
 }));
 equipmentRouter.post('/:associationId/equipment/inventory/:equipmentId', verifyCsrfToken, handler(async (req, res) => {
   await checkInventory({ associationId: req.params.associationId, userId: req.user._id, equipmentId: req.params.equipmentId, period: req.body.period, input: req.body });

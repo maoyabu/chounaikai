@@ -32,4 +32,14 @@
 .mfa-code-list { padding-left: 20px; line-height: 2; font-size: .95rem; overflow-wrap: anywhere; }
 .mfa-card .form-stack .checkbox-label { display: flex; align-items: flex-start; gap: .65rem; line-height: 1.6; }
 .mfa-card .checkbox-label input[type="checkbox"] { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; margin: .25rem 0 0; padding: 0; accent-color: var(--green); }
+.privacy-audit-filters { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.privacy-audit-filters .form-actions { grid-column: 1 / -1; }
+.privacy-audit-list { display: grid; gap: 1rem; }
+.privacy-audit-item { padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--surface); overflow-wrap: anywhere; }
+.privacy-audit-heading { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.privacy-audit-item dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; }
+.privacy-audit-item dt { color: var(--muted); font-size: .85rem; }
+.privacy-audit-item dd { margin: .35rem 0 0; }
+.privacy-audit-item small { display: block; color: var(--muted); margin-top: .25rem; }
+.privacy-audit-targets { max-height: 240px; overflow: auto; padding-left: 1.25rem; }
 @media print { .mfa-card form, .mfa-card button { display: none; } .mfa-card { box-shadow: none; } }

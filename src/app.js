@@ -4,6 +4,11 @@ import { mfaEncryptionKey } from './config/mfa.js';
 import { createMfaService } from './services/mfaService.js';
 import { enforceAdminMfa } from './middleware/mfa.js';
 import { mfaRouter } from './routes/mfa.js';
+import { privacyAudit } from './middleware/privacyAudit.js';
+import { privacyAuditRouter } from './routes/privacyAudit.js';
+import { createSiteSecurityService, applySiteMfaPolicy } from './services/siteSecurityService.js';
+import { siteSecurityRouter } from './routes/siteSecurity.js';
+import { productionErrorResponses, applicationErrorHandler } from './middleware/errorResponses.js';
 import { securityHeaders, enforceHttps } from './middleware/security.js';
 import { createAuthRateLimiter, createMemoryRateStore, createMongoRateStore } from './middleware/authRateLimit.js';
 import { mongoSecurityOptions } from './config/security.js';
@@ -35,10 +40,13 @@ import { notificationsRouter } from './routes/notifications.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY }) => {
+export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService }) => {
   const app = express();
   app.disable('x-powered-by');
-  app.locals.mfaService = mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) });
+  app.set('env', nodeEnv);
+  app.use(productionErrorResponses(nodeEnv));
+  app.locals.siteSecurityService = siteSecurityService || createSiteSecurityService();
+  app.locals.mfaService = applySiteMfaPolicy(mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) }), app.locals.siteSecurityService);
   // Change the asset URL whenever the server starts (or when a release version
   // is provided) so browsers do not keep using stale CSS/JS assets.
   app.locals.assetVersion = process.env.RELEASE_VERSION || String(Date.now());
@@ -85,10 +93,13 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
 
   app.use(createAuthRateLimiter({ store: limiterStore, secret: sessionSecret, authenticated: true }));
   app.use(enforceAdminMfa(app.locals.mfaService));
+  app.use(privacyAudit({ writer: privacyAuditWriter }));
   app.use('/mfa', mfaRouter);
   app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
+  app.use('/', privacyAuditRouter);
+  app.use('/', siteSecurityRouter);
   app.use('/', systemContactsRouter);
   app.use('/associations', messageAttachmentsRouter);
   app.use('/associations', associationEventsRouter);
@@ -106,23 +117,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/associations', householdsRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/associations', associationsRouter);
-  app.use((error, req, res, _next) => {
-    const databaseUnavailable = ['MongoNetworkError', 'MongoNetworkTimeoutError', 'MongoServerSelectionError'].includes(error?.name)
-      || ['ETIMEDOUT', 'ECONNREFUSED', 'EHOSTUNREACH'].includes(error?.code);
-    const status = Number(error.status) || (databaseUnavailable ? 503 : error?.code === 11000 ? 409 : 500);
-    if (status >= 500) console.error(error);
-    if (!req.originalUrl.startsWith('/api/')) {
-      const messages = {
-        400: error.message || '入力内容を確認してください。',
-        403: 'この操作を行う権限がありません。',
-        404: '指定された情報を確認できませんでした。',
-        409: error.message || '現在の状態では操作できません。',
-        429: error.message || '時間をおいて再度お試しください。',
-        503: 'データベースに接続できません。少し待ってから再度お試しください。'
-      };
-      return res.status(status).render('error', { title: status === 409 ? '操作を完了できません' : 'エラー', message: messages[status] || '処理中にエラーが発生しました。' });
-    }
-    res.status(status).json({ error: status === 500 ? 'internal_error' : error.message });
-  });
+  app.use((_req, _res, next) => next(Object.assign(new Error('not_found'), { status: 404 })));
+  app.use(applicationErrorHandler(nodeEnv));
   return app;
 };

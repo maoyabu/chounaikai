@@ -113,7 +113,7 @@ export const verifyEmailToken = async (token) => {
     } catch (error) {
       // The account remains valid even if the household invitation expired during signup.
       console.error('Verified household invitation could not be accepted', error.message);
-      user.$locals.householdParticipationError = error.status && error.status < 500 ? error.message : '世帯への紐付けを完了できませんでした。ログイン後に招待を再確認してください。';
+      user.$locals.householdParticipationError = '世帯への紐付けを完了できませんでした。ログイン後に招待を再確認してください。';
     }
   }
   return user;

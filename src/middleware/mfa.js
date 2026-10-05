@@ -5,6 +5,7 @@ export const mfaVerified = (req, state, now = Date.now()) => {
   const verified = req.session?.mfaVerified;
   return Boolean(state.credential?.enabledAt && verified && verified.userId === String(req.user._id)
     && verified.revision === state.credential.revision && verified.passwordFingerprint === passwordFingerprint(req.user)
+    && (!state.policyRevision || verified.policyRevision === state.policyRevision)
     && verified.at <= now && now - verified.at < MFA_SESSION_MS);
 };
 export const recentPrimaryAuth = (req, now = Date.now()) => {
@@ -25,13 +26,14 @@ export const completeMfa = async (req, credential) => {
   }
   await new Promise((resolve, reject) => req.logIn(req.user, error => error ? reject(error) : resolve()));
   Object.assign(req.session, preserved);
-  req.session.mfaVerified = { userId: String(req.user._id), revision: credential.revision, passwordFingerprint: passwordFingerprint(req.user), at: Date.now() };
+  req.session.mfaVerified = { userId: String(req.user._id), revision: credential.revision, policyRevision: req.mfaState?.policyRevision, passwordFingerprint: passwordFingerprint(req.user), at: Date.now() };
 };
 export const enforceAdminMfa = service => async (req, res, next) => {
   if (!req.isAuthenticated?.()) return next();
   try {
     const state = await service.getState(req.user);
     req.mfaState = state; req.mfaVerified = mfaVerified(req, state);
+    res.locals.siteMfaEnabled = state.siteEnabled !== false;
     res.locals.mfaRequired = state.required; res.locals.mfaEnabled = Boolean(state.credential?.enabledAt);
     if (!state.required && !state.credential?.enabledAt) return next();
     const path = req.path.toLowerCase().replace(/\/+$/, '');

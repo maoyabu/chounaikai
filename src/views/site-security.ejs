@@ -1,0 +1,19 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/admin">← システム管理者のダッシュボードへ</a>
+  <section class="page-heading"><div><p class="eyebrow">システム管理</p><h1>サイトの多要素認証設定</h1><p>このサイトのシステム管理者・町内会管理者に適用されます。</p></div></section>
+  <% if (typeof notice !== 'undefined' && notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <% if (formError) { %><div class="alert alert-error" role="alert"><%= formError %></div><% } %>
+  <section class="content-card"><h2>現在：<%= settings.mfaEnabled ? '使用する' : '使用しない' %></h2>
+    <p>「使用しない」にすると、登録済みの管理者もパスワードだけでログインできます。認証アプリの登録と復旧コードは保持され、「使用する」に戻すと再び追加認証が必要になります。</p>
+    <form method="post" action="/admin/security/mfa" class="form-stack">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="revision" value="<%= settings.revision %>"><input type="hidden" name="enabled" value="<%= settings.mfaEnabled ? 'false' : 'true' %>">
+      <label>現在のパスワード<input type="password" name="currentPassword" autocomplete="current-password" required></label>
+      <% if (enrolled) { %><label>認証アプリの6桁コード<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label><label>または未使用の復旧コード<input name="recoveryCode" autocomplete="off"></label><p class="help-text">どちらか一方を入力してください。直前に使った認証コードは再利用できないため、次のコードを待って入力してください。</p><% } %>
+      <button class="button <%= settings.mfaEnabled ? 'button-danger-outline' : 'button-primary' %>" type="submit"><%= settings.mfaEnabled ? '多要素認証を使用しない' : '多要素認証を使用する' %></button>
+    </form>
+  </section>
+  <section class="admin-section"><h2>設定の変更履歴</h2><% if (!settings.history?.length) { %><p>変更履歴はありません。</p><% } else { %><ul><% settings.history.slice(-10).reverse().forEach(item => { %><li><%= new Date(item.at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %> ／ <%= item.actorName || item.actor %> ／ <%= item.before ? '使用する' : '使用しない' %> → <%= item.after ? '使用する' : '使用しない' %></li><% }) %></ul><p class="help-text">最新10件を表示しています。</p><% } %></section>
+</main>
+<%- include('partials/foot') %>

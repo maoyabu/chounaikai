@@ -36,7 +36,7 @@
       try {
         const url = new URL(trigger.href); url.searchParams.set('modal', '1');
         const response = await fetch(url, { headers, signal: request.signal });
-        if (!response.ok) { const result = await response.json(); throw new Error(result.error); }
+        if (!response.ok) { const result = await response.json(); throw new Error(result.message || result.error || '処理できませんでした。'); }
         const html = await response.text();
         if (request.signal.aborted) return;
         content.innerHTML = html;
@@ -59,7 +59,7 @@
           try {
             const result = await fetch(form.action, { method: 'POST', headers, body: new URLSearchParams(new FormData(form)) });
             const data = await result.json();
-            if (!result.ok || !data.ok) throw new Error(data.error || '保存できませんでした。');
+            if (!result.ok || !data.ok) throw new Error(data.message || data.error || '保存できませんでした。');
             window.location.reload();
           } catch (failure) { showError(error, failure.message || '保存できませんでした。'); save.disabled = false; save.textContent = '保存'; }
         });

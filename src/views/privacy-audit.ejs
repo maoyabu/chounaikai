@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <a class="back-link" href="/admin">← システム管理者のダッシュボードへ</a>
+  <section class="page-heading"><div><p class="eyebrow">システム管理</p><h1>個人情報の閲覧監査ログ</h1><p>個人情報を含む画面・ファイルを返す前に記録した履歴です。日時は日本時間です。</p></div></section>
+  <form method="get" action="/admin/privacy-audit" class="form-card form-stack privacy-audit-filters">
+    <label>開始日<input type="date" name="from" value="<%= filters.from %>" required></label>
+    <label>終了日<input type="date" name="to" value="<%= filters.to %>" required></label>
+    <label>閲覧者<input name="actor" value="<%= filters.actor %>" maxlength="160" placeholder="閲覧時の名前・ユーザー名、またはユーザーID"></label>
+    <label>町内会<select name="association"><option value="">すべて（システム全体を含む）</option><% associations.forEach(item => { %><option value="<%= item._id %>" <%= filters.association === String(item._id) ? 'selected' : '' %>><%= item.name %></option><% }) %></select></label>
+    <label>情報の種類<select name="category"><option value="">すべて</option><% Object.entries(categories).forEach(([value, label]) => { %><option value="<%= value %>" <%= filters.category === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label>操作<select name="action"><option value="">すべて</option><% [['view', '閲覧'], ['download', 'ダウンロード'], ['export', '出力']].forEach(([value, label]) => { %><option value="<%= value %>" <%= filters.action === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label>対象ID<input name="target" value="<%= filters.target %>" maxlength="180" placeholder="ユーザー・世帯のID、または file:ファイルID"></label>
+    <div class="form-actions"><a class="button button-quiet" href="/admin/privacy-audit">条件をリセット</a><button type="submit" class="button button-primary">検索する</button></div>
+  </form>
+  <section class="admin-section">
+    <div class="section-heading"><h2>閲覧履歴</h2><small>新しい順・1ページ50件</small></div>
+    <% if (!logs.length) { %><div class="admin-empty"><p>条件に一致するログはありません。</p></div><% } %>
+    <div class="privacy-audit-list"><% logs.forEach(log => { %>
+      <article class="privacy-audit-item">
+        <div class="privacy-audit-heading"><strong><%= new Date(log.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false }) %></strong><span class="status-badge"><%= ({ view: '閲覧', download: 'ダウンロード', export: '出力' })[log.action] %></span></div>
+        <dl><div><dt>閲覧者</dt><dd><%= log.actorName || (log.actorKind === 'anonymous' ? '未ログイン' : '名前なし') %>（<%= log.actorKind === 'system_admin' ? 'システム管理者' : log.actorKind === 'anonymous' ? '匿名' : '利用者' %>）<% if (log.actor) { %><small>ID: <%= log.actor %></small><% } %></dd></div>
+        <div><dt>町内会</dt><dd><% if (log.associationNames?.length) { log.associationNames.forEach(item => { %><span><%= item.name %></span><small>ID: <%= item._id %></small><% }); } else { %>システム全体<% } %></dd></div>
+        <div><dt>情報・画面</dt><dd><%= categories[log.category] || log.category %><small><%= log.resource %></small></dd></div></dl>
+        <details><summary>対象ID・アクセス情報（対象 <%= log.targetCount %>件）</summary>
+          <% if (log.targetsTruncated) { %><p>対象が多いため、先頭5,000件のIDを保存しています。</p><% } %>
+          <% if (log.targets?.length) { %><ul class="privacy-audit-targets"><% log.targets.forEach(target => { %><li><code><%= target %></code></li><% }) %></ul><% } else { %><p>対象IDなし（空の一覧など）</p><% } %>
+          <p><%= log.method %> <code><%= log.route %></code></p><p>接続元IP: <%= log.ip || '不明' %></p><p>リクエストID: <code><%= log.requestId %></code></p>
+        </details>
+      </article>
+    <% }) %></div>
+    <nav class="form-actions" aria-label="監査ログのページ切り替え"><% if (firstUrl) { %><a class="button button-quiet" href="<%= firstUrl %>">最新のページへ</a><% } %><% if (nextUrl) { %><a class="button button-primary" href="<%= nextUrl %>">次の50件</a><% } %></nav>
+  </section>
+</main>
+<%- include('partials/foot') %>

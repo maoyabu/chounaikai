@@ -31,6 +31,9 @@ authRouter.post('/logout', requireLogin, (req, res, next) => {
   });
 });
 
-authRouter.get('/me', requireLogin, (req, res) => {
-  res.json({ user: { id: String(req.user._id), username: req.user.username, email: req.user.email, displayname: req.user.displayname || null, isAdmin: Boolean(req.user.isAdmin) } });
+authRouter.get('/me', requireLogin, async (req, res, next) => {
+  try {
+    await req.auditPersonalData?.({ category: 'residents', resource: 'api-auth-me', data: { user: req.user } });
+    res.json({ user: { id: String(req.user._id), username: req.user.username, email: req.user.email, displayname: req.user.displayname || null, isAdmin: Boolean(req.user.isAdmin) } });
+  } catch (error) { next(error); }
 });

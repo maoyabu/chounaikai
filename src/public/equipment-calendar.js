@@ -9,7 +9,7 @@
     try {
       const response = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: new URLSearchParams(new FormData(form)) });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || result.message || '処理できませんでした。');
+      if (!response.ok) throw new Error(result.message || result.error || '処理できませんでした。');
       location.reload();
     } catch (failure) { error.textContent = failure.message; error.hidden = false; }
     finally { buttons.forEach(button => button.disabled = false); }
