@@ -1,4 +1,5 @@
 import { mfaEncryptionKey } from './mfa.js';
+import { personalDataKeyring } from '../security/personalDataCrypto.js';
 import { mongoProxyOptions, mongoSecurityOptions, parseTrustProxy, publicHttpsOrigin } from './security.js';
 
 const required = (name) => {
@@ -14,6 +15,7 @@ export const loadConfig = () => {
   if (nodeEnv === 'production') publicHttpsOrigin(publicBaseUrl);
   const sessionSecret = required('CHOUNAIKAI_SESSION_SECRET');
   mfaEncryptionKey(process.env.MFA_ENCRYPTION_KEY, sessionSecret, nodeEnv);
+  personalDataKeyring();
   return {
     mongoUri,
     sessionSecret,

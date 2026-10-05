@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { personalDataPlugin } from '../security/personalDataPlugin.js';
 
 const annualOfficerSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
@@ -20,5 +21,6 @@ const annualOfficerSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'annual_officers' });
 
 annualOfficerSchema.index({ association: 1, fiscalYear: 1, user: 1 }, { unique: true, partialFilterExpression: { user: { $type: 'objectId' } } });
+annualOfficerSchema.plugin(personalDataPlugin, { collection: 'annual_officers' });
 
 export const AnnualOfficer = mongoose.model('AnnualOfficer', annualOfficerSchema);

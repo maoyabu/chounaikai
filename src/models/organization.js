@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { personalDataPlugin } from '../security/personalDataPlugin.js';
 
 const tenantField = { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true };
 
@@ -40,6 +41,7 @@ const householdSchema = new mongoose.Schema({
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true, collection: 'households' });
 householdSchema.index({ association: 1, representative: 1 }, { unique: true, partialFilterExpression: { representative: { $type: 'objectId' } } });
+householdSchema.plugin(personalDataPlugin, { collection: 'households' });
 
 const householdMemberSchema = new mongoose.Schema({
   association: tenantField,

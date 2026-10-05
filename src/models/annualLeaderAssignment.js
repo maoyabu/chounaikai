@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { personalDataPlugin } from '../security/personalDataPlugin.js';
 
 const annualLeaderAssignmentSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
@@ -19,5 +20,6 @@ const annualLeaderAssignmentSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'annual_leader_assignments' });
 
 annualLeaderAssignmentSchema.index({ association: 1, fiscalYear: 1, districtGroup: 1 }, { unique: true });
+annualLeaderAssignmentSchema.plugin(personalDataPlugin, { collection: 'annual_leader_assignments' });
 
 export const AnnualLeaderAssignment = mongoose.model('AnnualLeaderAssignment', annualLeaderAssignmentSchema);
