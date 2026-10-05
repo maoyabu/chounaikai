@@ -58,13 +58,13 @@
     await refresh();
   };
 
-  document.getElementById('notification-enable-button')?.addEventListener('click', enable);
+  document.getElementById('notification-enable-button')?.addEventListener('click', () => window.AppBusy.run(enable, '通知を設定中です'));
   document.querySelectorAll('[data-notification-dismiss]').forEach(button => button.addEventListener('click', async () => {
     await acknowledgePrompt();
     localStorage.setItem('notification-prompt-dismissed', '1');
     dialog.close();
   }));
-  profileToggle?.addEventListener('change', () => profileToggle.checked ? enable() : disable());
+  profileToggle?.addEventListener('change', () => window.AppBusy.run(async () => { try { await (profileToggle.checked ? enable() : disable()); } catch { showError('通知設定を変更できませんでした。'); await refresh(); } }, '通知を設定中です'));
 
   refresh().then(enabled => {
     if (enabled || !supported) {
