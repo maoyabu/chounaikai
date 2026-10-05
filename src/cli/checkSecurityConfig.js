@@ -6,7 +6,7 @@ let client;
 try {
   if (process.env.NODE_ENV !== 'production') throw new Error('Run this check with NODE_ENV=production');
   const config = loadConfig();
-  console.log('Production configuration: authenticated MongoDB, verified TLS, allowed DB host and HTTPS origin confirmed.');
+  console.log('Production configuration: authenticated MongoDB, verified TLS, allowed DB host, HTTPS origin and administrator MFA encryption key confirmed.');
   console.log(config.mongoOptions.proxyHost ? 'MongoDB fixed-egress proxy: configured.' : 'MongoDB fixed-egress proxy: not configured. Atlas Network Access still needs a fixed-egress path.');
   if (process.argv.includes('--connect')) {
     client = new mongoose.mongo.MongoClient(config.mongoUri, {

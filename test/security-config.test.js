@@ -40,10 +40,10 @@ test('HTTPS destination and proxy trust cannot accept arbitrary origins or blank
 });
 
 test('production environment configuration fails closed before connecting', () => {
-  const keys = ['NODE_ENV', 'MONGODB_URI', 'MONGODB_ALLOWED_HOSTS', 'PUBLIC_BASE_URL', 'CHOUNAIKAI_SESSION_SECRET', 'TRUST_PROXY', 'MONGODB_TLS_CA_FILE', 'MONGODB_SOCKS_PROXY_URL', 'FIXIE_SOCKS_HOST'];
+  const keys = ['NODE_ENV', 'MONGODB_URI', 'MONGODB_ALLOWED_HOSTS', 'PUBLIC_BASE_URL', 'CHOUNAIKAI_SESSION_SECRET', 'TRUST_PROXY', 'MONGODB_TLS_CA_FILE', 'MONGODB_SOCKS_PROXY_URL', 'FIXIE_SOCKS_HOST', 'MFA_ENCRYPTION_KEY'];
   const saved = Object.fromEntries(keys.map(key => [key, process.env[key]]));
   try {
-    Object.assign(process.env, { NODE_ENV: 'production', MONGODB_URI: srvUri, MONGODB_ALLOWED_HOSTS: allowedHosts, PUBLIC_BASE_URL: 'https://example.com', CHOUNAIKAI_SESSION_SECRET: 'test-session-secret', TRUST_PROXY: '1' });
+    Object.assign(process.env, { NODE_ENV: 'production', MONGODB_URI: srvUri, MONGODB_ALLOWED_HOSTS: allowedHosts, PUBLIC_BASE_URL: 'https://example.com', CHOUNAIKAI_SESSION_SECRET: 'test-session-secret', TRUST_PROXY: '1', MFA_ENCRYPTION_KEY: 'a'.repeat(64) });
     delete process.env.MONGODB_TLS_CA_FILE;
     delete process.env.MONGODB_SOCKS_PROXY_URL;
     delete process.env.FIXIE_SOCKS_HOST;

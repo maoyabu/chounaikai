@@ -11,7 +11,7 @@
     "security:check": "node src/cli/checkSecurityConfig.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "dependencies": {
     "cloudinary": "^2.11.0",
@@ -26,9 +26,11 @@
     "mongoose": "^8.13.0",
     "multer": "^2.3.0",
     "nodemailer": "^10.0.3",
+    "otplib": "^13.5.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^8.0.0",
+    "qrcode": "^1.5.4",
     "socks": "^2.8.10",
     "web-push": "^3.6.7"
   },

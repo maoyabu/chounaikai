@@ -1,0 +1,62 @@
+<%- include('partials/head') %>
+<main class="page-shell">
+  <section class="content-card mfa-card">
+    <p class="eyebrow">管理者アカウントの保護</p>
+    <h1><%= mode === 'setup' ? (changing ? '認証アプリを変更' : '多要素認証を設定') : mode === 'verify' ? '追加の本人確認' : mode === 'codes' ? '復旧コードを保存してください' : '多要素認証の設定' %></h1>
+    <% if (formError) { %><div class="alert alert-error" role="alert"><%= formError %></div><% } %>
+    <% if (mode === 'setup') { %>
+      <p>システム管理者・町内会管理者は、パスワードに加えて認証アプリでの確認が必要です。</p>
+      <ol><li>スマートフォンにGoogle Authenticatorなどの認証アプリを用意します。</li><li>アプリで下のQRコードを読み取ります。</li><li>アプリに表示された6桁のコードを入力します。</li></ol>
+      <img class="mfa-qr" src="<%= qrCode %>" width="256" height="256" alt="認証アプリで読み取る設定用QRコード">
+      <details><summary>QRコードを読み取れない場合</summary><p>認証アプリで設定キーを手動入力し、時間ベースの認証を選んでください。</p><code class="mfa-secret"><%= secret %></code></details>
+      <p class="help-text">このQRコードと設定キーは他の人に渡さないでください。設定は10分以内に完了してください。</p>
+      <form action="<%= changing ? '/mfa/change' : '/mfa/setup' %>" method="post" class="form-stack" data-busy-message="多要素認証を設定中です">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>認証アプリの6桁コード<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus></label>
+        <button class="button button-primary" type="submit">設定を完了する</button>
+      </form>
+    <% } else if (mode === 'verify') { %>
+      <p>認証アプリに表示された6桁のコードを入力してください。</p>
+      <form action="/mfa/verify" method="post" class="form-stack" data-busy-message="本人確認中です">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>認証コード<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus></label>
+        <button class="button button-primary" type="submit">確認してログイン</button>
+      </form>
+      <details class="mfa-recovery"><summary>スマートフォンを使えない場合</summary><p>設定時に保存した未使用の復旧コードを1つ入力してください。</p>
+        <form action="/mfa/verify" method="post" class="form-stack">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label>復旧コード<input name="recoveryCode" autocomplete="off" maxlength="64" required></label>
+          <button class="button button-quiet" type="submit">復旧コードで確認</button>
+        </form>
+      </details>
+    <% } else if (mode === 'codes') { %>
+      <p>スマートフォンを紛失したときに使えます。各コードは1回だけ使用できます。</p>
+      <p><strong>この一覧は今回だけ表示されます。</strong>紙や安全な保管場所に保存してください。再発行した場合、以前の復旧コードは使えなくなります。</p>
+      <ul class="mfa-code-list"><% codes.forEach(code => { %><li><code><%= code %></code></li><% }) %></ul>
+      <button type="button" class="button button-quiet" onclick="window.print()">印刷する</button>
+      <form action="/mfa/continue" method="post" class="form-stack">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="checkbox-label"><input type="checkbox" required><span>復旧コードを安全な場所に保存しました</span></label>
+        <button class="button button-primary" type="submit">保存して利用を開始</button>
+      </form>
+    <% } else { %>
+      <p>認証アプリによる多要素認証は有効です。未使用の復旧コードは<strong><%= recoveryCount %>個</strong>あります。</p>
+      <p>スマートフォンを変更するときは認証アプリを変更してください。復旧コードの作り直しでは、古いコードがすべて無効になります。</p>
+      <% [['change','認証アプリを変更する'],['recovery','復旧コードを作り直す']].forEach(([action,label]) => { %>
+        <details class="mfa-recovery"><summary><%= label %></summary>
+          <form action="/mfa/settings/<%= action %>" method="post" class="form-stack">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <label>現在のパスワード<input type="password" name="currentPassword" autocomplete="current-password" required></label>
+            <label>認証アプリの新しい6桁コード<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
+            <label>または未使用の復旧コード<input name="recoveryCode" autocomplete="off" maxlength="64"></label>
+            <p class="help-text">認証コードか復旧コードのどちらかを入力してください。使用済みの認証コードは、アプリで次のコードが表示されるまでお待ちください。</p>
+            <button class="button button-primary" type="submit"><%= label %></button>
+          </form>
+        </details>
+      <% }) %>
+      <p><a href="/dashboard">ホームに戻る</a></p>
+    <% } %>
+    <form action="/mfa/logout" method="post" class="mfa-logout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="button button-quiet">ログアウト</button></form>
+  </section>
+</main>
+<%- include('partials/foot') %>

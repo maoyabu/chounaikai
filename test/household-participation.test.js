@@ -649,8 +649,9 @@ test('login from an invitation creates an application despite session regenerati
   stub(t, JoinApplication, 'findOneAndUpdate', async (_filter, update) => ({ _id: ids.application, association: ids.association, ...update.$set }));
   const grant = stub(t, AssociationMembership, 'findOneAndUpdate', () => { throw new Error('must_wait_for_approval'); });
   stub(t, passport, 'authenticate', (_strategy, callback) => () => callback(null, user));
-  const req = { session: { householdInvitationId: String(ids.invitation), registrationChoice: { purpose: 'create' } },
-    logIn(_user, callback) { this.session = {}; return callback(); }
+  const req = { app: { locals: { mfaService: { async getState() { return { required: false }; } } } },
+    session: { householdInvitationId: String(ids.invitation), registrationChoice: { purpose: 'create' } },
+    logIn(_user, callback) { this.user = _user; this.session = {}; return callback(); }
   };
   const destination = await new Promise((resolve, reject) => {
     route(webRouter, '/login').stack.at(-1).handle(req, { redirect: resolve }, reject);
@@ -666,7 +667,8 @@ test('login with a different invitation email returns to invitation guidance wit
   stubInvitation(t);
   const claim = stub(t, Invitation, 'findOneAndUpdate', () => { throw new Error('must_not_claim'); });
   stub(t, passport, 'authenticate', (_strategy, callback) => () => callback(null, { ...user, email: 'other@example.test' }));
-  const req = { session: { householdInvitationId: String(ids.invitation) }, logIn(_user, callback) { this.session = {}; return callback(); } };
+  const req = { app: { locals: { mfaService: { async getState() { return { required: false }; } } } },
+    session: { householdInvitationId: String(ids.invitation) }, logIn(_user, callback) { this.user = _user; this.session = {}; return callback(); } };
   const destination = await new Promise((resolve, reject) => {
     route(webRouter, '/login').stack.at(-1).handle(req, { redirect: resolve }, reject);
   });
@@ -737,4 +739,21 @@ test('manager approval endpoint scopes applications to its association and accep
   const filter = JoinApplication.findOne.mock.calls[0].arguments[0];
   assert.equal(filter.association, String(ids.association));
   assert.deepEqual(filter.status, { $in: ['pending', 'awaiting_household'] });
+});
+
+
+test('administrator invitation login waits for MFA before accepting or changing membership', async t => {
+  const claim = stub(t, Invitation, 'findOneAndUpdate', () => { throw new Error('must_wait_for_mfa'); });
+  const grant = stub(t, AssociationMembership, 'findOneAndUpdate', () => { throw new Error('must_wait_for_mfa'); });
+  stub(t, passport, 'authenticate', (_strategy, callback) => () => callback(null, user));
+  const req = { app: { locals: { mfaService: { async getState() { return { required: true }; } } } },
+    session: { householdInvitationId: String(ids.invitation), registrationChoice: { purpose: 'create' } },
+    logIn(authenticated, callback) { this.user = authenticated; this.session = {}; return callback(); }
+  };
+  const destination = await new Promise((resolve, reject) => route(webRouter, '/login').stack.at(-1).handle(req, { redirect: resolve }, reject));
+  assert.equal(destination, '/mfa/setup');
+  assert.equal(req.session.householdInvitationId, String(ids.invitation));
+  assert.equal(req.session.registrationChoice.purpose, 'create');
+  assert.equal(claim.mock.callCount(), 0);
+  assert.equal(grant.mock.callCount(), 0);
 });

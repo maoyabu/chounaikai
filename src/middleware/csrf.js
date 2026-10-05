@@ -9,8 +9,9 @@ export const provideCsrfToken = (req, res, next) => {
 export const verifyCsrfToken = (req, res, next) => {
   const expected = String(req.session?.csrfToken || '');
   const received = String(req.body?._csrf || req.get('x-csrf-token') || '');
-  const valid = expected.length === received.length && expected.length > 0 &&
-    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+  const expectedBytes = Buffer.from(expected), receivedBytes = Buffer.from(received);
+  const valid = expectedBytes.length === receivedBytes.length && expectedBytes.length > 0 &&
+    crypto.timingSafeEqual(expectedBytes, receivedBytes);
   if (!valid) return res.status(403).render('error', { title: '操作を確認できませんでした', message: '画面を再読み込みして、もう一度お試しください。' });
   return next();
 };

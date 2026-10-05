@@ -1,5 +1,9 @@
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
+import { mfaEncryptionKey } from './config/mfa.js';
+import { createMfaService } from './services/mfaService.js';
+import { enforceAdminMfa } from './middleware/mfa.js';
+import { mfaRouter } from './routes/mfa.js';
 import { securityHeaders, enforceHttps } from './middleware/security.js';
 import { createAuthRateLimiter, createMemoryRateStore, createMongoRateStore } from './middleware/authRateLimit.js';
 import { mongoSecurityOptions } from './config/security.js';
@@ -31,9 +35,10 @@ import { notificationsRouter } from './routes/notifications.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore }) => {
+export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY }) => {
   const app = express();
   app.disable('x-powered-by');
+  app.locals.mfaService = mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) });
   // Change the asset URL whenever the server starts (or when a release version
   // is provided) so browsers do not keep using stale CSS/JS assets.
   app.locals.assetVersion = process.env.RELEASE_VERSION || String(Date.now());
@@ -79,6 +84,9 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   });
 
   app.use(createAuthRateLimiter({ store: limiterStore, secret: sessionSecret, authenticated: true }));
+  app.use(enforceAdminMfa(app.locals.mfaService));
+  app.use('/mfa', mfaRouter);
+  app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
   app.use('/', systemContactsRouter);

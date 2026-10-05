@@ -1,5 +1,6 @@
 import express from 'express';
 import passport from 'passport';
+import { recordPrimaryAuth } from '../middleware/mfa.js';
 import { requireLogin } from '../middleware/auth.js';
 
 export const authRouter = express.Router();
@@ -8,8 +9,12 @@ authRouter.post('/login', (req, res, next) => {
   passport.authenticate('local', (error, user, info) => {
     if (error) return next(error);
     if (!user) return res.status(401).json({ error: info?.code || 'invalid_credentials' });
-    return req.logIn(user, (loginError) => {
+    return req.logIn(user, async (loginError) => {
       if (loginError) return next(loginError);
+      try {
+        const state = await recordPrimaryAuth(req, user, '/dashboard');
+        if (state.required || state.credential?.enabledAt) return res.status(202).json({ mfaRequired: true, setupRequired: !state.credential?.enabledAt, next: state.credential?.enabledAt ? '/mfa/verify' : '/mfa/setup' });
+      } catch (error) { return next(error); }
       return res.json({ user: { id: String(user._id), username: user.username, email: user.email, displayname: user.displayname || null } });
     });
   })(req, res, next);

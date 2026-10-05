@@ -98,7 +98,7 @@ test('production sessions use verified TLS and the fixed-IP proxy with Secure co
   try {
     const app = createApp({
       mongoUri: 'mongodb+srv://app:secret@cluster.example.mongodb.net/finance', sessionSecret: 'test-secret',
-      nodeEnv: 'production', publicBaseUrl: 'https://trusted.example', trustProxy: 'loopback',
+      nodeEnv: 'production', mfaKey: 'a'.repeat(64), publicBaseUrl: 'https://trusted.example', trustProxy: 'loopback',
       mongoOptions: { proxyHost: 'fixed.example', proxyPort: 1080, proxyUsername: 'user', proxyPassword: 'secret' },
       rateLimitStore: { async increment() { return 1; } }
     });

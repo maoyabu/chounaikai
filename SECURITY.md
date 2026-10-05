@@ -14,6 +14,7 @@
 | 会員登録 | 1時間 | 10 | 3 | — |
 | 家族の招待メール送信 | 1時間 | 20 | 3 | 10 |
 | 招待・確認メール・再設定リンク閲覧、招待受諾 | 15分 | 30 | — | — |
+| MFAの登録確認・検証・設定変更 | 15分 | 30 | — | 10 |
 | プロフィールでのパスワード変更 | 15分 | 10 | — | 5 |
 
 上限は成功・失敗を含む試行回数です。固定時間枠を使用し、枠が切り替わると回数がリセットされます。上限超過にはHTTP 429・Retry-After・日本語の案内を返します。アカウントの存在を調べる前に制限するため、制限の応答で登録状況を明かしません。
@@ -84,3 +85,13 @@ Fixie SocksのHandlebarは月額上限9 USD、月2,000接続・500 MB、無料Gr
 - [MongoDBドライバーのSOCKS5設定](https://www.mongodb.com/docs/drivers/node/current/security/socks/)
 - [HerokuのFixie Socks連携](https://devcenter.heroku.com/articles/fixie-socks)
 - [Fixie Socksの公式料金](https://elements.heroku.com/addons/fixie-socks)
+
+## 管理者の多要素認証
+
+システム管理者と有効な町内会管理者権限を持つアカウントにTOTP認証を必須にします。
+既存ログイン、画面、APIを共通のミドルウェアで保護し、パスワード再設定後もMFAを維持します。
+MFAの秘密は専用コレクションで暗号化し、復旧コードはハッシュだけを保存します。
+
+本番反映前に **MFA_ENCRYPTION_KEY** の新規設定が必要です。
+今回のMFA作業はテスト環境までとし、GitHub・Herokuへは反映しません。
+具体的な利用・反映・検証手順は [MFA.md](MFA.md) を参照してください。

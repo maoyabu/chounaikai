@@ -27,6 +27,7 @@ import { registerUser } from '../services/userService.js';
 import { assertMailConfigured, resendVerification, sendVerificationEmail, verifyEmailToken } from '../services/emailVerificationService.js';
 import { acceptProfileImage, uploadProfileImage } from '../services/profileImageService.js';
 import { requestPasswordReset, isPasswordResetValid, resetPassword } from '../services/passwordResetService.js';
+import { recordPrimaryAuth } from '../middleware/mfa.js';
 import { changePassword } from '../services/passwordChangeService.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
 
@@ -352,6 +353,36 @@ webRouter.post('/verification-email/resend', verifyCsrfToken, async (req, res, n
   }
 });
 
+const finishWebLogin = async (req, res, next) => {
+  const user = req.user;
+  try {
+    if (req.session.householdInvitationId) {
+      if (user.isAdmin) return res.redirect('/resident-onboarding');
+      let application;
+      try {
+        application = await acceptHouseholdInvitation({ invitationId: req.session.householdInvitationId, user });
+      } catch (invitationError) {
+        if (invitationError.status && invitationError.status < 500) return res.redirect('/resident-onboarding');
+        throw invitationError;
+      }
+      delete req.session.householdInvitationId;
+      delete req.session.registrationChoice;
+      req.session.notice = '参加申請を送信しました。班長または町内会管理者の承認をお待ちください。';
+      return res.redirect(`/associations/${application.association}/participation`);
+    }
+    const registration = await ResidentRegistration.findOne({ user: user._id }).lean();
+    if (req.session.registrationChoice?.purpose === 'create') return res.redirect('/associations/new');
+    if (req.session.registrationChoice?.purpose === 'join') return res.redirect(`/associations/${req.session.registrationChoice.associationId}/join`);
+    if (registration?.registrationPurpose === 'create') {
+      req.session.registrationChoice = { purpose: 'create' };
+      return res.redirect('/associations/new');
+    }
+    if (registration?.association) return res.redirect(`/associations/${registration.association}/join`);
+    return res.redirect(req.session.householdInvitationId || registration?.householdInvitation || registration?.residentMode === 'general' ? '/resident-onboarding' : '/dashboard');
+  } catch (registrationError) { return next(registrationError); }
+};
+webRouter.get('/login/complete', requireLogin, finishWebLogin);
+
 webRouter.post('/login', verifyCsrfToken, (req, res, next) => {
   const householdInvitationId = req.session.householdInvitationId;
   const registrationChoice = req.session.registrationChoice;
@@ -369,30 +400,10 @@ webRouter.post('/login', verifyCsrfToken, (req, res, next) => {
       if (registrationChoice) req.session.registrationChoice = registrationChoice;
       if (householdInvitationId) req.session.householdInvitationId = householdInvitationId;
       try {
-        if (householdInvitationId) {
-          if (user.isAdmin) return res.redirect('/resident-onboarding');
-          let application;
-          try {
-            application = await acceptHouseholdInvitation({ invitationId: householdInvitationId, user });
-          } catch (invitationError) {
-            if (invitationError.status && invitationError.status < 500) return res.redirect('/resident-onboarding');
-            throw invitationError;
-          }
-          delete req.session.householdInvitationId;
-          delete req.session.registrationChoice;
-          req.session.notice = '参加申請を送信しました。班長または町内会管理者の承認をお待ちください。';
-          return res.redirect(`/associations/${application.association}/participation`);
-        }
-        const registration = await ResidentRegistration.findOne({ user: user._id }).lean();
-        if (req.session.registrationChoice?.purpose === 'create') return res.redirect('/associations/new');
-        if (req.session.registrationChoice?.purpose === 'join') return res.redirect(`/associations/${req.session.registrationChoice.associationId}/join`);
-        if (registration?.registrationPurpose === 'create') {
-          req.session.registrationChoice = { purpose: 'create' };
-          return res.redirect('/associations/new');
-        }
-        if (registration?.association) return res.redirect(`/associations/${registration.association}/join`);
-        return res.redirect(req.session.householdInvitationId || registration?.householdInvitation || registration?.residentMode === 'general' ? '/resident-onboarding' : '/dashboard');
-      } catch (registrationError) { return next(registrationError); }
+        const state = await recordPrimaryAuth(req, user, '/login/complete');
+        if (state.required || state.credential?.enabledAt) return res.redirect(state.credential?.enabledAt ? '/mfa/verify' : '/mfa/setup');
+        return await finishWebLogin(req, res, next);
+      } catch (error) { return next(error); }
     });
   })(req, res, next);
 });

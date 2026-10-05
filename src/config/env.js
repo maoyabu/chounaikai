@@ -1,3 +1,4 @@
+import { mfaEncryptionKey } from './mfa.js';
 import { mongoProxyOptions, mongoSecurityOptions, parseTrustProxy, publicHttpsOrigin } from './security.js';
 
 const required = (name) => {
@@ -11,9 +12,12 @@ export const loadConfig = () => {
   const mongoUri = required('MONGODB_URI');
   const publicBaseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3003';
   if (nodeEnv === 'production') publicHttpsOrigin(publicBaseUrl);
+  const sessionSecret = required('CHOUNAIKAI_SESSION_SECRET');
+  mfaEncryptionKey(process.env.MFA_ENCRYPTION_KEY, sessionSecret, nodeEnv);
   return {
     mongoUri,
-    sessionSecret: required('CHOUNAIKAI_SESSION_SECRET'),
+    sessionSecret,
+    mfaKey: process.env.MFA_ENCRYPTION_KEY,
     port: Number(process.env.PORT || 3003),
     nodeEnv,
     publicBaseUrl,

@@ -12,6 +12,7 @@ const policies = {
   register: { windowMs: 60 * minute, ip: 10, account: 3 },
   invitationSend: { windowMs: 60 * minute, ip: 20, user: 10, account: 3 },
   token: { windowMs: 15 * minute, ip: 30 },
+  mfa: { windowMs: 15 * minute, ip: 30, user: 10 },
   password: { windowMs: 15 * minute, ip: 10, user: 5 }
 };
 
@@ -19,6 +20,7 @@ export const authRatePolicy = req => {
   // Match case-insensitive and optional trailing slashes, like Express routes.
   const path = req.path.toLowerCase().replace(/\/+$/, '') || '/';
   if (req.method === 'POST') {
+    if (/^\/(?:api\/auth\/)?mfa\/(?:setup|verify|change|settings\/(?:change|recovery))$/.test(path)) return 'mfa';
     if (['/login', '/api/auth/login'].includes(path)) return 'login';
     if (['/forgot-password', '/verification-email/resend'].includes(path)) return 'resetEmail';
     if (path === '/reset-password') return 'reset';

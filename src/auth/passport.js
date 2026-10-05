@@ -27,7 +27,9 @@ export const configurePassport = (passport) => {
   passport.serializeUser((user, done) => done(null, String(user._id)));
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await User.findById(id);
+      // passport-local-mongoose hides hash by default. MFA binds the session to
+      // the current password hash, including after password changes/resets.
+      const user = await User.findById(id).select('+hash');
       if (!user || user.unsubscribe_date) return done(null, false);
       return done(null, user);
     } catch (error) {
