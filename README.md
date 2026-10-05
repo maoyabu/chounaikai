@@ -108,3 +108,13 @@
 ## Google Driveドキュメント管理
 
 町内会管理の「Google Drive連携設定」に各町内会のOAuthクライアントと共有フォルダを登録します。役員メニューの「町内会ドキュメント管理」から資料を操作できます。サーバーには `DRIVE_ENCRYPTION_KEY` と公開URLの設定が必要です。設定・Google審査・対応形式は [GOOGLE_DRIVE.md](GOOGLE_DRIVE.md)、管理者向けの1枚資料は [準備手順PowerPoint](src/public/documents/google-drive-setup.pptx) を参照してください。
+
+## 本番セキュリティ設定
+
+認証関連のレート制限、Helmet、HTTPS強制・HSTS、本番MongoDBの認証・TLS検証を適用します。
+本番は `PUBLIC_BASE_URL` にHTTPS origin、`MONGODB_ALLOWED_HOSTS` にAtlasの接続先ホストを設定する必要があります。
+Herokuでは `TRUST_PROXY=1` を使用します。設定不足や安全でないMongoDB接続では起動しません。
+
+Atlasの接続元制限には固定IPの確保とNetwork Access設定が別途必要です。
+固定IP用SOCKS5プロキシは `FIXIE_SOCKS_HOST` または `MONGODB_SOCKS_PROXY_URL` に設定します。
+導入・検証手順と制限値は [SECURITY.md](SECURITY.md) を参照してください。

@@ -1,5 +1,7 @@
 import { AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder } from '../models/equipment.js';
 import mongoose from 'mongoose';
+import { mongoSecurityOptions } from '../config/security.js';
+import { RATE_LIMIT_COLLECTION } from '../middleware/authRateLimit.js';
 import { Household, HouseholdMember } from '../models/organization.js';
 
 const ensureHouseholdMemberUserIndex = async () => {
@@ -44,9 +46,11 @@ const ensureHouseholdRepresentativeIndex = async () => {
   );
 };
 
-export const connectDatabase = async (mongoUri, nodeEnv = 'development') => {
+export const connectDatabase = async (mongoUri, nodeEnv = 'development', mongoOptions = {}) => {
+  const secureOptions = mongoSecurityOptions(mongoUri, nodeEnv, { caFile: mongoOptions.tlsCAFile, allowedHosts: process.env.MONGODB_ALLOWED_HOSTS });
   mongoose.set('autoIndex', nodeEnv !== 'production');
-  await mongoose.connect(mongoUri, { connectTimeoutMS: 10000, serverSelectionTimeoutMS: 10000 });
+  await mongoose.connect(mongoUri, { ...mongoOptions, ...secureOptions, connectTimeoutMS: 10000, serverSelectionTimeoutMS: 10000 });
+  await mongoose.connection.collection(RATE_LIMIT_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'auth_rate_limit_expiry' });
   // Household members do not need a shared login account. Upgrade the former
   // required-user index so multiple account-less family members can coexist.
   await ensureHouseholdMemberUserIndex();

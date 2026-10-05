@@ -9,11 +9,10 @@ import { AnnualOfficer } from './models/annualOfficer.js';
 import { dispatchPendingNotifications } from './services/notificationService.js';
 
 const config = loadConfig();
-const app = createApp(config);
 mongoose.connection.on('error', error => console.error('MongoDB connection error:', error.message));
 mongoose.connection.on('disconnected', () => console.error('MongoDB disconnected.'));
 try {
-  await connectDatabase(config.mongoUri, config.nodeEnv);
+  await connectDatabase(config.mongoUri, config.nodeEnv, config.mongoOptions);
   console.log('MongoDB connected.');
   let notificationDispatchRunning = false;
   setInterval(async () => {
@@ -53,4 +52,5 @@ try {
   }
   console.error('Web server will stay available; database-backed pages will retry when MongoDB is restored.');
 }
+const app = createApp(config);
 app.listen(config.port, () => console.log(`chounaikai listening on port ${config.port}`));
