@@ -24,6 +24,7 @@ associationEventsRouter.get('/:associationId/public', async (req, res, next) => 
     if (!mongoose.isValidObjectId(req.params.associationId)) throw notFound();
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
     if (!association) throw notFound();
+    res.set('Cache-Control', 'no-store');
     const pageData = await loadAssociationPageData(association, { month: req.query.month });
     return res.render('association-public-events', { title: `${association.name} 町内会について`, association, ...pageData });
   } catch (error) { return next(error); }

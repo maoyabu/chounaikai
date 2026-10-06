@@ -1,0 +1,37 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow"><a class="back-link" href="/associations/<%= association._id %>/manage/basic">← 基本設定へ戻る</a><h1>個人情報の公開ルール</h1><h2><%= association.name %></h2>
+<% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+<p>役員紹介・役員一覧の公開上限を設定します。本人が同意した範囲との狭い方が適用されます。上限を広げても自動で公開は広がりません。狭めた場合は即時反映され、再び広げても本人が保存し直すまで公開は戻りません。</p>
+<form class="form-card form-stack" action="/associations/<%= association._id %>/manage/disclosure" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="policyRevision" value="<%= association.officerDisclosureHistory?.length || 0 %>">
+<style>
+.disclosure-choice-title { display: block; margin-bottom: .5rem; font-weight: 700; }
+.disclosure-choice summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: .65rem; cursor: pointer; font-weight: 700; list-style: none; }
+.disclosure-choice summary::-webkit-details-marker { display: none; }
+.disclosure-choice summary::after { content: '▾'; }
+.disclosure-choice[open] summary::after { content: '▴'; }
+.disclosure-choice summary:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.disclosure-choice-options { margin-top: .5rem; padding: .4rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--surface); }
+.form-stack .disclosure-choice-option { display: flex; align-items: center; gap: .65rem; padding: .7rem; border-radius: .4rem; cursor: pointer; }
+.form-stack .disclosure-choice-option input { width: 1rem; height: 1rem; margin: 0; padding: 0; flex: 0 0 auto; accent-color: var(--green); }
+.disclosure-choice-option:has(input:checked) { background: var(--green-pale); }
+</style>
+<% disclosureFields.forEach(([field, label]) => { %>
+<div><span class="disclosure-choice-title" id="disclosure-title-<%= field %>"><%= label %>の公開上限</span>
+<details class="disclosure-choice"><summary aria-labelledby="disclosure-title-<%= field %> disclosure-value-<%= field %>"><span id="disclosure-value-<%= field %>" data-disclosure-value><%= disclosureLevels.find(([key]) => key === policy[field])[1] %></span></summary>
+<div class="disclosure-choice-options" role="group" aria-labelledby="disclosure-title-<%= field %>">
+<% disclosureLevels.filter(([key]) => field === 'photo' || key !== 'open').forEach(([key, text]) => { %>
+<label class="disclosure-choice-option"><input type="radio" name="<%= field %>" value="<%= key %>" <%= policy[field] === key ? 'checked' : '' %> required><span><%= text %></span></label>
+<% }) %></div></details></div>
+<% }) %>
+<script>
+document.querySelectorAll('.disclosure-choice').forEach(choice => {
+  choice.addEventListener('change', event => {
+    if (!event.target.matches('input[type="radio"]')) return;
+    choice.querySelector('[data-disclosure-value]').textContent = event.target.closest('label').querySelector('span').textContent;
+  });
+  choice.querySelector('summary').addEventListener('click', () => {
+    document.querySelectorAll('.disclosure-choice').forEach(other => { if (other !== choice) other.open = false; });
+  });
+});
+</script>
+<p class="help-text">「本人・町内会管理者のみ」でも、町内会管理者の閲覧・編集・削除権限は維持されます。</p><button class="button button-primary">公開ルールを保存</button></form></main><%- include('partials/foot') %>

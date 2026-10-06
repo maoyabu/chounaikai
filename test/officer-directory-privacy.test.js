@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ejs from 'ejs';
+import { redactOfficer } from '../src/services/disclosurePolicy.js';
 
 const officer = {
   _id: 'officer', name: '山田太郎', nameKana: 'やまだたろう',
@@ -15,15 +16,17 @@ const locals = {
 const options = { includer: () => ({ template: ' ' }) };
 
 test('resident officer directory omits contact details and login identifiers', async () => {
-  const html = await ejs.renderFile('src/views/association-public-officers.ejs', locals, options);
+  const policy = { photo: 'private', name: 'residents', address: 'private', phone: 'private', email: 'private' };
+  const display = redactOfficer({ ...officer, fiscalYear: 2026 }, policy, { scopes: policy, confirmedAt: new Date(), fiscalYear: 2026 }, { audience: 'residents', currentYear: 2026 });
+  const html = await ejs.renderFile('src/views/association-public-officers.ejs', { ...locals, officers: [display] }, options);
   for (const value of [officer.phone, officer.mobilePhone, officer.address, officer.user.email, officer.user.username]) {
     assert.ok(!html.includes(value), `Resident directory exposed ${value}`);
   }
   for (const value of [officer.name, '会長', '総務部', '一班']) assert.ok(html.includes(value));
   const unnamed = await ejs.renderFile('src/views/association-public-officers.ejs', {
-    ...locals, officers: [{ ...officer, name: '', user: { ...officer.user, displayname: '' } }]
+    ...locals, officers: [{ ...display, name: '', displayLabel: '会長担当' }]
   }, options);
-  assert.ok(unnamed.includes('氏名未登録'));
+  assert.ok(unnamed.includes('会長担当'));
   assert.ok(!unnamed.includes(officer.user.username));
 });
 

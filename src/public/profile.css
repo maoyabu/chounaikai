@@ -77,13 +77,15 @@ main.page-shell > .page-heading + .management-tabs,
 main.page-shell > .page-heading + .settings-entry-grid { margin-top: 0; }
 @media (max-width: 760px) { .dashboard-title-main { font-size: 1.25rem; } .dashboard-association-title { align-items: flex-start; } .dashboard-title-arrow { margin-top: .1rem; } .association-detail-shell .association-hero { padding: 1rem; } .association-officers-link { align-self: flex-end; margin-top: .75rem; } }
 /* Keep the withdrawal confirmation control directly beside its text. */
-.form-stack label.withdrawal-confirmation {
+.form-stack label.withdrawal-confirmation,
+.form-stack label.disclosure-confirmation {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   gap: .45rem;
 }
-.form-stack .withdrawal-confirmation input[type="checkbox"] {
+.form-stack .withdrawal-confirmation input[type="checkbox"],
+.form-stack .disclosure-confirmation input[type="checkbox"] {
   flex: 0 0 auto;
   width: 1rem;
   height: 1rem;

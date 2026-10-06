@@ -1,13 +1,14 @@
+import { discloseOfficers } from './officerDisclosureService.js';
 import { Household, HouseholdMember, DistrictGroup } from '../models/organization.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AnnualDepartmentPlan } from '../models/annualDepartmentPlan.js';
 import { visibleEvents, calendarWindow } from './associationEventService.js';
 import { AssociationGroup, AssociationGroupMembership } from '../models/associationGroup.js';
 
-export const loadAssociationPageData = async (association, { publicOnly = true, month } = {}) => {
+export const loadAssociationPageData = async (association, { publicOnly = true, month, viewer = {} } = {}) => {
   const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
   const window = calendarWindow(month, now);
-  const [events, districtGroups, households, officers, groups, departmentPlans] = await Promise.all([
+  const [events, districtGroups, households, rawOfficers, groups, departmentPlans] = await Promise.all([
     visibleEvents([association._id], { publicOnly, now: window.first }),
     DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
     Household.find({ association: association._id, active: true, deletedAt: { $exists: false } }).select('_id districtGroup').lean(),
@@ -15,6 +16,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     AssociationGroup.find({ association: association._id, status: 'active' }).sort({ name: 1 }).lean(),
     AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean()
   ]);
+  const officers = await discloseOfficers(association, rawOfficers, publicOnly ? { audience: 'open' } : viewer);
   const groupMembers = groups.length ? await AssociationGroupMembership.aggregate([{ $match: { association: association._id, group: { $in: groups.map(group => group._id) }, status: 'active' } }, { $group: { _id: '$group', count: { $sum: 1 } } }]) : [];
   const groupCount = new Map(groupMembers.map(item => [String(item._id), item.count]));
   const memberCounts = households.length ? await HouseholdMember.aggregate([

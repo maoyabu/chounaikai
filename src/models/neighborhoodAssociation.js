@@ -31,6 +31,8 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   eventCategories: { type: [String], default: [] },
   socialLinks: { instagram: String, x: String, youtube: String },
   symbolImage: { url: String, publicId: String },
+  officerDisclosurePolicy: { photo: { type: String, enum: ['private', 'officers', 'residents', 'open'], default: 'officers' }, name: { type: String, enum: ['private', 'officers', 'residents'], default: 'officers' }, address: { type: String, enum: ['private', 'officers', 'residents'], default: 'private' }, phone: { type: String, enum: ['private', 'officers', 'residents'], default: 'private' }, email: { type: String, enum: ['private', 'officers', 'residents'], default: 'private' } },
+  officerDisclosureHistory: { type: [{ actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, at: Date, before: mongoose.Schema.Types.Mixed, after: mongoose.Schema.Types.Mixed }], default: [] },
   financePublic: { type: Boolean, default: false },
   financeFiscalStartMonth: { type: Number, default: 4, min: 1, max: 12 },
   financePaymentTypes: { type: [String], default: ['現金', '銀行引き落とし', 'クレジットカード'] },

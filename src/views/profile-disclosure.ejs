@@ -1,0 +1,12 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow"><a class="back-link" href="/profile">← プロフィールへ戻る</a><h1>個人情報の公開設定</h1>
+<% if (notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+<p>役員紹介・役員一覧で公開する情報を町内会ごとに選びます。保存するまでは非公開です。写真の登録だけでは公開されません。町内会管理者は設定にかかわらず業務上の情報を閲覧・管理できます。</p>
+<% rows.forEach(row => { %><section class="form-card"><h2><%= row.association.name %></h2><p><%= row.consent?.confirmedAt && row.consent.fiscalYear === new Date().getFullYear() - (new Date().getMonth() < 3 ? 1 : 0) ? '公開設定の確認済み' : '未同意：すべて非公開' %></p>
+<form class="form-stack" action="/profile/disclosure/<%= row.association._id %>" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="policyRevision" value="<%= row.association.officerDisclosureHistory?.length || 0 %>">
+<% disclosureFields.forEach(([field, label]) => { const maximum = disclosureLevels.findIndex(([key]) => key === row.policy[field]); %>
+<label><%= label %><select name="<%= field %>"><% disclosureLevels.slice(0, maximum + 1).forEach(([key, text]) => { %><option value="<%= key %>" <%= row.effective[field] === key ? 'selected' : '' %>><%= text %></option><% }) %></select></label>
+<p class="help-text">現在：<%= disclosureLevels.find(([key]) => key === row.effective[field])[1] %> ／ 町内会の上限：<%= disclosureLevels[maximum][1] %></p>
+<% }) %>
+<label class="disclosure-confirmation"><input type="checkbox" name="confirmDisclosure" value="yes" required><span>選択した公開先を確認し、この範囲での公開に同意します</span></label><p class="help-text">いつでも非公開に変更できます。役員退任後は役員紹介での公開を終了します。年度ごとに確認して保存してください。既にダウンロードされた資料には変更が反映されません。</p><button class="button button-primary">公開設定を保存</button></form></section><% }) %>
+<% if (!rows.length) { %><p>公開設定の対象となる現年度の役員登録はありません。</p><% } %></main><%- include('partials/foot') %>

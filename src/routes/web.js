@@ -1,3 +1,4 @@
+import { discloseOfficers, viewerDisclosureAccess } from '../services/officerDisclosureService.js';
 import { EquipmentSettings } from '../models/equipment.js';
 import { loadAnnouncementPins } from '../services/officerAnnouncementService.js';
 import express from 'express';
@@ -813,7 +814,8 @@ webRouter.get('/associations/:associationId', requireLogin, async (req, res, nex
     ]);
     const isApplicant = String(association.requestedBy?._id || association.requestedBy) === String(req.user._id);
     if ((!membership && !req.user.isAdmin && !isApplicant) || (association.deletedAt && !req.user.isAdmin)) return res.status(404).render('error', { title: '町内会が見つかりません', message: '指定された町内会を確認できませんでした。' });
-    const pageData = association.status === 'active' && !association.deletedAt ? await loadAssociationPageData(association, { publicOnly: false, month: req.query.month }) : null;
+    res.set('Cache-Control', 'no-store');
+    const pageData = association.status === 'active' && !association.deletedAt ? await loadAssociationPageData(association, { publicOnly: false, month: req.query.month, viewer: await viewerDisclosureAccess(association, req.user) }) : null;
     return res.render('association-detail', { title: association.name, association, membership, canManage: Boolean(req.user.isAdmin || assignment?.role), pageData });
   } catch (error) {
     return next(error);
@@ -831,7 +833,9 @@ webRouter.get('/associations/:associationId/officers', requireLogin, async (req,
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }).lean()
     ]);
     if (!association || (!membership && !req.user.isAdmin)) return res.status(404).render('error', { title: '町内会が見つかりません', message: '指定された町内会を確認できませんでした。' });
-    const officers = await AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).select('-phone -mobilePhone -address').populate('user', 'displayname avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean();
+    const rawOfficers = await AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean();
+    const officers = await discloseOfficers(association, rawOfficers, await viewerDisclosureAccess(association, req.user));
+    res.set('Cache-Control', 'no-store');
     return res.render('association-public-officers', { title: `${association.name}の役員`, association, fiscalYear, officers });
   } catch (error) { return next(error); }
 });

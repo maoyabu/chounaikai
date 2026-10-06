@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { configurePassport } from './auth/passport.js';
 import { authRouter } from './routes/auth.js';
 import { associationsRouter } from './routes/associations.js';
+import { disclosureRouter } from './routes/disclosure.js';
 import { webRouter } from './routes/web.js';
 import { managementRouter } from './routes/management.js';
 import { householdsRouter } from './routes/households.js';
@@ -98,6 +99,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
+  // Disclosure views need the navigation and flash locals initialized by webRouter.
+  app.use('/', disclosureRouter);
   app.use('/', privacyAuditRouter);
   app.use('/', siteSecurityRouter);
   app.use('/', systemContactsRouter);
