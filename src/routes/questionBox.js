@@ -86,7 +86,7 @@ questionBoxRouter.post('/:associationId/questions', verifyCsrfToken, async (req,
   try {
     const thread = await createQuestion({ associationId: req.params.associationId, userId: req.user._id, title: req.body.title, body: req.body.body });
     req.session.notice = '質問・ご意見を送信しました。';
-    return redirectToBox(res, req.params.associationId, `own-${thread._id}`);
+    return redirectToBox(res, req.params.associationId, null);
   } catch (error) { return next(error); }
 });
 
@@ -94,7 +94,7 @@ questionBoxRouter.post('/:associationId/questions/:threadId/messages', verifyCsr
   try {
     const thread = await addQuestionMessage({ associationId: req.params.associationId, threadId: req.params.threadId, userId: req.user._id, body: req.body.body });
     req.session.notice = thread.status === 'answered' ? '回答を送信しました。' : '返信・再質問を送信しました。';
-    return redirectToBox(res, req.params.associationId, `${thread.status === 'answered' ? 'officer' : 'own'}-${thread._id}`, thread.status === 'answered');
+    return redirectToBox(res, req.params.associationId, null, thread.status === 'answered');
   } catch (error) { return next(error); }
 });
 
@@ -102,7 +102,7 @@ questionBoxRouter.post('/:associationId/questions/:threadId/close', verifyCsrfTo
   try {
     const thread = await closeQuestion({ associationId: req.params.associationId, threadId: req.params.threadId, userId: req.user._id, resolution: req.body.resolution });
     req.session.notice = thread.status === 'no_reply' ? '返信不要として終了しました。' : 'やり取りを完了しました。';
-    return redirectToBox(res, req.params.associationId, `own-${thread._id}`);
+    return redirectToBox(res, req.params.associationId, null);
   } catch (error) { return next(error); }
 });
 

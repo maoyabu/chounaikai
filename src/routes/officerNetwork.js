@@ -44,7 +44,7 @@ officerNetworkRouter.get('/:associationId/officer-network', async (req, res, nex
 });
 
 officerNetworkRouter.post('/:associationId/officer-network/:announcementId/edit', verifyCsrfToken, async (req, res, next) => {
-  try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, title: req.body.title, body: req.body.body }); req.session.notice = '連絡を編集しました。'; return res.redirect(`${base(req.params.associationId)}/${req.params.announcementId}`); } catch (error) { return next(error); }
+  try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, title: req.body.title, body: req.body.body }); req.session.notice = '連絡を編集しました。'; return res.redirect(base(req.params.associationId)); } catch (error) { return next(error); }
 });
 officerNetworkRouter.post('/:associationId/officer-network/:announcementId/mute', verifyCsrfToken, async (req, res, next) => {
   try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: true }); req.session.notice = '連絡をミュートしました。'; return res.redirect(base(req.params.associationId)); } catch (error) { return next(error); }
@@ -71,7 +71,7 @@ officerNetworkRouter.post('/:associationId/officer-network', acceptAnnouncementA
       title: req.body.title, body: req.body.body, responseMode: req.body.responseMode,
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = `${recipientCount}人の役員に連絡を送りました。`;
-    return res.redirect(`${base(req.params.associationId)}/${announcement._id}`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -89,7 +89,7 @@ officerNetworkRouter.post('/:associationId/officer-network/groups', verifyCsrfTo
   try {
     await saveOfficerContactGroup({ associationId: req.params.associationId, userId: req.user._id, name: req.body.name, members: req.body.members });
     req.session.notice = '役員グループを作成しました。';
-    return res.redirect(`${base(req.params.associationId)}/groups`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -97,7 +97,7 @@ officerNetworkRouter.post('/:associationId/officer-network/groups/:groupId/updat
   try {
     await saveOfficerContactGroup({ associationId: req.params.associationId, userId: req.user._id, groupId: req.params.groupId, name: req.body.name, members: req.body.members });
     req.session.notice = '役員グループを更新しました。';
-    return res.redirect(`${base(req.params.associationId)}/groups`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -105,7 +105,7 @@ officerNetworkRouter.post('/:associationId/officer-network/groups/:groupId/delet
   try {
     await deleteOfficerContactGroup({ associationId: req.params.associationId, userId: req.user._id, groupId: req.params.groupId });
     req.session.notice = '役員グループを削除しました。';
-    return res.redirect(`${base(req.params.associationId)}/groups`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -152,6 +152,6 @@ officerNetworkRouter.post('/:associationId/officer-network/:announcementId/remin
     const count = await remindAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id,
       recipientId: req.body.recipientId || null, channel: 'officer' });
     req.session.notice = `${count}人の未確認役員に再通知しました。`;
-    return res.redirect(`${base(req.params.associationId)}/${req.params.announcementId}`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });

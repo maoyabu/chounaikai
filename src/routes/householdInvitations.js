@@ -78,7 +78,7 @@ householdInvitationsRouter.post('/associations/:associationId/household/:househo
     const result = await Invitation.updateOne({ _id: req.params.invitationId, association: req.params.associationId, household: household._id, invitedBy: req.user._id, status: 'pending' }, { $set: { status: 'cancelled' } });
     if (!result.modifiedCount) throw fail('この招待は既に受諾または取り消し済みです。', 409);
     req.session.notice = '未受諾の招待を取り消しました。';
-    return res.redirect(`/profile?tab=household#household-${household._id}`);
+    return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -106,6 +106,6 @@ householdInvitationsRouter.post('/associations/:associationId/household/:househo
     member.email = email;
     await member.save();
     req.session.notice = `${member.name}さんに招待メールを送信しました。`;
-    return res.redirect(`/profile?tab=household#household-${householdId}`);
+    return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });

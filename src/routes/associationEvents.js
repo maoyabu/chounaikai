@@ -66,7 +66,7 @@ associationEventsRouter.post('/:associationId/public/edit', requireLogin, requir
     await association.save();
     await Promise.allSettled(replaced.map(deletePublicPhoto));
     req.session.notice = '公開ページを更新しました。';
-    return res.redirect(`/associations/${association._id}/public/edit`);
+    return res.redirect(`/associations/${association._id}/manage`);
   } catch (error) {
     await Promise.allSettled(uploaded.map(photo => deletePublicPhoto(photo.publicId)));
     return next(error);

@@ -218,7 +218,8 @@ associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToke
     const active = Array.isArray(req.body.paymentActive) ? req.body.paymentActive : [req.body.paymentActive].filter(Boolean);
     const paymentMethods = names.filter(Boolean).map((name, index) => ({ name: String(name).trim(), order: index + 1, active: active.includes(String(index)) }));
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $set: { financePublic: req.body.financePublic === 'on' || req.body.financePublic === 'true' || req.body.financePublic === '1', financeFiscalStartMonth: Number(req.body.fiscalStartMonth) || association.financeFiscalStartMonth || 4, financePaymentTypes: paymentMethods.map((item) => item.name), financePaymentMethods: paymentMethods } });
-    return res.redirect(`/associations/${association._id}/finance/settings`);
+    req.session.notice = '会計設定を保存しました。';
+    return res.redirect(`/associations/${association._id}/finance`);
   } catch (error) { return next(error); }
 });
 
@@ -243,7 +244,8 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets/copy', v
         memo: detail.memo
       }))
     })));
-    return res.json({ redirect: `/associations/${association._id}/finance/settings?year=${targetYear}` });
+    req.session.notice = '予算項目をコピーしました。';
+    return res.json({ redirect: `/associations/${association._id}/finance?year=${encodeURIComponent(targetYear)}` });
   } catch (error) { return next(error); }
 });
 
@@ -273,8 +275,8 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
     });
     await FinanceBudget.deleteMany({ group: groupId, year: targetYear, cf: { $in: submittedTypes } });
     if (items.length) await FinanceBudget.insertMany(items);
-    const tab = req.body.budgetTab === '支出' ? '支出' : '収入';
-    return res.redirect(`/associations/${association._id}/finance/settings?year=${encodeURIComponent(String(req.body.year || year))}&tab=${encodeURIComponent(tab)}`);
+    req.session.notice = '予算項目を保存しました。';
+    return res.redirect(`/associations/${association._id}/finance?year=${encodeURIComponent(String(req.body.year || year))}`);
   } catch (error) { return next(error); }
 });
 
@@ -285,7 +287,8 @@ associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken
     const tagName = cf === '支出' ? String(req.body.tagText || '').trim() : '';
     const selectedTags = tagName ? [{ name: tagName }] : [];
     await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
-    return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance/entries`);
+    req.session.notice = '入出金を登録しました。';
+    return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance`);
   } catch (error) { return next(error); }
 });
 
@@ -297,6 +300,7 @@ associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update',
     const changes = { date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName };
     const update = cf === '支出' ? { $set: { ...changes, payment_type: paymentType } } : { $set: changes, $unset: { payment_type: 1 } };
     await Finance.updateOne({ _id: req.params.entryId, group: groupId }, update);
+    req.session.notice = '入出金を更新しました。';
     return res.redirect(`/associations/${association._id}/finance/entries`);
   } catch (error) { return next(error); }
 });

@@ -75,7 +75,7 @@ for (const system of [false, true]) {
     }
     await notify(thread, false, req.user._id);
     req.session.notice = 'システム管理者へ連絡を送りました。';
-    res.redirect(`${url(req)}/${thread._id}`);
+    res.redirect(url(req));
   }));
   systemContactsRouter.get(`${base}/:contactId/attachments/:fileId`, requireLogin, guard, wrap(async (req, res) => {
     const thread = await load(req);
@@ -102,12 +102,12 @@ for (const system of [false, true]) {
     await SystemContact.updateOne({ _id: thread._id }, { $push: { messages: { sender: req.user._id, kind: system ? 'system' : 'association', body } }, $set: { status: 'open', [system ? 'associationReadAt' : 'systemReadAt']: null } });
     await notify({ ...thread, association: thread.association._id }, system, req.user._id);
     req.session.notice = '返信を送りました。';
-    res.redirect(`${url(req)}/${thread._id}`);
+    res.redirect(url(req));
   }));
   systemContactsRouter.post(`${base}/:contactId/status`, requireLogin, guard, verifyCsrfToken, wrap(async (req, res) => {
     const thread = await load(req);
     if (!['open', 'resolved'].includes(req.body.status)) throw fail('対応状況を確認してください。');
     await SystemContact.updateOne({ _id: thread._id }, { $set: { status: req.body.status } });
-    res.redirect(`${url(req)}/${thread._id}`);
+    res.redirect(url(req));
   }));
 }

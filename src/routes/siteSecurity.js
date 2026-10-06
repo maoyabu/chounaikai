@@ -29,7 +29,7 @@ siteSecurityRouter.post('/admin/security/mfa', verifyCsrfToken, async (req, res,
     delete req.session.mfaVerified; delete req.session.mfaSetup;
     req.session.mfaPrimary = { userId: String(req.user._id), passwordFingerprint: passwordFingerprint(req.user), at: Date.now() };
     req.session.notice = enabled ? 'このサイトの多要素認証を使用する設定にしました。' : 'このサイトの多要素認証を使用しない設定にしました。';
-    return res.redirect('/admin/security');
+    return res.redirect('/admin');
   } catch (error) {
     if (error.status === 400) { try { return await render(req, res, error.message, 400); } catch (failure) { return next(failure); } }
     next(error);

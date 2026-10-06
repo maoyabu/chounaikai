@@ -486,7 +486,7 @@ webRouter.post('/profile/password', requireLogin, verifyCsrfToken, async (req, r
     await changePassword({ userId: req.user._id, currentPassword: req.body.currentPassword, password: req.body.password, confirmation: req.body.passwordConfirmation });
     req.session.notice = 'パスワードを変更しました。';
     delete req.session.passwordResetToken;
-    return res.redirect('/profile?tab=account#password-change');
+    return res.redirect('/dashboard');
   } catch (error) {
     if (error.status === 400) {
       req.session.errorMessage = error.message;
@@ -528,7 +528,7 @@ webRouter.post('/profile', requireLogin, acceptProfileImage, verifyCsrfToken, as
     ]);
     Object.assign(req.user, update);
     req.session.notice = 'プロフィールを更新しました。';
-    return res.redirect('/profile');
+    return res.redirect('/dashboard');
   } catch (error) {
     if (error?.status === 503) return renderError(error.message, 503);
     if (error?.code === 11000) return renderError('このメールアドレスは既に使用されています。', 409);

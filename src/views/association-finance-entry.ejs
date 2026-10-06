@@ -1,7 +1,7 @@
 <%- include('partials/head') %><%- include('partials/header') %>
 <% const editing = Boolean(entry); const selectedItem = entry?.expense_item || entry?.income_item || ''; %>
 <main class="page-shell page-narrow finance-shell">
-  <a class="back-link" href="/associations/<%= association._id %>/finance">← 会計管理トップへ戻る</a>
+  <a class="back-link" href="/associations/<%= association._id %>/finance<%= editing ? '/entries' : '' %>">← <%= editing ? '入出金一覧へ戻る' : '会計管理トップへ戻る' %></a>
   <div class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= editing ? '会計を編集' : '会計を入力' %></h1><p><span id="finance-entry-fiscal-year"><%= year %></span>年度</p></div></div>
   <form class="form-card form-stack finance-entry-form" action="<%= editing ? `/associations/${association._id}/finance/entries/${entry._id}/update` : `/associations/${association._id}/finance/entries` %>" method="post">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">

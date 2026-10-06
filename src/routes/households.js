@@ -50,7 +50,7 @@ householdsRouter.post('/:associationId/household', verifyCsrfToken, async (req, 
       throw error;
     }
     req.session.notice = '世帯情報を登録しました。';
-    return res.redirect(`/profile?tab=household#household-${household._id}`);
+    return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -141,7 +141,7 @@ householdsRouter.post('/:associationId/household/:householdId/update', verifyCsr
     const postalCode = String(req.body.postalCode || '').trim(), street = String(req.body.street || '').trim();
     if (!postalCode || !street) throw fail('郵便番号と住所を入力してください。');
     household.address = { postalCode, street, building: String(req.body.building || '').trim() }; household.phone = String(req.body.phone || '').trim(); await household.save();
-    req.session.notice = '世帯情報を更新しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    req.session.notice = '世帯情報を更新しました。'; return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -152,7 +152,7 @@ householdsRouter.post('/:associationId/household/:householdId/members', verifyCs
     const birthDate = new Date(req.body.birthDate), name = String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim(), gender = String(req.body.gender || 'unspecified');
     if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('家族の必須情報を入力してください。');
     await HouseholdMember.create({ association: req.params.associationId, household: household._id, name, nameKana, birthDate, gender, email: String(req.body.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), relationship: String(req.body.relationship || '').trim(), startsAt: new Date() });
-    req.session.notice = '家族を登録しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    req.session.notice = '家族を登録しました。'; return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -165,7 +165,7 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
     const birthDate = new Date(req.body.birthDate), name = member.isRepresentative ? String(req.user.displayname || req.user.username || '').trim() : String(req.body.name || '').trim(), nameKana = String(req.body.nameKana || '').trim(), gender = String(req.body.gender || 'unspecified');
     if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('必須情報を入力してください。');
     Object.assign(member, { name, nameKana, birthDate, gender, email: String(req.body.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), relationship: member.isRepresentative ? '世帯代表者' : String(req.body.relationship || '').trim() }); await member.save();
-    req.session.notice = '家族を更新しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    req.session.notice = '家族を更新しました。'; return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -180,10 +180,10 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
       req.session.notice = result.accountExists
         ? 'アカウント紐付け済みの家族を世帯から削除し、町内会への参加を終了しました。共通アカウントは残ります。'
         : '存在しないアカウントへの参照を整理し、家族を削除しました。';
-      return res.redirect(`/profile?tab=household#household-${household._id}`);
+      return res.redirect('/dashboard');
     }
     await Invitation.updateMany({ householdMember: member._id, status: 'pending' }, { $set: { status: 'cancelled' } });
-    await member.deleteOne(); req.session.notice = '家族を削除しました。'; return res.redirect(`/profile?tab=household#household-${household._id}`);
+    await member.deleteOne(); req.session.notice = '家族を削除しました。'; return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 
@@ -196,7 +196,7 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
     const member = await HouseholdMember.findOneAndUpdate({ _id: req.params.memberId, association: req.params.associationId, household: req.params.householdId, user: req.user._id, isRepresentative: false }, { $set: { nameKana, lineAccount: String(req.body.lineAccount || '').trim(), relationship: String(req.body.relationship || '').trim() } }, { new: true });
     if (!member) throw fail('本人の家族情報を確認できません。', 404);
     req.session.notice = '本人の家族情報を更新しました。';
-    return res.redirect(`/profile?tab=household#household-${req.params.householdId}`);
+    return res.redirect('/dashboard');
   } catch (error) { return next(error); }
 });
 

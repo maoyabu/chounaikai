@@ -41,7 +41,7 @@ officerAnnouncementsRouter.post('/:associationId/announcements/officer', acceptA
     const { announcement, recipientCount } = await publishAnnouncement({ associationId: req.params.associationId, userId: req.user._id, ...req.body, files: req.files,
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = `${recipientCount}人に連絡を送りました。`;
-    return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${announcement._id}`);
+    return res.redirect(`/associations/${req.params.associationId}/announcements/officer`);
   } catch (error) { return next(error); }
 });
 
@@ -80,7 +80,7 @@ officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announce
   try {
     const count = await remindAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, recipientId: req.body.recipientId || null, channel: 'resident' });
     req.session.notice = `${count}人の未確認者に再通知しました。`;
-    return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${req.params.announcementId}`);
+    return res.redirect(`/associations/${req.params.associationId}/announcements/officer`);
   } catch (error) { return next(error); }
 });
 
@@ -98,7 +98,7 @@ officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announce
     await editResidentAnnouncement({ ...req.body, associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, files: req.files,
       options: req.body.responseMode === 'none' ? [] : [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = '連絡を編集しました。';
-    return res.redirect(`/associations/${req.params.associationId}/announcements/officer/${req.params.announcementId}`);
+    return res.redirect(`/associations/${req.params.associationId}/announcements/officer`);
   } catch (error) { return next(error); }
 });
 officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announcementId/mute', verifyCsrfToken, async (req, res, next) => { try { await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, muted: true }); req.session.notice = '連絡をミュートしました。'; return res.redirect(`/associations/${req.params.associationId}/announcements/officer`); } catch (error) { return next(error); } });

@@ -27,7 +27,7 @@ withdrawalsRouter.post('/associations/:associationId/withdrawals', requireLogin,
   try {
     await requestWithdrawal({ associationId: req.params.associationId, userId: req.user._id, scope: req.body.scope, successorId: req.body.successorId, reason: req.body.reason, confirmed: req.body.confirmWithdrawal === 'on' });
     req.session.notice = '退会申請を送信しました。承認が完了するまで町内会を利用できます。';
-    res.redirect('/profile/withdrawals');
+    res.redirect('/profile');
   } catch (error) { next(error); }
 });
 for (const decision of ['approve', 'reject']) {
@@ -35,7 +35,7 @@ for (const decision of ['approve', 'reject']) {
     try {
       await confirmWithdrawal({ ...req.params, actorId: req.user._id, approve: decision === 'approve' });
       req.session.notice = decision === 'approve' ? '世帯主として承認し、班長へ退会申請を送りました。' : '退会申請を承認しませんでした。';
-      res.redirect('/profile/withdrawals');
+      res.redirect('/profile');
     } catch (error) { next(error); }
   });
   withdrawalsRouter.post('/associations/:associationId/leader/withdrawals/:applicationId/' + decision, requireLogin, verifyCsrfToken, async (req, res, next) => {
@@ -51,6 +51,6 @@ withdrawalsRouter.post('/profile/withdrawals/:applicationId/cancel', requireLogi
   try {
     await cancelWithdrawal({ applicationId: req.params.applicationId, actorId: req.user._id });
     req.session.notice = '退会申請を取り消しました。';
-    res.redirect('/profile/withdrawals');
+    res.redirect('/profile');
   } catch (error) { next(error); }
 });

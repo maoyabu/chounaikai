@@ -49,7 +49,7 @@ disclosureRouter.post('/profile/disclosure/:associationId', verifyCsrfToken, asy
       $set: { scopes, confirmedAt: at, policyRevision: association.officerDisclosureHistory?.length || 0, fiscalYear: currentFiscalYear() }, $push: { history: { actor: req.user._id, at, scopes } }
     }, { upsert: true, runValidators: true });
     req.session.notice = '公開設定を保存しました。';
-    res.redirect('/profile/disclosure');
+    res.redirect('/profile');
   } catch (error) { next(error); }
 });
 disclosureRouter.get('/associations/:associationId/manage/disclosure', requirePermission('association.manage'), async (req, res, next) => {

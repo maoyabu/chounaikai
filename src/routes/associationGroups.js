@@ -81,7 +81,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/pr', accept
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403);
     const photos = Array.from({ length: 3 }, (_, slot) => group.publicPhotos?.[slot] || null), replaced = [];
     for (let slot = 0; slot < 3; slot++) { const file = req.files?.[`photo${slot}`]?.[0]; if (file) { const photo = await uploadPublicPhoto(file, group._id, `group_${slot}`); uploaded.push(photo); if (photos[slot]?.publicId) replaced.push(photos[slot].publicId); photos[slot] = photo; } else if (req.body[`remove${slot}`] === 'on') { if (photos[slot]?.publicId) replaced.push(photos[slot].publicId); photos[slot] = null; } }
-    group.name = String(req.body.name || '').trim(); group.publicDescription = String(req.body.publicDescription || '').trim(); group.publicVisibility = req.body.publicVisibility === 'open' ? 'open' : 'members'; group.publicPhotos = photos; if (!group.name) throw fail('グループ名を入力してください。'); await group.save(); await Promise.allSettled(replaced.map(deletePublicPhoto)); req.session.notice = 'グループPRページを更新しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage/pr`);
+    group.name = String(req.body.name || '').trim(); group.publicDescription = String(req.body.publicDescription || '').trim(); group.publicVisibility = req.body.publicVisibility === 'open' ? 'open' : 'members'; group.publicPhotos = photos; if (!group.name) throw fail('グループ名を入力してください。'); await group.save(); await Promise.allSettled(replaced.map(deletePublicPhoto)); req.session.notice = 'グループPRページを更新しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage`);
   } catch (error) { await Promise.allSettled(uploaded.map(photo => deletePublicPhoto(photo.publicId))); return next(error); }
 });
 
@@ -140,7 +140,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/members/:us
     const target = await AssociationGroupMembership.findOne({ group: req.params.groupId, user: req.params.userId, status: 'active' });
     if (!target) throw fail('グループメンバーを確認できません。', 404);
     if (target.role === 'manager') throw fail('グループ責任者は強制退会できません。');
-    target.status = 'rejected'; await target.save(); return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}/manage`);
+    target.status = 'rejected'; await target.save(); req.session.notice = 'グループのメンバー情報を更新しました。'; return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}`);
   } catch (error) { return next(error); }
 });
 
@@ -150,7 +150,8 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/members/:us
     const target = await AssociationGroupMembership.findOne({ group: req.params.groupId, user: req.params.userId, status: 'active' });
     if (!target) throw fail('グループメンバーを確認できません。', 404);
     target.role = 'manager'; await target.save();
-    return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}/manage`);
+    req.session.notice = 'グループ管理者を設定しました。';
+    return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}`);
   } catch (error) { return next(error); }
 });
 

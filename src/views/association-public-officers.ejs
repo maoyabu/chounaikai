@@ -1,3 +1,47 @@
 <%- include('partials/head') %><%- include('partials/header') %>
 <main class="page-shell"><a class="back-link" href="/associations/<%= association._id %>">← 町内会ページへ戻る</a><section class="page-heading"><div><p class="eyebrow"><%= fiscalYear %>年度</p><h1><%= association.name %>の役員</h1></div></section>
-<section class="content-card"><div class="public-officer-list"><% officers.forEach((officer) => { const name = officer.displayLabel || '担当者'; %><article><% if (officer.user?.avatar) { %><img class="profile-avatar resident-avatar" src="<%= officer.user.avatar %>" alt=""><% } else { %><span class="profile-avatar resident-avatar profile-avatar-placeholder">人</span><% } %><div><small><%= officer.role?.name || '一般役員' %><% if (officer.department?.name) { %> ／ <%= officer.department.name %><% } %></small><strong><%= name %></strong><% if (officer.districtGroup) { %><span><%= officer.districtGroup.name %></span><% } %><% if (officer.address) { %><span>住所：<%= officer.address %></span><% } %><% if (officer.phone) { %><span>電話：<%= officer.phone %></span><% } %><% if (officer.mobilePhone) { %><span>携帯：<%= officer.mobilePhone %></span><% } %><% if (officer.email) { %><span>メール：<%= officer.email %></span><% } %></div></article><% }) %></div><% if (!officers.length) { %><p class="help-text">この年度の役員情報はまだ登録されていません。</p><% } %></section></main><%- include('partials/foot') %>
+<style>
+.officer-directory-filters { display:grid; grid-template-columns:1fr 1fr 2fr auto; gap:1rem; align-items:end; margin-bottom:1rem; }
+.officer-directory-filters label { display:grid; gap:.5rem; font-weight:700; }
+.public-officer-list article[hidden] { display:none; }
+@media(max-width:760px) { .officer-directory-filters { grid-template-columns:1fr 1fr; } .officer-directory-name { grid-column:1 / -1; } }
+</style>
+<section class="content-card">
+<% const roleNames = [...new Set(officers.map(o => o.role?.name || '一般役員'))]; const departmentNames = [...new Set(officers.map(o => o.department?.name || '部会未設定'))]; %>
+<div class="officer-directory-filters">
+<label>役職<select id="officer-role-filter"><option value="">すべての役職</option><% roleNames.forEach(name => { %><option value="<%= name %>"><%= name %></option><% }) %></select></label>
+<label>部会<select id="officer-department-filter"><option value="">すべての部会</option><% departmentNames.forEach(name => { %><option value="<%= name %>"><%= name %></option><% }) %></select></label>
+<label class="officer-directory-name">氏名<input type="search" id="officer-name-filter" placeholder="氏名の一部を入力"></label>
+<button type="button" class="button button-quiet" id="officer-filter-reset">条件をクリア</button>
+</div>
+<p class="help-text" id="officer-filter-count" role="status"><%= officers.length %>件表示</p>
+<div class="public-officer-list"><% officers.forEach((officer) => { const name = officer.displayLabel || '担当者'; %><article data-officer-card data-role="<%= officer.role?.name || '一般役員' %>" data-department="<%= officer.department?.name || '部会未設定' %>" data-name="<%= officer.name || '' %>"><% if (officer.user?.avatar) { %><img class="profile-avatar resident-avatar" src="<%= officer.user.avatar %>" alt=""><% } else { %><span class="profile-avatar resident-avatar profile-avatar-placeholder">人</span><% } %><div><small><%= officer.role?.name || '一般役員' %><% if (officer.department?.name) { %> ／ <%= officer.department.name %><% } %></small><strong><%= name %></strong><% if (officer.districtGroup) { %><span><%= officer.districtGroup.name %></span><% } %><% if (officer.address) { %><span>住所：<%= officer.address %></span><% } %><% if (officer.phone) { %><span>電話：<%= officer.phone %></span><% } %><% if (officer.mobilePhone) { %><span>携帯：<%= officer.mobilePhone %></span><% } %><% if (officer.email) { %><span>メール：<%= officer.email %></span><% } %></div></article><% }) %></div><% if (!officers.length) { %><p class="help-text">この年度の役員情報はまだ登録されていません。</p><% } %><p id="officer-filter-empty" hidden>条件に一致する役員はいません。</p></section>
+<script>
+(() => {
+  const role = document.getElementById('officer-role-filter');
+  const department = document.getElementById('officer-department-filter');
+  const name = document.getElementById('officer-name-filter');
+  const cards = [...document.querySelectorAll('[data-officer-card]')];
+  const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/\s/g, '');
+  const apply = () => {
+    const query = normalize(name.value);
+    let count = 0;
+    cards.forEach(card => {
+      const matches = (!role.value || card.dataset.role === role.value)
+        && (!department.value || card.dataset.department === department.value)
+        && (!query || normalize(card.dataset.name).includes(query));
+      card.hidden = !matches;
+      if (matches) count++;
+    });
+    document.getElementById('officer-filter-count').textContent = `${count}件表示 / 全${cards.length}件`;
+    document.getElementById('officer-filter-empty').hidden = count > 0 || cards.length === 0;
+  };
+  role.addEventListener('change', apply);
+  department.addEventListener('change', apply);
+  name.addEventListener('input', apply);
+  document.getElementById('officer-filter-reset').addEventListener('click', () => {
+    role.value = ''; department.value = ''; name.value = ''; apply();
+  });
+  apply();
+})();
+</script></main><%- include('partials/foot') %>

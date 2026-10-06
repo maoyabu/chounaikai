@@ -63,7 +63,7 @@ equipmentRouter.get('/:associationId/equipment/inventory.xlsx', handler(async (r
 }));
 equipmentRouter.post('/:associationId/equipment/inventory/:equipmentId', verifyCsrfToken, handler(async (req, res) => {
   await checkInventory({ associationId: req.params.associationId, userId: req.user._id, equipmentId: req.params.equipmentId, period: req.body.period, input: req.body });
-  req.session.notice = '棚卸しの数量とチェック情報を記録しました。'; res.redirect(`${base(req.params.associationId)}/inventory#place-${encodeURIComponent(req.body.place || '')}`);
+  req.session.notice = '棚卸しの数量とチェック情報を記録しました。'; res.redirect(base(req.params.associationId));
 }));
 
 equipmentRouter.get('/:associationId/equipment/purchase-list', handler(async (req, res) => {

@@ -1,6 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/header') %>
 <main class="page-shell communication-theme group-communication-theme">
+<% if (typeof notice !== 'undefined' && notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
   <a class="back-link" href="/dashboard">← ホームへ戻る</a>
   <section class="page-heading"><div><p class="eyebrow"><%= group.name %></p><h1>グループ内の連絡</h1></div><a class="button button-primary" href="/associations/<%= group.association %>/groups/<%= group._id %>/messages/new">新しい連絡を送る</a></section>
   <div class="group-messages-layout">

@@ -30,7 +30,8 @@ documentsRouter.post('/:associationId/documents/settings', verifyCsrfToken, requ
   if (secret) values.clientSecret = encryptDriveSecret(secret, req.params.associationId);
   if (changed) Object.assign(values, { refreshToken: null, connectedAt: null, accountEmail: '' });
   await DriveConnection.findOneAndUpdate({ association: req.params.associationId }, { $set: values }, { upsert: true, runValidators: true });
-  await settingsRender(req, res, '設定を保存しました。続いて「Googleアカウントで接続」を押してください。');
+  req.session.notice = 'Drive連携設定を保存しました。接続が必要な場合は、Drive連携設定を開いて「Googleアカウントで接続」を押してください。';
+  res.redirect(`/associations/${req.params.associationId}/manage`);
 }));
 documentsRouter.post('/:associationId/documents/oauth/start', verifyCsrfToken, requirePermission('association.manage'), handler(async (req, res) => {
   await access(req); const connection = await connectionFor(req);
@@ -60,11 +61,12 @@ documentsRouter.get('/:associationId/documents/oauth/callback', requirePermissio
   const about = await (await client.request('drive/v3/about?fields=user(emailAddress)')).json();
   const saved = await DriveConnection.updateOne({ _id: connection._id, updatedAt: connection.updatedAt }, { $set: { refreshToken: encryptDriveSecret(tokens.refresh_token, connection.association), connectedAt: new Date(), accountEmail: about.user?.emailAddress || '' } });
   if (!saved.modifiedCount) throw driveError('設定が変更されました。もう一度接続してください。');
-  res.redirect(`${base(req.params.associationId)}/settings`);
+  req.session.notice = 'Google Driveに接続しました。';
+  res.redirect(`/associations/${req.params.associationId}/manage`);
 }));
 documentsRouter.post('/:associationId/documents/disconnect', verifyCsrfToken, requirePermission('association.manage'), handler(async (req, res) => {
   await access(req); await DriveConnection.updateOne({ association: req.params.associationId }, { $set: { refreshToken: null, connectedAt: null, accountEmail: '' } });
-  delete req.session.driveOAuth; res.redirect(`${base(req.params.associationId)}/settings`);
+  delete req.session.driveOAuth; req.session.notice = 'Google Driveの接続を解除しました。'; res.redirect(`/associations/${req.params.associationId}/manage`);
 }));
 documentsRouter.get('/:associationId/documents', handler(async (req, res) => {
   const { association } = await access(req), connection = await connectionFor(req);

@@ -89,7 +89,7 @@ districtMessagesRouter.post('/:associationId/district-messages/officer-announcem
     await residentAnnouncementForDistrict(association._id, req.params.announcementId, districtGroup._id, req.user._id);
     const count = await remindAnnouncement({ associationId: association._id, announcementId: req.params.announcementId, userId: req.user._id, recipientId: req.body.recipientId || null, channel: 'district_leader' });
     req.session.notice = `${count}人に再通知しました。`;
-    return res.redirect(`${base(association._id)}/officer-announcements/${req.params.announcementId}`);
+    return res.redirect(`${base(association._id)}/officer-announcements`);
   } catch (error) { return next(error); }
 });
 
@@ -109,7 +109,7 @@ districtMessagesRouter.post('/:associationId/district-messages', acceptAnnouncem
       targetOfficerIds: req.body.recipientIds, urgency: req.body.urgency, title: req.body.title, body: req.body.body, responseMode: req.body.responseMode,
       options: [req.body.option1, req.body.option2, req.body.option3, req.body.option4, req.body.option5] });
     req.session.notice = `${recipientCount}人の班員に連絡を送りました。`;
-    return res.redirect(`${base(req.params.associationId)}/${announcement._id}`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -157,7 +157,7 @@ districtMessagesRouter.post('/:associationId/district-messages/:announcementId/e
     await context(req.params.associationId, req.user._id);
     await updateAnnouncementVisibility({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, title: req.body.title, body: req.body.body });
     req.session.notice = '連絡を編集しました。';
-    return res.redirect(`${base(req.params.associationId)}/${req.params.announcementId}`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
 
@@ -185,6 +185,6 @@ districtMessagesRouter.post('/:associationId/district-messages/:announcementId/r
     await sentAnnouncement(association._id, req.params.announcementId, req.user._id, districtGroup._id);
     const count = await remindAnnouncement({ associationId: association._id, announcementId: req.params.announcementId, userId: req.user._id, recipientId: req.body.recipientId || null, channel: 'district' });
     req.session.notice = `${count}人の未確認班員に再通知しました。`;
-    return res.redirect(`${base(req.params.associationId)}/${req.params.announcementId}`);
+    return res.redirect(base(req.params.associationId));
   } catch (error) { return next(error); }
 });
