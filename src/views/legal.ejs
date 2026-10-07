@@ -1,0 +1,14 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell legal-page">
+  <header class="page-heading"><div><p class="eyebrow">まちの伝言板 / Kurashi Campany Inc.</p><h1><%= document.title %></h1><p><%= document.draft ? 'ひな形作成日：2026年10月7日（正式な適用日は未定）' : '制定日：2026年10月7日' %></p></div></header>
+  <article class="content-card legal-document">
+    <p><%= document.introduction %></p>
+    <% if (document.draft) { %><p class="legal-preparation-note">ひな形・検討案です。記載した保持期間と削除期限は未確定であり、現在の削除処理や実際の保持期間を示すものではありません。</p><% } %>
+    <p class="legal-preparation-note">運営会社名は仮称です。</p>
+    <nav class="legal-toc" aria-label="目次"><ol><% document.sections.forEach((section, index) => { %><li><a href="#section-<%= index + 1 %>"><%= section.heading %></a></li><% }) %></ol></nav>
+    <% document.sections.forEach((section, index) => { %><section id="section-<%= index + 1 %>"><h2><%= section.heading %></h2><% section.paragraphs.forEach(paragraph => { %><% if (typeof paragraph === 'string') { %><p><%= paragraph %></p><% } else if (paragraph.href) { %><p><a href="<%= paragraph.href %>"><%= paragraph.label %></a></p><% } else { %><%- include('partials/legal-contact', { contact: paragraph }) %><% } %><% }) %></section><% }) %>
+    <nav class="legal-related" aria-label="関連する規約・方針"><% legalDocuments.filter(item => item.path !== document.path && !item.draft).forEach(item => { %><a href="<%= item.path %>"><%= item.title %></a><% }) %></nav>
+  </article>
+</main>
+<%- include('partials/foot') %>

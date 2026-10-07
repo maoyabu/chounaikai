@@ -1,0 +1,7 @@
+<div class="legal-contact">
+  <p>運営会社：<%= contact.company %></p>
+  <p>会社所在地：<%= contact.address %></p>
+  <p>代表者：<%= contact.representative %></p>
+  <p>お問い合わせ窓口：<a class="legal-contact-email" href="mailto:<%= contact.email %>"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span><%= contact.email %></span></a></p>
+</div>
+<% contact.guidance.forEach(paragraph => { %><p><%= paragraph %></p><% }) %>

@@ -43,3 +43,23 @@
 .privacy-audit-item small { display: block; color: var(--muted); margin-top: .25rem; }
 .privacy-audit-targets { max-height: 240px; overflow: auto; padding-left: 1.25rem; }
 @media print { .mfa-card form, .mfa-card button { display: none; } .mfa-card { box-shadow: none; } }
+
+.site-footer { max-width: 1200px; margin: 2rem auto 0; padding: 1.5rem 24px 2rem; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: .875rem; }
+.site-footer nav, .legal-related { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem 1.5rem; }
+.site-footer a, .legal-document a { color: var(--green-dark); text-underline-offset: .2em; }
+.site-footer p { margin: 1rem 0 0; }
+.legal-page { max-width: 900px; }
+.legal-page h1 { font-size: clamp(1.6rem, 5vw, 2.7rem); overflow-wrap: anywhere; }
+.legal-document { line-height: 1.9; overflow-wrap: anywhere; }
+.legal-document section { margin-top: 2rem; scroll-margin-top: 6rem; }
+.legal-document h2 { font-size: 1.2rem; line-height: 1.6; }
+.legal-preparation-note { padding: 1rem; background: var(--bg); border-left: 3px solid var(--line); font-size: .9rem; }
+.legal-toc { margin: 1.5rem 0; padding: .5rem 1rem; border: 1px solid var(--line); border-radius: .75rem; }
+.legal-toc ol { padding-left: 1.5rem; }
+.legal-related { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+@media (max-width: 600px) { .site-footer nav { flex-direction: column; align-items: center; } }
+.legal-contact { margin: 1rem 0 1.5rem; }
+.legal-contact p { margin: .5rem 0; }
+.legal-contact-email { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; vertical-align: middle; }
+.legal-contact-email svg { flex-shrink: 0; }
+.legal-contact-email span { min-width: 0; overflow-wrap: anywhere; }

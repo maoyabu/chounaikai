@@ -1,5 +1,6 @@
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
+import { legalRouter } from './routes/legal.js';
 import { mfaEncryptionKey } from './config/mfa.js';
 import { createMfaService } from './services/mfaService.js';
 import { enforceAdminMfa } from './middleware/mfa.js';
@@ -64,6 +65,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.set('views', path.join(dirname, 'views'));
   app.use('/assets', express.static(path.join(dirname, 'public'), { maxAge: nodeEnv === 'production' ? '1d' : 0 }));
   app.get('/health', (_req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ ok: mongoose.connection.readyState === 1 }));
+  // Public legal pages remain available without a session or MFA verification.
+  app.use('/', legalRouter);
   // The server connects Mongoose before creating the app. Reuse that client so
   // session reads and application queries share the same monitored connection.
   const storeOptions = mongoose.connection.readyState === 1
