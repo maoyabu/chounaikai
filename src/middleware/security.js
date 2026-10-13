@@ -15,7 +15,8 @@ export const securityHeaders = nodeEnv => helmet({
       frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"],
-      formAction: ["'self'"],
+      // Google Drive OAuth starts with a POST followed by a redirect to Google.
+      formAction: ["'self'", 'https://accounts.google.com'],
       upgradeInsecureRequests: nodeEnv === 'production' ? [] : null
     }
   },

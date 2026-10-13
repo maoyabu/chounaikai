@@ -54,6 +54,7 @@ test('trusted HTTPS proxy gets HSTS, Helmet headers and compatible CSP', async (
     assert.equal(res.headers['referrer-policy'], 'no-referrer');
     assert.equal(res.headers['x-powered-by'], undefined);
     const csp = res.headers['content-security-policy'];
+    assert.equal(csp.split(';').find(value => value.trim().startsWith('form-action ')).trim(), "form-action 'self' https://accounts.google.com");
     for (const directive of ["object-src 'none'", "form-action 'self'", "frame-ancestors 'self'", 'https://zipcloud.ibsnet.co.jp', 'https://www.youtube.com', 'upgrade-insecure-requests']) assert.ok(csp.includes(directive), directive);
   });
 });
