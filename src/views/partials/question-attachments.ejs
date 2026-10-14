@@ -1,0 +1,4 @@
+<% if (message.attachments?.length) { %><div class="question-attachments">
+<% message.attachments.forEach(file => { const url = `/associations/${association._id}/question-attachments/${encodeURIComponent(file.fileId)}`; %>
+<p><a href="<%= url %>" target="_blank" rel="noopener"><% if (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimeType)) { %><img src="<%= url %>" alt="<%= file.originalName %>" loading="lazy"><% } %><span><%= file.originalName %></span></a></p>
+<% }) %></div><% } %>

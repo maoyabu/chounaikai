@@ -4,6 +4,12 @@ const messageSchema = new mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   kind: { type: String, enum: ['resident', 'officer'], required: true },
   body: { type: String, required: true, maxlength: 3000 },
+  attachments: { type: [new mongoose.Schema({
+    fileId: { type: String, required: true },
+    originalName: { type: String, required: true },
+    mimeType: String,
+    bytes: Number
+  }, { _id: false })], default: [] },
   createdAt: { type: Date, required: true, default: Date.now },
   editedAt: Date,
   mutedAt: Date,

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { attachmentContext, saveMessageAttachments, removeMessageAttachments, validateMessageFiles } from './messageAttachmentService.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { RoleAssignment, RoleDefinition } from '../models/role.js';
@@ -31,17 +32,32 @@ export const loadQuestionBoxAccess = async ({ associationId, userId, now = new D
   return { association, membership, canAnswer: Boolean(officer || manager) };
 };
 
-export const createQuestion = async ({ associationId, userId, title, body }) => {
+// Only roll back uploads when persisting the message fails, never after notification errors.
+const persistWithAttachments = async (associationId, files, persist) => {
+  validateMessageFiles(files);
+  if (!files.length) return persist([]);
+  const context = await attachmentContext(associationId);
+  const attachments = await saveMessageAttachments(files, context);
+  try { return await persist(attachments); }
+  catch (error) {
+    await removeMessageAttachments(attachments, context.client);
+    throw error;
+  }
+};
+
+export const createQuestion = async ({ associationId, userId, title, body, files = [] }) => {
   const { membership } = await loadQuestionBoxAccess({ associationId, userId });
+  title = text(title, 120, 'タイトル');
+  body = text(body, 3000, '内容');
   const now = new Date();
-  const thread = await QuestionThread.create({ association: associationId, author: userId, districtGroup: membership.districtGroup,
-    title: text(title, 120, 'タイトル'), messages: [{ sender: userId, kind: 'resident', body: text(body, 3000, '内容'), createdAt: now }],
-    status: 'unanswered', residentMessageCount: 1, lastResidentAt: now });
+  const thread = await persistWithAttachments(associationId, files, attachments => QuestionThread.create({ association: associationId, author: userId, districtGroup: membership.districtGroup,
+    title: text(title, 120, 'タイトル'), messages: [{ sender: userId, kind: 'resident', body, attachments, createdAt: now }],
+    status: 'unanswered', residentMessageCount: 1, lastResidentAt: now }));
   await notifyResponsible({ association: associationId, officers: true, type: 'question_created', title: '質問・ご意見が届きました', relatedId: thread._id });
   return thread;
 };
 
-export const addQuestionMessage = async ({ associationId, threadId, userId, body }) => {
+export const addQuestionMessage = async ({ associationId, threadId, userId, body, files = [] }) => {
   if (!mongoose.isValidObjectId(threadId)) throw fail('投稿を確認してください。', 404);
   const { canAnswer } = await loadQuestionBoxAccess({ associationId, userId });
   const thread = await QuestionThread.findOne({ _id: threadId, association: associationId }).select('author status title').lean();
@@ -56,8 +72,12 @@ export const addQuestionMessage = async ({ associationId, threadId, userId, body
   const change = kind === 'officer'
     ? { $push: { messages: message }, $set: { status: 'answered', lastOfficerAt: now, lastOfficer: userId } }
     : { $push: { messages: message }, $set: { status: 'unanswered', lastResidentAt: now }, $inc: { residentMessageCount: 1 } };
-  const updated = await QuestionThread.findOneAndUpdate({ _id: threadId, association: associationId, status: thread.status }, change, { new: true });
-  if (!updated) throw fail('先に別の返信が届きました。画面を読み直してください。', 409);
+  const updated = await persistWithAttachments(associationId, files, async attachments => {
+    message.attachments = attachments;
+    const saved = await QuestionThread.findOneAndUpdate({ _id: threadId, association: associationId, status: thread.status }, change, { new: true });
+    if (!saved) throw fail('先に別の返信が届きました。画面を読み直してください。', 409);
+    return saved;
+  });
   if (kind === 'officer') {
     try {
       await createNotification({ association: associationId, recipient: thread.author, type: 'question_answered', title: '質問・ご意見箱に回答が届きました', body: `「${thread.title}」に役員から回答が届きました。`, relatedType: 'QuestionThread', relatedId: threadId });

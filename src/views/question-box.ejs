@@ -6,10 +6,11 @@
   <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>質問・ご意見箱</h1><p>町内会の役員へ質問や意見を送れます。回答への返信・再質問もここから行えます。</p></div></section>
 
   <section class="content-card question-compose"><h2>質問・ご意見を送る</h2>
-    <form class="form-stack" action="/associations/<%= association._id %>/questions" method="post">
+    <form class="form-stack" action="/associations/<%= association._id %>/questions" method="post" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label>タイトル <span class="required">必須</span><input name="title" maxlength="120" required></label>
       <label>内容 <span class="required">必須</span><textarea name="body" rows="5" maxlength="3000" required></textarea></label>
+      <%- include('partials/question-attachment-fields') %>
       <div class="form-actions"><button class="button button-primary" type="submit">送信する</button></div>
     </form>
   </section>

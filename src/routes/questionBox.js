@@ -1,4 +1,5 @@
 import express from 'express';
+import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import { notifyResponsible } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -82,17 +83,17 @@ questionBoxRouter.get('/:associationId/questions/:threadId', async (req, res, ne
   } catch (error) { return next(error); }
 });
 
-questionBoxRouter.post('/:associationId/questions', verifyCsrfToken, async (req, res, next) => {
+questionBoxRouter.post('/:associationId/questions', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
   try {
-    const thread = await createQuestion({ associationId: req.params.associationId, userId: req.user._id, title: req.body.title, body: req.body.body });
+    const thread = await createQuestion({ associationId: req.params.associationId, userId: req.user._id, title: req.body.title, body: req.body.body, files: req.files });
     req.session.notice = '質問・ご意見を送信しました。';
     return redirectToBox(res, req.params.associationId, null);
   } catch (error) { return next(error); }
 });
 
-questionBoxRouter.post('/:associationId/questions/:threadId/messages', verifyCsrfToken, async (req, res, next) => {
+questionBoxRouter.post('/:associationId/questions/:threadId/messages', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
   try {
-    const thread = await addQuestionMessage({ associationId: req.params.associationId, threadId: req.params.threadId, userId: req.user._id, body: req.body.body });
+    const thread = await addQuestionMessage({ associationId: req.params.associationId, threadId: req.params.threadId, userId: req.user._id, body: req.body.body, files: req.files });
     req.session.notice = thread.status === 'answered' ? '回答を送信しました。' : '返信・再質問を送信しました。';
     return redirectToBox(res, req.params.associationId, null, thread.status === 'answered');
   } catch (error) { return next(error); }

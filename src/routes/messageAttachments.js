@@ -1,4 +1,5 @@
 import express from 'express';
+import { QuestionThread } from '../models/questionThread.js';
 import mongoose from 'mongoose';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -84,4 +85,18 @@ messageAttachmentsRouter.get('/:associationId/event-images/:fileId', wrap(async 
   }
   if (!allowed) throw fail();
   await streamFile(req, res, event.image);
+}));
+
+export const canReadQuestionAttachment = async (thread, user) => {
+  const access = await loadQuestionBoxAccess({ associationId: thread.association, userId: user._id });
+  return access.canAnswer || String(thread.author) === String(user._id);
+};
+messageAttachmentsRouter.get('/:associationId/question-attachments/:fileId', requireLogin, wrap(async (req, res) => {
+  await validAssociation(req);
+  const id = driveId(req.params.fileId);
+  const thread = await QuestionThread.findOne({ association: req.params.associationId, 'messages.attachments.fileId': id }).lean();
+  if (!thread) throw fail(404);
+  if (!await canReadQuestionAttachment(thread, req.user)) throw fail();
+  const file = thread.messages.flatMap(message => message.attachments || []).find(file => file.fileId === id);
+  await streamFile(req, res, file);
 }));
