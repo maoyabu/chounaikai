@@ -1,5 +1,4 @@
 import express from 'express';
-import { notifyResponsible } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
@@ -8,7 +7,7 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { DistrictGroup, Household, HouseholdMember } from '../models/organization.js';
 import { JoinApplication, Invitation, WithdrawalApplication } from '../models/workflow.js';
 import { ResidentRegistration } from '../models/residentRegistration.js';
-import { ensureCanApply, decideJoinApplication, parseResidentProfile } from '../services/householdParticipationService.js';
+import { ensureCanApply, decideJoinApplication, parseResidentProfile, notifyDistrictLeaders, loadLeaderDistrictIds } from '../services/householdParticipationService.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import crypto from 'node:crypto';
 import { loadLeaderHouseholdDeletion, deleteLeaderHousehold } from '../services/leaderHouseholdDeletionService.js';
@@ -105,13 +104,13 @@ householdsRouter.post('/:associationId/join', verifyCsrfToken, async (req, res, 
       { $set: { name: representativeName, nameKana: representativeKana, birthDate, gender, email, lineAccount: String(req.body.lineAccount || '').trim(), isRepresentative: true, relationship: '世帯代表者', startsAt: new Date() }, $unset: { endsAt: '' } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    await JoinApplication.findOneAndUpdate(
+    const application = await JoinApplication.findOneAndUpdate(
       { association: association._id, applicant: req.user._id },
-      { $set: { districtGroup: districtGroup._id, household: household._id, status: 'pending', source: 'representative', applicantNote: String(req.body.applicantNote || '').trim() }, $unset: { decidedBy: '', decidedAt: '', rejectionReason: '', invitation: '', invitedBy: '', householdMember: '', residentProfile: '', householdConfirmedBy: '', householdConfirmedAt: '' } },
+      { $set: { districtGroup: districtGroup._id, household: household._id, status: 'pending', source: 'representative', applicantNote: String(req.body.applicantNote || '').trim() }, $unset: { leaderApprovedBy: '', leaderApprovedAt: '', decidedBy: '', decidedAt: '', rejectionReason: '', invitation: '', invitedBy: '', householdMember: '', residentProfile: '', householdConfirmedBy: '', householdConfirmedAt: '' } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     req.session.notice = `「${association.name}・${districtGroup.name}」への参加を申請しました。`;
-    await notifyResponsible({ association: association._id, districtGroup: districtGroup._id, type: 'join_application_received', title: '町内会への参加申請が届きました' });
+    await notifyDistrictLeaders({ application, household, applicantName: representativeName });
     await ResidentRegistration.deleteOne({ user: req.user._id });
     return res.redirect(`/associations/${association._id}/participation`);
   } catch (error) { return next(error); }
@@ -200,7 +199,6 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
   } catch (error) { return next(error); }
 });
 
-const loadLeaderDistrictIds = async (associationId, userId) => AnnualLeaderAssignment.find({ association: associationId, representative: userId, fiscalYear: currentFiscalYear(), cancelledAt: null }).distinct('districtGroup');
 
 householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
   try {
@@ -335,10 +333,10 @@ householdsRouter.get('/:associationId/leader', async (req, res, next) => {
 for (const decision of ['approve', 'reject']) householdsRouter.post('/:associationId/leader/applications/:applicationId/' + decision, verifyCsrfToken, async (req, res, next) => {
   try {
     const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
-    const application = await JoinApplication.findOne({ _id: req.params.applicationId, association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending' }).populate('districtGroup', 'name');
+    const application = await JoinApplication.findOne({ _id: req.params.applicationId, association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending', leaderApprovedAt: null }).populate('districtGroup', 'name');
     if (!application) throw fail('自分の班の参加申請を確認できません。', 403);
-    await decideJoinApplication({ application, actor: req.user, approve: decision === 'approve', rejectionReason: req.body.rejectionReason });
-    req.session.notice = decision === 'approve' ? '参加申請を承認しました。' : '参加申請を拒否し、申請者へ通知しました。';
+    await decideJoinApplication({ application, actor: req.user, approve: decision === 'approve', rejectionReason: req.body.rejectionReason, leaderApproval: true });
+    req.session.notice = decision === 'approve' ? '班長として承認しました。町内会管理者の最終承認をお待ちください。' : '参加申請を拒否し、申請者へ通知しました。';
     return res.redirect(`/associations/${req.params.associationId}/leader`);
   } catch (error) { return next(error); }
 });

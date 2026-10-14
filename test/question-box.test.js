@@ -113,7 +113,7 @@ test('officer menu opens its hub and shows the unanswered count', async () => {
     currentOfficerQuestionBoxes: [{ _id: association, name: '中央町内会', unansweredCount: 3 }]
   });
   assert.match(html, /役員メニュー/);
-  assert.match(html, /class="menu-action-count" aria-label="未回答 3件"/);
+  assert.match(html, /menu-action-tag">質問・ご意見 3件/);
   assert.match(html, new RegExp(`/associations/${association}/officer`));
   const hub = await ejs.renderFile(path.join(directory, '../src/views/officer-menu.ejs'), {
     assetVersion: 'test', showNotificationPrompt: false, title: '役員メニュー', currentUser: { displayname: '役員', email: 'officer@example.test' }, currentRoleTags: [], currentPath: '', csrfToken: 'token',

@@ -12,6 +12,7 @@ import { Group } from '../src/models/group.js';
 import { AssociationMembership } from '../src/models/associationMembership.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import { Notification } from '../src/models/notification.js';
+import { RoleDefinition, RoleAssignment } from '../src/models/role.js';
 import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
 import { AuditLog } from '../src/models/auditLog.js';
 import { ResidentRegistration } from '../src/models/residentRegistration.js';
@@ -23,7 +24,7 @@ import { householdsRouter } from '../src/routes/households.js';
 import { webRouter } from '../src/routes/web.js';
 import { managementRouter } from '../src/routes/management.js';
 import { verifyCsrfToken } from '../src/middleware/csrf.js';
-import { createHouseholdInvitationToken, digestInvitationToken, parseResidentProfile, loadHouseholdInvitation, acceptHouseholdInvitation, requestHouseholdLink, confirmHouseholdLink, decideJoinApplication } from '../src/services/householdParticipationService.js';
+import { createHouseholdInvitationToken, digestInvitationToken, countPendingLeaderApplications, notifyDistrictLeaders, parseResidentProfile, loadHouseholdInvitation, acceptHouseholdInvitation, requestHouseholdLink, confirmHouseholdLink, decideJoinApplication } from '../src/services/householdParticipationService.js';
 
 const id = () => new mongoose.Types.ObjectId();
 const ids = { association: id(), household: id(), district: id(), head: id(), user: id(), member: id(), invitation: id(), group: id(), application: id() };
@@ -212,7 +213,8 @@ test('leader invitation approval is displayed as joint district and household pa
   });
   assert.match(html, /山田世帯の山田 花子さんの参加申請/);
   assert.match(html, /世帯主による再確認は不要/);
-  assert.match(html, /班・世帯への参加を承認/);
+  assert.match(html, /班長として承認/);
+  assert.match(html, /町内会管理者が最終承認/);
   assert.match(html, new RegExp(`/leader/applications/${ids.application}/approve`));
   assert.doesNotMatch(html, /href="\/profile/);
 });
@@ -482,7 +484,7 @@ test('failed approval does not remove pre-existing legacy group membership', asy
   assert.equal(Notification.deleteOne.mock.callCount(), 1);
 });
 
-const render = (name, data) => ejs.renderFile(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', assetVersion: 'test', csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: user, values: {}, ...data });
+const render = (name, data) => ejs.renderFile(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', assetVersion: 'test', showNotificationPrompt: false, csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: user, values: {}, ...data });
 
 test('invitation page offers signup/login and binds acceptance to the exact invitation', async () => {
   const details = { ...invitation, household: { ...household, districtGroup: { name: '1班' } }, member };
@@ -756,4 +758,86 @@ test('administrator invitation login waits for MFA before accepting or changing 
   assert.equal(req.session.registrationChoice.purpose, 'create');
   assert.equal(claim.mock.callCount(), 0);
   assert.equal(grant.mock.callCount(), 0);
+});
+
+
+test('leader approval keeps the application pending without granting membership', async t => {
+  const application = stubDecision(t, 'representative');
+  application.applicant = ids.head;
+  AssociationMembership.exists.mock.mockImplementation(async () => null);
+  stub(t, AnnualLeaderAssignment, 'exists', async () => ({ _id: id() }));
+  const result = await decideJoinApplication({ application, actor: { _id: ids.head }, approve: true, leaderApproval: true });
+  assert.equal(result.status, 'pending');
+  assert.equal(String(result.leaderApprovedBy), String(ids.head));
+  assert.ok(result.leaderApprovedAt instanceof Date);
+  assert.equal(AssociationMembership.findOneAndUpdate.mock.callCount(), 0);
+  assert.equal(Group.updateOne.mock.callCount(), 0);
+});
+
+test('manager approval finalizes participation before or after leader approval', async t => {
+  const application = stubDecision(t);
+  await decideJoinApplication({ application, actor: { _id: ids.head }, approve: true, managerOverride: true });
+  assert.equal(JoinApplication.findOneAndUpdate.mock.calls[0].arguments[1].$set.status, 'approved');
+  application.leaderApprovedAt = new Date(); application.leaderApprovedBy = ids.head;
+  await decideJoinApplication({ application, actor: { _id: ids.head }, approve: true, managerOverride: true });
+  assert.equal(AssociationMembership.findOneAndUpdate.mock.callCount(), 2);
+});
+
+test('leader cannot approve a foreign district or an application already finalized by a manager', async t => {
+  const application = stubDecision(t);
+  stub(t, AnnualLeaderAssignment, 'exists', async () => null);
+  await assert.rejects(decideJoinApplication({ application, actor: { _id: ids.head }, approve: true, leaderApproval: true }), { status: 403 });
+  AnnualLeaderAssignment.exists.mock.mockImplementation(async () => ({ _id: id() }));
+  JoinApplication.findOneAndUpdate.mock.mockImplementation(async () => null);
+  await assert.rejects(decideJoinApplication({ application, actor: { _id: ids.head }, approve: true, leaderApproval: true }), { status: 409 });
+  assert.equal(AssociationMembership.findOneAndUpdate.mock.callCount(), 0);
+});
+
+test('head applications notify their current district leader and the association manager', async t => {
+  const leader = id(), manager = id();
+  stub(t, AnnualLeaderAssignment, 'find', filter => { assert.equal(String(filter.districtGroup), String(ids.district)); return query([{ representative: leader }]); });
+  stub(t, AssociationMembership, 'exists', async () => ({ _id: id() }));
+  stub(t, RoleDefinition, 'find', () => ({ distinct: async () => [id()] }));
+  stub(t, RoleAssignment, 'find', () => ({ distinct: async () => [manager] }));
+  stub(t, AssociationMembership, 'find', () => ({ distinct: async () => [manager] }));
+  const notices = [];
+  stub(t, Notification, 'create', async value => { notices.push(value); return { _id: id(), ...value }; });
+  stub(t, Notification, 'findOneAndUpdate', async () => null);
+  stub(t, Notification, 'insertMany', async values => { notices.push(...values); });
+  await notifyDistrictLeaders({ application: { _id: ids.application, association: ids.association, districtGroup: ids.district }, household, applicantName: '山田 太郎' });
+  assert.equal(notices.length, 2);
+  assert.deepEqual(new Set(notices.map(item => String(item.recipient))), new Set([String(leader), String(manager)]));
+  assert.ok(notices.every(item => String(item.relatedId) === String(ids.application)));
+});
+
+test('leader-approved applications display manager waiting without another leader decision', async () => {
+  const data = { association, csrfToken: 'csrf', applications: [{ _id: ids.application, applicant: user, household, districtGroup: { name: '1班' }, status: 'pending', source: 'representative', leaderApprovedAt: new Date() }] };
+  const leader = await render('partials/join-application-list', { ...data, decisionPath: 'leader' });
+  assert.match(leader, /町内会管理者の最終承認待ち/);
+  assert.doesNotMatch(leader, /<form/);
+  const manager = await render('partials/join-application-list', { ...data, decisionPath: 'manage' });
+  assert.match(manager, /<form/);
+});
+
+
+test('leader badge counts only pending unconfirmed applications from their current districts', async t => {
+  stub(t, AnnualLeaderAssignment, 'find', filter => {
+    assert.equal(filter.representative, ids.head);
+    assert.equal(filter.cancelledAt, null);
+    return { distinct: async () => [ids.district] };
+  });
+  stub(t, JoinApplication, 'countDocuments', async filter => {
+    assert.deepEqual(filter, { association: ids.association, districtGroup: { $in: [ids.district] }, status: 'pending', leaderApprovedAt: null });
+    return 1;
+  });
+  assert.equal(await countPendingLeaderApplications(ids.association, ids.head), 1);
+  AnnualLeaderAssignment.find.mock.mockImplementation(() => ({ distinct: async () => [] }));
+  assert.equal(await countPendingLeaderApplications(ids.association, ids.head), 0);
+  assert.equal(JoinApplication.countDocuments.mock.callCount(), 1);
+});
+
+test('hamburger menu labels manager and leader participation counts', async () => {
+  const html = await render('partials/header', { currentManagerAssociations: [{ _id: ids.association, actionCount: 2 }], currentLeaderAssociations: [{ _id: ids.association, actionCount: 1 }] });
+  assert.match(html, /menu-action-tag">参加申請 2件/);
+  assert.match(html, /menu-action-tag">参加申請 1件/);
 });

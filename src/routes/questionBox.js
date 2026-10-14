@@ -1,4 +1,5 @@
 import express from 'express';
+import { pendingEquipmentLoans, summarizePendingEquipmentLoans } from '../services/equipmentService.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import { notifyResponsible } from '../services/notificationRecipients.js';
 import mongoose from 'mongoose';
@@ -58,7 +59,8 @@ questionBoxRouter.get('/:associationId/officer', async (req, res, next) => {
     const { association, canAnswer } = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id });
     if (!canAnswer) return res.status(403).render('error', { title: 'エラー', message: '役員メニューを開く権限がありません。' });
     const unansweredCount = await QuestionThread.countDocuments({ association: association._id, status: 'unanswered' });
-    return res.render('officer-menu', { title: `${association.name} 役員メニュー`, association, unansweredCount });
+    const pendingLoanItems = summarizePendingEquipmentLoans(await pendingEquipmentLoans([association._id]));
+    return res.render('officer-menu', { pendingLoanItems, pendingLoanCount: pendingLoanItems.reduce((sum, item) => sum + item.count, 0), title: `${association.name} 役員メニュー`, association, unansweredCount });
   } catch (error) { return next(error); }
 });
 

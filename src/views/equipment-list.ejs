@@ -11,6 +11,7 @@
 </div><p><%= association.name %>の設備・備品を保管場所ごとに管理</p></div>
   <% if (canAnswer) { %><div class="equipment-header-links"><a class="equipment-header-pill equipment-inventory-pill" href="<%= base %>/inventory"><%- include('partials/equipment-icon', { icon: 'check-square' }) %>棚卸しリスト</a><a class="equipment-header-pill equipment-purchase-pill" href="<%= base %>/purchase-list"><%- include('partials/equipment-icon', { icon: 'shopping-bag' }) %>そろそろ購入リスト</a></div><% } %>
 </header>
+<% if (canAnswer && typeof pendingLoanItems !== 'undefined' && pendingLoanItems.length) { %><section class="content-card"><h2>承認待ちの貸出依頼</h2><% pendingLoanItems.forEach(item => { %><p><a class="button officer-loan-approval-link" href="<%= base %>/<%= item.equipmentId %>/loans#equipment-loan-requests"><%= item.name %>：貸出依頼 <%= item.count %>件を確認・承認</a></p><% }) %></section><% } %>
 <div class="equipment-filter-bar">
   <nav class="equipment-filter-tabs" aria-label="備品の表示切替"><% [['all','すべて'],['stock','ストック'],['disaster','防災対策'],['wishlist','ウィッシュリスト']].forEach(([key,label]) => { %><a class="equipment-filter-tab <%= tab === key ? 'is-active' : '' %>" href="<%= base %>?tab=<%= key %>" <%- tab === key ? 'aria-current="page"' : '' %>><%= label %></a><% }) %></nav>
   <% if (canAnswer) { %><a class="equipment-add-button" data-equipment-editor="new" href="<%= base %>/new?tab=<%= tab %>"><span aria-hidden="true">＋</span> 設備・備品を追加</a><% } %>
@@ -19,7 +20,9 @@
 <% groups.forEach(place => { %><section class="content-card equipment-place"><div class="section-heading"><h2><%= place.name %></h2><% if (canAnswer) { %><a class="button button-quiet button-small" data-equipment-editor="new" href="<%= base %>/new?place=<%= encodeURIComponent(place.name) %>&tab=<%= tab %>">＋ この場所に追加</a><% } %></div>
 <div class="equipment-card-grid">
 <% place.groups.flatMap(group => group.items).forEach(item => { %>
-  <article class="equipment-card">
+  <article class="equipment-card <%= canAnswer && item.pendingLoanCount > 0 ? 'equipment-card-pending' : '' %>">
+        <% if (canAnswer && item.pendingLoanCount > 0) { %><a class="equipment-loan-request-badge" href="<%= base %>/<%= item._id %>/loans#equipment-loan-requests">貸出依頼 <%= item.pendingLoanCount %>件</a><% } %>
+
     <div class="equipment-card-main">
       <% if (item.productImageUrl) { %><img src="<%= item.productImageUrl %>" alt="<%= item.name %>の画像" loading="lazy"><% } else { %><span class="equipment-placeholder">No Image</span><% } %>
       <div class="equipment-card-details">

@@ -19,6 +19,8 @@ const joinApplicationSchema = new mongoose.Schema({
   residentProfile: { name: String, nameKana: String, birthDate: Date, gender: String, email: String, lineAccount: String, relationship: String },
   applicantNote: String,
   addressEvidence: String,
+  leaderApprovedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  leaderApprovedAt: Date,
   decidedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   decidedAt: Date,
   rejectionReason: String

@@ -1666,3 +1666,20 @@ h1, h2, h3, h4, h5, h6,
 
 .question-attachments img { display: block; max-width: 100%; max-height: 280px; object-fit: contain; margin-bottom: .4rem; border-radius: .5rem; }
 .question-attachments a { overflow-wrap: anywhere; }
+
+.equipment-list-page .equipment-card { position: relative; }
+.equipment-list-page .equipment-card-pending { padding-top: 1.25rem; }
+.equipment-loan-request-badge { position: absolute; top: -.75rem; right: .4rem; z-index: 1; display: inline-flex; align-items: center; padding: .35rem .65rem; border: 2px solid #fff; border-radius: 999px; background: #dc2626; color: #fff; font-size: .75rem; font-weight: 700; line-height: 1.3; text-decoration: none; box-shadow: 0 2px 5px rgba(153,27,27,.2); }
+.equipment-loan-request-badge:hover { background: #b91c1c; }
+.equipment-loan-request-badge:focus-visible { outline: 3px solid #991b1b; outline-offset: 2px; }
+
+.officer-loan-notice { margin-bottom: 1.5rem; }
+.officer-loan-approval-link { background: #dc2626; color: #fff; font-weight: 700; text-align: center; }
+.officer-loan-approval-link:hover { background: #b91c1c; }
+.officer-loan-approval-link:focus-visible { outline: 3px solid #991b1b; outline-offset: 3px; }
+.officer-functions-section .officer-loan-pending-badge { background: #dc2626; color: #fff; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+
+.menu-item .menu-action-tag { height: auto; min-height: 1.5rem; padding: .3rem .5rem; line-height: 1.3; white-space: nowrap; }
+.menu-item:has(.menu-action-tag) { flex-wrap: wrap; gap: .4rem; }
+
+.finance-annual-difference-note { margin: 0 0 .75rem; text-align: right; color: var(--muted); font-size: .875rem; line-height: 1.6; }

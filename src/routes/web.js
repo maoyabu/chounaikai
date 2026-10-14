@@ -1,7 +1,9 @@
 import { discloseOfficers, viewerDisclosureAccess } from '../services/officerDisclosureService.js';
+import { pendingEquipmentLoans } from '../services/equipmentService.js';
 import { EquipmentSettings } from '../models/equipment.js';
 import { loadAnnouncementPins } from '../services/officerAnnouncementService.js';
 import express from 'express';
+import { countPendingLeaderWithdrawals } from '../services/withdrawalService.js';
 import passport from 'passport';
 import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
@@ -19,7 +21,7 @@ import { ResidentRegistration } from '../models/residentRegistration.js';
 import { PendingUserRegistration } from '../models/pendingUserRegistration.js';
 import { visibleEvents, calendarWindow } from '../services/associationEventService.js';
 import { loadAssociationPageData } from '../services/associationPublicPageService.js';
-import { loadHouseholdInvitation, acceptHouseholdInvitation } from '../services/householdParticipationService.js';
+import { loadHouseholdInvitation, acceptHouseholdInvitation, countPendingLeaderApplications } from '../services/householdParticipationService.js';
 import { deleteNotification, markNotificationRead, syncCompletedNotifications } from '../services/notificationInboxService.js';
 import { requireLogin, requireSystemAdmin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
@@ -137,7 +139,9 @@ webRouter.use(async (req, res, next) => {
         const activeIds = new Set(activeAnswerMemberships.map((item) => String(item.association)));
         const activeAssociations = answerAssociations.filter((item) => activeIds.has(String(item._id)));
         const pendingQuestions = activeAssociations.length ? await QuestionThread.find({ association: { $in: activeAssociations.map((item) => item._id) }, status: 'unanswered' }).select('association').lean() : [];
+        const pendingLoans = await pendingEquipmentLoans(activeAssociations.map(item => item._id));
         res.locals.currentOfficerQuestionBoxes = activeAssociations.map((item) => ({ _id: item._id, name: item.name,
+          pendingLoanCount: pendingLoans.filter(loan => String(loan.association) === String(item._id)).length,
           unansweredCount: pendingQuestions.filter((thread) => String(thread.association) === String(item._id)).length }));
       }
       res.locals.currentLeaderAssociations = [...new Map(
@@ -146,9 +150,11 @@ webRouter.use(async (req, res, next) => {
           .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
       ).values()];
       if (res.locals.currentLeaderAssociations.length) {
-        const counts = await Promise.all(res.locals.currentLeaderAssociations.map(async (item) => [String(item._id), await JoinApplication.countDocuments({ association: item._id, status: 'pending' })]));
+        const counts = await Promise.all(res.locals.currentLeaderAssociations.map(async (item) => [String(item._id), await countPendingLeaderApplications(item._id, req.user._id)]));
         const countMap = new Map(counts);
-        res.locals.currentLeaderAssociations = res.locals.currentLeaderAssociations.map(item => ({ ...item, actionCount: countMap.get(String(item._id)) || 0 }));
+        const withdrawalCounts = await Promise.all(res.locals.currentLeaderAssociations.map(async item => [String(item._id), await countPendingLeaderWithdrawals(item._id, req.user._id)]));
+        const withdrawalMap = new Map(withdrawalCounts);
+        res.locals.currentLeaderAssociations = res.locals.currentLeaderAssociations.map(item => ({ ...item, actionCount: countMap.get(String(item._id)) || 0, withdrawalCount: withdrawalMap.get(String(item._id)) || 0 }));
       }
       res.locals.currentHasAssociationMembership = Boolean(activeMembership);
       res.locals.currentMenuAssociationName = activeMembership?.association?.name || res.locals.currentOfficerQuestionBoxes[0]?.name || res.locals.currentLeaderAssociations[0]?.name || res.locals.currentManagerAssociations[0]?.name || null;
@@ -596,7 +602,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
         }
         if (['equipment_inventory', 'equipment_expiry', 'equipment_loan'].includes(notification.type)) {
           const equipmentBase = `/associations/${notification.association._id}/equipment`;
-          notification.actionUrl = notification.type === 'equipment_inventory' ? `${equipmentBase}/inventory` : notification.type === 'equipment_expiry' ? `${equipmentBase}/purchase-list` : notification.relatedId ? `${equipmentBase}/${notification.relatedId}/loans` : equipmentBase;
+          notification.actionUrl = notification.type === 'equipment_inventory' ? `${equipmentBase}/inventory` : notification.type === 'equipment_expiry' ? `${equipmentBase}/purchase-list` : notification.relatedId ? `${equipmentBase}/${notification.relatedId}/loans#equipment-loan-requests` : equipmentBase;
           notification.actionLabel = '設備・備品を確認';
         }
         if (notification.type === 'join_application_received' && res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id))) {
@@ -627,7 +633,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
         notification.actionUrl = `/associations/${notification.association._id}/district-messages/inbox/${notification.relatedId}`;
         notification.actionLabel = '班内の連絡を確認';
       }
-      if (notification.type === 'join_application_received' && notification.association && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
+      if (notification.type === 'join_application_received' && notification.association && !res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id)) && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
         notification.actionUrl = `/associations/${notification.association._id}/leader?tab=applications#application-${notification.relatedId}`;
       }
     }

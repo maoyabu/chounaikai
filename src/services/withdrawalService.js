@@ -155,3 +155,9 @@ export const cancelWithdrawal = async ({ applicationId, actorId }) => {
   const result = await WithdrawalApplication.updateOne({ _id: applicationId, requestedBy: actorId, status: { $in: ['pending', 'awaiting_household'] } }, { $set: { status: 'cancelled' } });
   if (result.modifiedCount !== 1) throw fail('取り消せる申請がありません。', 404);
 };
+
+export const countPendingLeaderWithdrawals = async (associationId, actorId) => {
+  const districtIds = await AnnualLeaderAssignment.find({ association: associationId, representative: actorId, fiscalYear: year(), cancelledAt: null }).distinct('districtGroup');
+  if (!districtIds.length) return 0;
+  return WithdrawalApplication.countDocuments({ association: associationId, districtGroup: { $in: districtIds }, status: 'pending' });
+};

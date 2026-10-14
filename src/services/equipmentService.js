@@ -128,6 +128,9 @@ export const decideEquipmentLoan = async ({ associationId, userId, loanId, actio
   const loan = await EquipmentLoan.findOneAndUpdate({ _id: loanId, association: associationId, status: existing.status }, { $set: { status: action, decidedBy: userId, decidedAt: new Date() } }, { new: true });
   if (!loan) throw equipmentError('申込みの状態が変更されています。', 409);
   if (action !== 'approved') await AssociationEquipment.updateOne({ _id: existing.equipment, association: associationId }, { $pull: { reservations: { loanId: existing._id } }, $inc: { reservationVersion: 1 } });
+  if (action === 'cancelled' && String(existing.borrower) === String(userId)) {
+    await notifyResponsible({ association: associationId, officers: true, exclude: [userId], type: 'equipment_loan', title: '設備・備品の貸出申込みが取り消されました', relatedId: existing.equipment });
+  }
   try { await Notification.create({ association: associationId, recipient: existing.borrower, type: 'equipment_loan', title: `設備・備品の貸出：${({ approved: '承認', rejected: '却下', cancelled: '取消', returned: '返却済み' })[action]}`, body: `${existing.startDate}〜${existing.endDate} ${existing.allDay === false ? `${existing.startTime}〜${existing.endTime}` : '終日'}`, relatedType: 'AssociationEquipment', relatedId: existing.equipment }); }
   catch (error) { console.error('Equipment loan notification failed:', error.name); }
   return loan;
@@ -184,4 +187,23 @@ export const runEquipmentReminders = async (now = new Date()) => {
     const items = await AssociationEquipment.find({ association: association._id, deletedAt: null, wishlist: { $ne: true }, expiryDate: { $ne: '', $lte: addMonths(today, settings.expiryAlertMonths) }, quantity: { $gt: 0 } }).lean();
     for (const item of items) if (item.expiryDate) await equipmentOfficerNotice({ associationId: association._id, key: `expiry:${item._id}:${item.expiryDate}`, type: 'equipment_expiry', title: `${item.name}の期限が近づいています`, body: `期限：${item.expiryDate}／保管場所：${item.place}`, relatedId: item._id });
   }
+};
+
+// Count requests awaiting a decision, independently of notification read state.
+export const pendingEquipmentLoans = async associationIds => {
+  if (!associationIds.length) return [];
+  return EquipmentLoan.find({ association: { $in: associationIds }, status: 'pending' })
+    .select('association equipment').populate('equipment', 'name').lean();
+};
+export const summarizePendingEquipmentLoans = loans => {
+  const groups = new Map();
+  for (const loan of loans) {
+    const equipment = loan.equipment;
+    if (!equipment) continue;
+    const id = String(equipment._id || equipment);
+    const group = groups.get(id) || { equipmentId: id, name: equipment.name || '設備・備品', count: 0 };
+    group.count++;
+    groups.set(id, group);
+  }
+  return [...groups.values()];
 };

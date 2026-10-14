@@ -1,5 +1,6 @@
 import { equipmentDaySchedule } from '../services/equipmentTimeService.js';
 import express from 'express';
+import { pendingEquipmentLoans, summarizePendingEquipmentLoans } from '../services/equipmentService.js';
 import ExcelJS from 'exceljs';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission } from '../middleware/auth.js';
@@ -23,10 +24,12 @@ const inventoryData = async associationId => {
 
 equipmentRouter.get('/:associationId/equipment', handler(async (req, res) => {
   const access = await equipmentAccess(req.params.associationId, req.user._id);
-  const items = await activeItems(access.association._id);
+  const pendingLoanItems = access.canAnswer ? summarizePendingEquipmentLoans(await pendingEquipmentLoans([access.association._id])) : [];
+  const counts = new Map(pendingLoanItems.map(item => [item.equipmentId, item.count]));
+  const items = (await activeItems(access.association._id)).map(item => ({ ...item, pendingLoanCount: counts.get(String(item._id)) || 0 }));
   const tab = ['all', 'stock', 'disaster', 'wishlist'].includes(req.query.tab) ? req.query.tab : 'all';
   const filtered = items.filter(item => tab === 'all' || (tab === 'stock' ? !item.wishlist : tab === 'disaster' ? !item.wishlist && Boolean(item.disasterCategory) : item.wishlist));
-  res.render('equipment-list', { title: '設備・備品管理', ...access, items: filtered, groups: equipmentGroups(filtered, tab === 'disaster' ? 'disasterCategory' : 'stockCategory'), tab, base: base(req.params.associationId) });
+  res.render('equipment-list', { pendingLoanItems, title: '設備・備品管理', ...access, items: filtered, groups: equipmentGroups(filtered, tab === 'disaster' ? 'disasterCategory' : 'stockCategory'), tab, base: base(req.params.associationId) });
 }));
 
 equipmentRouter.get('/:associationId/equipment/settings', requirePermission('association.manage'), handler(async (req, res) => {
@@ -114,7 +117,8 @@ equipmentRouter.get('/:associationId/equipment/:equipmentId/loans', handler(asyn
     const capacity = Math.max(0, ...segments.map(segment => segment.available));
     cells.push({ date, day, segments, capacity, available: date >= today && capacity > 0 });
   }
-  const requests = await EquipmentLoan.find({ association: req.params.associationId, equipment: item._id, ...(access.canAnswer ? {} : { borrower: req.user._id }) }).populate('borrower', 'displayname username').sort({ createdAt: -1 }).limit(100).lean();
+  const requests = await EquipmentLoan.find({ association: req.params.associationId, equipment: item._id, ...(access.canAnswer ? {} : { borrower: req.user._id }) }).populate('borrower', 'displayname username').sort({ createdAt: -1 }).lean();
+  requests.sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending'));
   res.render('equipment-loans', { title: `${item.name}の貸出`, ...access, item, cells, requests, month, previous: monthString(index - 1), next, today, base: base(req.params.associationId) });
 }));
 equipmentRouter.post('/:associationId/equipment/:equipmentId/loans', verifyCsrfToken, handler(async (req, res) => {

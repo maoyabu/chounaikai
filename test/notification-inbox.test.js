@@ -45,3 +45,17 @@ test('completed replies, confirmations and approvals are read while pending requ
   assert.equal(String(filter.recipient), String(recipient));
   assert.deepEqual(filter._id.$in.map(String), [0, 1, 2, 4].map(index => String(items[index]._id)));
 });
+
+test('leader confirmation reads the leader notice while the manager notice remains pending', async t => {
+  const leader = new mongoose.Types.ObjectId(), manager = new mongoose.Types.ObjectId(), application = new mongoose.Types.ObjectId(), notice = new mongoose.Types.ObjectId();
+  const query = value => ({ select() { return this; }, lean: async () => value });
+  t.mock.method(Notification, 'find', () => query([{ _id: notice, type: 'join_application_received', relatedId: application }]));
+  t.mock.method(OfficerAnnouncementReceipt, 'find', () => query([]));
+  t.mock.method(QuestionThread, 'find', () => query([]));
+  t.mock.method(WithdrawalApplication, 'find', () => query([]));
+  t.mock.method(JoinApplication, 'find', () => query([{ _id: application, status: 'pending', leaderApprovedBy: leader, leaderApprovedAt: new Date() }]));
+  const update = t.mock.method(Notification, 'updateMany', async () => ({}));
+  assert.equal(await syncCompletedNotifications({ recipient: leader }), 1);
+  assert.equal(await syncCompletedNotifications({ recipient: manager }), 0);
+  assert.equal(update.mock.callCount(), 1);
+});

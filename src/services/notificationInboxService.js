@@ -28,18 +28,19 @@ export const syncCompletedNotifications = async ({ recipient }) => {
   const [receipts, threads, joins, withdrawals] = await Promise.all([
     OfficerAnnouncementReceipt.find({ recipient, announcement: { $in: relatedIds(announcementTypes) }, readAt: { $ne: null } }).select('announcement').lean(),
     QuestionThread.find({ _id: { $in: relatedIds(['question_answered']) }, author: recipient }).select('_id lastOfficerAt residentReadAt').lean(),
-    JoinApplication.find({ _id: { $in: relatedIds(['join_application_received', 'household_link_requested']) } }).select('_id status').lean(),
+    JoinApplication.find({ _id: { $in: relatedIds(['join_application_received', 'household_link_requested']) } }).select('_id status leaderApprovedBy leaderApprovedAt').lean(),
     WithdrawalApplication.find({ _id: { $in: relatedIds(['withdrawal_head_requested', 'withdrawal_leader_requested']) } }).select('_id status').lean()
   ]);
   const confirmedAnnouncements = new Set(receipts.map(item => String(item.announcement)));
   const readQuestions = new Set(threads.filter(item => item.residentReadAt && item.lastOfficerAt && new Date(item.residentReadAt) >= new Date(item.lastOfficerAt)).map(item => String(item._id)));
   const joinById = new Map(joins.map(item => [String(item._id), item.status]));
+  const leaderConfirmed = new Set(joins.filter(item => item.leaderApprovedAt && String(item.leaderApprovedBy) === String(recipient)).map(item => String(item._id)));
   const withdrawalById = new Map(withdrawals.map(item => [String(item._id), item.status]));
   const completed = unread.filter(item => {
     const id = String(item.relatedId);
     if (announcementTypes.includes(item.type)) return confirmedAnnouncements.has(id);
     if (item.type === 'question_answered') return readQuestions.has(id);
-    if (item.type === 'join_application_received') return joinById.has(id) && joinById.get(id) !== 'pending';
+    if (item.type === 'join_application_received') return joinById.has(id) && (joinById.get(id) !== 'pending' || leaderConfirmed.has(id));
     if (item.type === 'household_link_requested') return joinById.has(id) && joinById.get(id) !== 'awaiting_household';
     if (item.type === 'withdrawal_head_requested') return withdrawalById.has(id) && withdrawalById.get(id) !== 'awaiting_household';
     if (item.type === 'withdrawal_leader_requested') return withdrawalById.has(id) && !['pending', 'processing'].includes(withdrawalById.get(id));

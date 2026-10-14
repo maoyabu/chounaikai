@@ -14,7 +14,7 @@ import { User } from '../src/models/user.js';
 import { Group } from '../src/models/group.js';
 import { Notification } from '../src/models/notification.js';
 import { AuditLog } from '../src/models/auditLog.js';
-import { requestWithdrawal, confirmWithdrawal, decideWithdrawal, cancelWithdrawal } from '../src/services/withdrawalService.js';
+import { countPendingLeaderWithdrawals, requestWithdrawal, confirmWithdrawal, decideWithdrawal, cancelWithdrawal } from '../src/services/withdrawalService.js';
 import { withdrawalsRouter } from '../src/routes/withdrawals.js';
 import { requireLogin } from '../src/middleware/auth.js';
 import { verifyCsrfToken } from '../src/middleware/csrf.js';
@@ -194,7 +194,7 @@ test('a cancelled leader assignment cannot approve withdrawal', async t => {
 test('household changes or a new member require a fresh withdrawal request', async t => {
   const records = setup(t), application = await request(head, 'household');
   records(AssociationMembership).push({ _id: oid(900), association, household, user: oid(901), districtGroup: district, status: 'active' });
-  await assert.rejects(decide(application), /世帯メンバーが増えています/);
+  await assert.rejects(decide(application), /申請後に家族が増えています/);
   assert.equal(records(WithdrawalApplication)[0].status, 'pending');
   records(Household)[0].districtGroup = oid(902);
   await assert.rejects(decide(application), { status: 409 });
@@ -269,7 +269,7 @@ test('changed household head invalidates a previously confirmed application', as
 
 test('profile withdrawal page renders scope choices, confirmation, cancellation and approvals', async () => {
   const html = await ejs.renderFile(fileURLToPath(new URL('../src/views/withdrawals.ejs', import.meta.url)), {
-    title: '退会申請', currentPath: '/profile/withdrawals', currentUser: { _id: head, displayname: '山田 太郎', username: 'head' }, notice: null, csrfToken: 'csrf',
+    title: '退会申請', assetVersion: 'test', showNotificationPrompt: false, currentPath: '/profile/withdrawals', currentUser: { _id: head, displayname: '山田 太郎', username: 'head' }, notice: null, csrfToken: 'csrf',
     memberships: [{ association: { _id: association, name: 'テスト町内会' }, household: { _id: household, active: true, representative: head } }],
     successors: [{ household, user: { _id: resident, displayname: '山田 花子' } }], busyHouseholds: [], headApplications: [],
     applications: [{ _id: oid(100), association: { name: 'テスト町内会' }, status: 'pending', scope: 'representative' }]
@@ -288,4 +288,31 @@ test('withdrawal schema stores tenant, target, successor and active-request uniq
   const index = WithdrawalApplication.schema.indexes().find(([fields]) => fields.household === 1);
   assert.equal(index[1].unique, true);
   assert.deepEqual(index[1].partialFilterExpression.status.$in, ['awaiting_household', 'pending', 'processing']);
+});
+
+
+test('leader withdrawal badge counts only pending applications in current assigned districts', async t => {
+  t.mock.method(AnnualLeaderAssignment, 'find', filter => {
+    assert.equal(filter.association, association);
+    assert.equal(filter.representative, leader);
+    assert.equal(filter.cancelledAt, null);
+    return { distinct: async () => [district] };
+  });
+  const count = t.mock.method(WithdrawalApplication, 'countDocuments', async filter => {
+    assert.deepEqual(filter, { association, districtGroup: { $in: [district] }, status: 'pending' });
+    return 2;
+  });
+  assert.equal(await countPendingLeaderWithdrawals(association, leader), 2);
+  AnnualLeaderAssignment.find.mock.mockImplementation(() => ({ distinct: async () => [] }));
+  assert.equal(await countPendingLeaderWithdrawals(association, leader), 0);
+  assert.equal(count.mock.callCount(), 1);
+});
+
+test('hamburger menu shows participation and withdrawal tags together and hides zero', async () => {
+  const values = { currentUser: { displayname: '班長' }, currentPath: '', csrfToken: 'token', currentLeaderAssociations: [{ _id: association, actionCount: 1, withdrawalCount: 2 }] };
+  const html = await ejs.renderFile('src/views/partials/header.ejs', values);
+  assert.match(html, /参加申請 1件/);
+  assert.match(html, /退会申請 2件/);
+  const clear = await ejs.renderFile('src/views/partials/header.ejs', { ...values, currentLeaderAssociations: [{ _id: association, actionCount: 0, withdrawalCount: 0 }] });
+  assert.doesNotMatch(clear, /menu-action-tag/);
 });

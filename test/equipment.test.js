@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import ejs from 'ejs';
 import ExcelJS from 'exceljs';
 import mongoose from 'mongoose';
-import { saveEquipment, equipmentValues, equipmentSettingsValues, japanDate, addMonths, inventoryPeriod, reminderPeriod, loanCapacity, equipmentGroups, equipmentShortage, requestEquipmentLoan, checkInventory, receiveEquipment, equipmentOfficerNotice, decideEquipmentLoan } from '../src/services/equipmentService.js';
+import { pendingEquipmentLoans, summarizePendingEquipmentLoans, saveEquipment, equipmentValues, equipmentSettingsValues, japanDate, addMonths, inventoryPeriod, reminderPeriod, loanCapacity, equipmentGroups, equipmentShortage, requestEquipmentLoan, checkInventory, receiveEquipment, equipmentOfficerNotice, decideEquipmentLoan } from '../src/services/equipmentService.js';
 import { AssociationEquipment, EquipmentLoan, EquipmentSettings, EquipmentInventory, EquipmentPurchase, EquipmentReminder } from '../src/models/equipment.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import { AnnualOfficer } from '../src/models/annualOfficer.js';
@@ -212,4 +212,64 @@ test('calendar links require lending enabled and exclude wishes for both officer
       assert.equal(html.includes('class="equipment-purchase-link"'),canAnswer);
     }
   }
+});
+
+
+test('pending loan summaries count only undecided requests in the selected associations', async t => {
+  const rows = [{ association, equipment: { _id: equipmentId, name: '机' } }, { association, equipment: { _id: equipmentId, name: '机' } }];
+  let filter;
+  t.mock.method(EquipmentLoan, 'find', value => { filter = value; return q(rows); });
+  assert.deepEqual(await pendingEquipmentLoans([]), []);
+  assert.deepEqual(await pendingEquipmentLoans([association]), rows);
+  assert.deepEqual(filter, { association: { $in: [association] }, status: 'pending' });
+  assert.deepEqual(summarizePendingEquipmentLoans(rows), [{ equipmentId: String(equipmentId), name: '机', count: 2 }]);
+  assert.deepEqual(summarizePendingEquipmentLoans([]), []);
+});
+
+test('officers see pending counts throughout the menu and equipment cards with approval links', async () => {
+  const entry = { ...item, pendingLoanCount: 2 };
+  const pendingLoanItems = [{ equipmentId: String(equipmentId), name: entry.name, count: 2 }];
+  const values = { ...common, items: [entry], groups: equipmentGroups([entry]), tab: 'all', pendingLoanItems };
+  const officer = await ejs.renderFile('src/views/equipment-list.ejs', values);
+  assert.match(officer, /貸出依頼 2件/);
+  assert.match(officer, /loans#equipment-loan-requests/);
+  const resident = await ejs.renderFile('src/views/equipment-list.ejs', { ...values, canAnswer: false });
+  assert.doesNotMatch(resident, /貸出依頼 2件|承認待ちの貸出依頼/);
+  const menu = await ejs.renderFile('src/views/officer-menu.ejs', { ...common, unansweredCount: 0, pendingLoanCount: 2, pendingLoanItems });
+  assert.match(menu, /貸出依頼が2件あります/);
+  assert.match(menu, /貸出依頼 2件を確認・承認/);
+  const header = await ejs.renderFile('src/views/partials/header.ejs', { ...common, currentOfficerQuestionBoxes: [{ _id: association, name: '中央町内会', unansweredCount: 3, pendingLoanCount: 2 }] });
+  assert.match(header, /質問・ご意見 3件/);
+  assert.match(header, /貸出依頼 2件/);
+  const clear = await ejs.renderFile('src/views/partials/header.ejs', { ...common, currentOfficerQuestionBoxes: [{ _id: association, name: '中央町内会', unansweredCount: 0, pendingLoanCount: 0 }] });
+  assert.doesNotMatch(clear, /menu-action-count/);
+});
+
+test('loan requests and borrower cancellations notify active responsible officers', async t => {
+  access(t, false);
+  const officer = id(), today = japanDate();
+  t.mock.method(RoleDefinition, 'find', () => ({ ...q([]), distinct: async () => [] }));
+  t.mock.method(RoleAssignment, 'find', () => ({ distinct: async () => [] }));
+  t.mock.method(AnnualOfficer, 'find', () => ({ distinct: async () => [officer] }));
+  t.mock.method(AssociationMembership, 'find', filter => {
+    assert.equal(filter.status, 'active');
+    return { distinct: async () => [officer] };
+  });
+  t.mock.method(AssociationEquipment, 'findOne', () => q({ _id: equipmentId, name: '机', quantity: 2, reservations: [] }));
+  t.mock.method(AssociationEquipment, 'updateOne', async () => ({ matchedCount: 1 }));
+  t.mock.method(EquipmentLoan, 'find', () => q([]));
+  let loan;
+  t.mock.method(EquipmentLoan, 'create', async value => { loan = { ...value, status: 'pending' }; return loan; });
+  const notices = [];
+  t.mock.method(Notification, 'insertMany', async values => { notices.push(...values); });
+  t.mock.method(Notification, 'create', async () => ({}));
+  await requestEquipmentLoan({ associationId: association, userId: user, equipmentId, input: { startDate: today, endDate: today, allDay: true, quantity: 1, purpose: '会合' } });
+  assert.equal(String(notices[0].recipient), String(officer));
+  assert.equal(String(notices[0].relatedId), String(equipmentId));
+  assert.match(notices[0].title, /机の貸出申込み/);
+  t.mock.method(EquipmentLoan, 'findOne', () => q(loan));
+  t.mock.method(EquipmentLoan, 'findOneAndUpdate', async () => ({ ...loan, status: 'cancelled' }));
+  await decideEquipmentLoan({ associationId: association, userId: user, loanId: loan._id, action: 'cancelled' });
+  assert.match(notices[1].title, /取り消されました/);
+  assert.equal(String(notices[1].recipient), String(officer));
 });
