@@ -1215,6 +1215,9 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 800px) { .group-messages-layout { grid-template-columns: 1fr; } }
 .button-blue { background: #2f6fb3; border-color: #2f6fb3; color: #fff; }
 .button-blue:hover { background: #245a91; border-color: #245a91; color: #fff; }
+@media (min-width: 761px) {
+  .finance-annual-shell { width: calc(100% - 2rem); }
+}
 .finance-annual-card { overflow: hidden; }
 .finance-annual-card { padding: .85rem; }
 .finance-inline-menu { display: grid; gap: .55rem; margin-top: 1.25rem; padding-top: .65rem; border-top: 0; }
