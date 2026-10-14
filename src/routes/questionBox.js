@@ -87,7 +87,7 @@ questionBoxRouter.post('/:associationId/questions', acceptAnnouncementAttachment
   try {
     const thread = await createQuestion({ associationId: req.params.associationId, userId: req.user._id, title: req.body.title, body: req.body.body, files: req.files });
     req.session.notice = '質問・ご意見を送信しました。';
-    return redirectToBox(res, req.params.associationId, null);
+    return redirectToBox(res, req.params.associationId, null, req.body.returnTo === 'officer');
   } catch (error) { return next(error); }
 });
 

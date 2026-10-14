@@ -94,6 +94,16 @@ test('resident and officer inboxes render separately with modal conversations', 
   assert.match(officerHtml, /question-dialog-officer-/);
   assert.match(officerHtml, /回答を送信/);
   assert.doesNotMatch(officerHtml, /質問・ご意見を送る/);
+  for (const html of [residentHtml, officerHtml]) {
+    assert.match(html, /data-open-question="compose"[^>]*>新規投稿<\/button>/);
+    assert.match(html, /<dialog[^>]*id="question-dialog-compose"/);
+    const compose = html.match(/<dialog[^>]*id="question-dialog-compose"[\s\S]*?<\/dialog>/)[0];
+    assert.match(compose, /name="title"/);
+    assert.match(compose, /name="attachments"/);
+    assert.match(compose, /enctype="multipart\/form-data"/);
+    assert.doesNotMatch(html.replace(/<dialog\b[\s\S]*?<\/dialog>/g, ''), /name="title"|name="attachments"/);
+  }
+  assert.match(officerHtml, /name="returnTo" value="officer"/);
 });
 
 test('officer menu opens its hub and shows the unanswered count', async () => {

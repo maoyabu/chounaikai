@@ -1,0 +1,11 @@
+<dialog class="question-dialog" id="question-dialog-compose" aria-labelledby="question-compose-title">
+  <div class="dialog-heading"><h2 id="question-compose-title">新規投稿</h2><button type="button" class="dialog-close" data-close-question aria-label="閉じる">×</button></div>
+    <form class="form-stack" action="/associations/<%= association._id %>/questions" method="post" enctype="multipart/form-data">
+      <% if (mode === 'officer') { %><input type="hidden" name="returnTo" value="officer"><% } %>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>タイトル <span class="required">必須</span><input name="title" maxlength="120" required></label>
+      <label>内容 <span class="required">必須</span><textarea name="body" rows="5" maxlength="3000" required></textarea></label>
+      <%- include('question-attachment-fields') %>
+      <div class="form-actions"><button class="button button-quiet" type="button" data-close-question>キャンセル</button><button class="button button-primary" type="submit">送信する</button></div>
+    </form>
+</dialog>

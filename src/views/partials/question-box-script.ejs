@@ -14,6 +14,6 @@
   };
   document.querySelectorAll('[data-open-question]').forEach((button) => button.addEventListener('click', (event) => { if (open(button) && button.tagName === 'A') event.preventDefault(); }));
   document.querySelectorAll('[data-close-question]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
-  document.querySelectorAll('.question-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
+  document.querySelectorAll('.question-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target !== dialog) return; const bounds = dialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close(); }));
   if (shell.dataset.openThread) { const button = [...document.querySelectorAll('[data-open-question]')].find((item) => item.dataset.openQuestion === shell.dataset.openThread); if (button) open(button); }
 })();</script>
