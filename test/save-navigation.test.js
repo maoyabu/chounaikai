@@ -144,6 +144,7 @@ test('public page edit and group PR edit finish on their management page', async
   assert.equal(result.error, undefined); assert.equal(result.res.location, `/associations/${id}/manage`);
   t.mock.method(AssociationGroup, 'findOne', async () => ({ _id: id, association: id, publicPhotos: [], save: async () => {} }));
   t.mock.method(AssociationGroupMembership, 'findOne', async () => ({ role: 'manager' }));
+  t.mock.method(AssociationGroup, 'exists', async () => ({ _id: id }));
   const group = await invoke(associationGroupsRouter, '/:associationId/groups/:groupId/manage/pr', { params: { groupId: id }, body: { name: 'グループ', publicDescription: '紹介文' } });
   assert.equal(group.error, undefined); assert.equal(group.res.location, `/associations/${id}/groups/${id}/manage`);
 });

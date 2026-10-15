@@ -13,7 +13,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
     Household.find({ association: association._id, active: true, deletedAt: { $exists: false } }).select('_id districtGroup').lean(),
     AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean(),
-    AssociationGroup.find({ association: association._id, status: 'active' }).sort({ name: 1 }).lean(),
+    AssociationGroup.find({ association: association._id, status: { $in: ['active', 'suspended'] } }).sort({ name: 1 }).lean(),
     AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean()
   ]);
   const officers = await discloseOfficers(association, rawOfficers, publicOnly ? { audience: 'open' } : viewer);

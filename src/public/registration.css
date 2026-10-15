@@ -1683,3 +1683,5 @@ h1, h2, h3, h4, h5, h6,
 .menu-item:has(.menu-action-tag) { flex-wrap: wrap; gap: .4rem; }
 
 .finance-annual-difference-note { margin: 0 0 .75rem; text-align: right; color: var(--muted); font-size: .875rem; line-height: 1.6; }
+
+.group-suspended-banner { color: #c40000; background: #fff; padding: .5rem 1rem; border-radius: .4rem; font-size: 1.5rem; font-weight: 800; }
