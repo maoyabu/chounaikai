@@ -1,3 +1,4 @@
+import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -13,18 +14,17 @@ import { deleteOfficerContactGroup, saveOfficerContactGroup } from '../services/
 
 export const officerNetworkRouter = express.Router();
 officerNetworkRouter.use(requireLogin);
-const fiscalYear = (date = new Date()) => date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
 const checkedId = value => {
   if (!mongoose.isValidObjectId(value)) throw Object.assign(new Error('連絡を確認できません。'), { status: 404 });
   return value;
 };
 const base = associationId => `/associations/${associationId}/officer-network`;
 const loadOfficerDirectory = async associationId => {
-  const assignments = await AnnualOfficer.find({ association: associationId, fiscalYear: fiscalYear(), cancelledAt: null })
+  const assignments = await AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(), cancelledAt: null })
     .populate('user', 'displayname username').populate('department', 'name').lean();
   const active = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: assignments.map(item => item.user?._id).filter(Boolean) } }).select('user').lean();
   const activeIds = new Set(active.map(item => String(item.user)));
-  return assignments.filter(item => item.user && activeIds.has(String(item.user._id)));
+  return uniqueAnnualMenuRoles(assignments.filter(item => item.user && activeIds.has(String(item.user._id))), item => String(item.user._id));
 };
 
 officerNetworkRouter.get('/:associationId/officer-network', async (req, res, next) => {

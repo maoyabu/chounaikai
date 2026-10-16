@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
@@ -39,7 +40,7 @@ async function loadContext(req, res, next) {
   const publicAccess = req.originalUrl.includes(`/associations/${req.params.associationId}/finance/public`) || req.path.includes('/public') || req.query.public === '1';
   const [manager, officer, membership] = await Promise.all([
     RoleAssignment.findOne({ association: association._id, user: req.user._id, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' } }).lean(),
-    AnnualOfficer.findOne({ association: association._id, user: req.user._id, fiscalYear: fiscalYear(now), cancelledAt: null }).lean(),
+    AnnualOfficer.findOne({ association: association._id, user: req.user._id, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).lean(),
     publicAccess ? AssociationMembership.findOne({ association: association._id, user: req.user._id, status: { $in: ['active'] } }).lean() : null
   ]);
   if (!manager?.role && !officer && !req.user.isAdmin && !(publicAccess && Boolean(association.financePublic) && membership)) return res.status(403).render('error', { title: '権限がありません', message: '公開設定されていない会計、または町内会の住人限定ページです。' });

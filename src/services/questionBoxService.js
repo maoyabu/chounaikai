@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import mongoose from 'mongoose';
 import { attachmentContext, saveMessageAttachments, removeMessageAttachments, validateMessageFiles } from './messageAttachmentService.js';
 import { AssociationMembership } from '../models/associationMembership.js';
@@ -10,7 +11,6 @@ import { createNotification } from './notificationService.js';
 import { notifyResponsible } from './notificationRecipients.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
-const fiscalYear = (now = new Date()) => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
 const text = (value, max, label) => {
   const result = String(value || '').trim();
   if (!result || result.length > max) throw fail(`${label}は1〜${max}文字で入力してください。`);
@@ -26,7 +26,7 @@ export const loadQuestionBoxAccess = async ({ associationId, userId, now = new D
   if (!association || !membership) throw fail('参加中の町内会だけで質問・ご意見箱を利用できます。', 403);
   const managerRoles = await RoleDefinition.find({ association: associationId, active: true, permissions: 'association.manage' }).select('_id').lean();
   const [officer, manager] = await Promise.all([
-    AnnualOfficer.exists({ association: associationId, user: userId, fiscalYear: fiscalYear(now), cancelledAt: null }),
+    AnnualOfficer.exists({ association: associationId, user: userId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }),
     managerRoles.length ? RoleAssignment.exists({ association: associationId, user: userId, role: { $in: managerRoles.map((role) => role._id) }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }) : null
   ]);
   return { association, membership, canAnswer: Boolean(officer || manager) };

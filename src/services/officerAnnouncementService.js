@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import mongoose from 'mongoose';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
@@ -12,7 +13,6 @@ import { AssociationGroupMembership } from '../models/associationGroup.js';
 import { uploadAnnouncementAttachment, deleteAnnouncementAttachment } from './announcementAttachmentService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
-const fiscalYear = (date = new Date()) => date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
 const requiredText = (value, max, label) => {
   const result = String(value ?? '').trim();
   if (!result || result.length > max) throw fail(`${label}は1〜${max}文字で入力してください。`);
@@ -39,7 +39,7 @@ export const requireDistrictMember = async (associationId, userId) => {
   if (!membership?.districtGroup) throw fail('班への参加を確認できません。', 403);
   return membership;
 };
-export const isCurrentDistrictLeader = async (associationId, districtGroup, userId) => Boolean(await AnnualLeaderAssignment.exists({ association: associationId, districtGroup, representative: userId, fiscalYear: fiscalYear(), cancelledAt: null }));
+export const isCurrentDistrictLeader = async (associationId, districtGroup, userId) => Boolean(await AnnualLeaderAssignment.exists({ association: associationId, districtGroup, representative: userId, fiscalYear: annualRoleYearFilter(), cancelledAt: null }));
 
 const prepareAnnouncement = async ({ associationId, userId, channel = 'resident', audience, targetId, targetOfficerIds = [], recipientScope = 'all', targetDistrictGroupIds = [], urgency, title, body, responseMode, options = [], associationGroupId, files = [], attachmentRetentionDays = 30 }) => {
   const districtMembership = channel === 'district' ? await requireDistrictMember(associationId, userId) : null;
@@ -88,7 +88,7 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
       recipientIds = unique;
     }
   } else if (channel === 'officer') {
-    const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: fiscalYear(now), cancelledAt: null }).select('user department').lean();
+    const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).select('user department').lean();
     if (audience === 'officers_all') recipientIds = officers.map(item => item.user);
     else {
       if (audience === 'officer_individual') {
@@ -115,7 +115,7 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
       }
     }
   } else if (audience === 'leaders') {
-    const assignments = await AnnualLeaderAssignment.find({ association: associationId, fiscalYear: fiscalYear(now), cancelledAt: null }).select('representative').lean();
+    const assignments = await AnnualLeaderAssignment.find({ association: associationId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).select('representative').lean();
     recipientIds = assignments.map(item => item.representative);
   } else {
     const memberships = await AssociationMembership.find({ association: associationId, status: 'active' }).select('user').lean();

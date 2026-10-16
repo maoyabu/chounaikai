@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import crypto from 'node:crypto';
 import { Invitation, JoinApplication } from '../models/workflow.js';
 import { Household, HouseholdMember, DistrictGroup } from '../models/organization.js';
@@ -17,8 +18,7 @@ const fail = (message, status = 400) => Object.assign(new Error(message), { stat
 export const notifyDistrictLeaders = async ({ application, household, applicantName }) => {
   try {
     const now = new Date();
-    const fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
-    const leaders = await AnnualLeaderAssignment.find({ association: application.association, districtGroup: application.districtGroup, fiscalYear, cancelledAt: null }).select('representative').lean();
+    const leaders = await AnnualLeaderAssignment.find({ association: application.association, districtGroup: application.districtGroup, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).select('representative').lean();
     for (const recipient of new Set(leaders.filter(leader => leader.representative).map(leader => String(leader.representative)))) {
       if (!await AssociationMembership.exists({ association: application.association, user: recipient, status: 'active' })) continue;
       await createNotification({ association: application.association, recipient, type: 'join_application_received', title: `${household.displayName}の${applicantName}さんの参加申請`, body: '班長メニューの「参加申請」で確認してください。班長の承認後、町内会管理者が最終承認します。管理者が先に承認した場合は参加が確定します。', relatedType: 'JoinApplication', relatedId: application._id, emailRequired: true });
@@ -213,9 +213,7 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
   if (!approve && !reason) throw fail('拒否理由を入力してください。');
   const now = new Date();
   if (leaderApproval && !managerOverride) {
-    const current = new Date();
-    const fiscalYear = current.getMonth() < 3 ? current.getFullYear() - 1 : current.getFullYear();
-    if (!await AnnualLeaderAssignment.exists({ association: application.association, districtGroup: district._id, representative: actor._id, fiscalYear, cancelledAt: null })) throw fail('自分の班の参加申請だけを承認できます。', 403);
+    if (!await AnnualLeaderAssignment.exists({ association: application.association, districtGroup: district._id, representative: actor._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null })) throw fail('自分の班の参加申請だけを承認できます。', 403);
     if (application.leaderApprovedAt) throw fail('班長承認済みです。町内会管理者の承認をお待ちください。', 409);
     if (approve) {
       const confirmed = await JoinApplication.findOneAndUpdate({ _id: application._id, status: 'pending', leaderApprovedAt: null }, { $set: { leaderApprovedBy: actor._id, leaderApprovedAt: now } }, { new: true });
@@ -301,8 +299,7 @@ export const decideJoinApplication = async ({ application, actor, approve, rejec
 };
 
 export const loadLeaderDistrictIds = async (associationId, userId, now = new Date()) => {
-  const fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
-  return AnnualLeaderAssignment.find({ association: associationId, representative: userId, fiscalYear, cancelledAt: null }).distinct('districtGroup');
+  return AnnualLeaderAssignment.find({ association: associationId, representative: userId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).distinct('districtGroup');
 };
 export const countPendingLeaderApplications = async (associationId, userId) => {
   const districtIds = await loadLeaderDistrictIds(associationId, userId);

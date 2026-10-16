@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { RoleDefinition, RoleAssignment } from '../models/role.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
@@ -10,7 +11,7 @@ export const notifyResponsible = async ({ association, districtGroup, officers =
     const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const roles = await RoleDefinition.find({ association, active: true, permissions: 'association.manage' }).distinct('_id');
     const managers = await RoleAssignment.find({ association, role: { $in: roles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $gte: now } }] }).distinct('user');
-    const others = officers ? await AnnualOfficer.find({ association, fiscalYear, cancelledAt: null }).distinct('user') : districtGroup ? await AnnualLeaderAssignment.find({ association, districtGroup, fiscalYear, cancelledAt: null }).distinct('representative') : [];
+    const others = officers ? await AnnualOfficer.find({ association, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).distinct('user') : districtGroup ? await AnnualLeaderAssignment.find({ association, districtGroup, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).distinct('representative') : [];
     const recipients = await AssociationMembership.find({ association, status: 'active', user: { $in: [...managers, ...others].filter(Boolean) } }).distinct('user');
     const excluded = new Set(exclude.filter(Boolean).map(String));
     await queueNotice({ association, recipients: recipients.filter(id => !excluded.has(String(id))), type, title, relatedId });

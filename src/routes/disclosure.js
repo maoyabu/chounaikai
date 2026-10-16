@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission } from '../middleware/auth.js';
@@ -19,13 +20,13 @@ const activeAssociation = async id => {
 const ownAccess = async (association, user) => {
   const [member, officer] = await Promise.all([
     AssociationMembership.exists({ association: association._id, user: user._id, status: 'active' }),
-    AnnualOfficer.exists({ association: association._id, user: user._id, fiscalYear: currentFiscalYear(), cancelledAt: null })
+    AnnualOfficer.exists({ association: association._id, user: user._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null })
   ]);
   if (!member || !officer) throw Object.assign(new Error('現年度の役員だけが公開設定を変更できます。'), { status: 403 });
 };
 disclosureRouter.get('/profile/disclosure', async (req, res, next) => {
   try {
-    const officers = await AnnualOfficer.find({ user: req.user._id, fiscalYear: currentFiscalYear(), cancelledAt: null }).select('association').lean();
+    const officers = await AnnualOfficer.find({ user: req.user._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('association').lean();
     const associations = await NeighborhoodAssociation.find({ _id: { $in: officers.map(item => item.association) }, status: 'active', deletedAt: { $exists: false } }).lean();
     const memberships = await AssociationMembership.find({ user: req.user._id, status: 'active' }).select('association').lean();
     const active = new Set(memberships.map(item => String(item.association)));

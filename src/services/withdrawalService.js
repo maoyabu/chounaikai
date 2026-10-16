@@ -1,3 +1,4 @@
+import { annualRoleYearFilter, annualRoleYears } from '../lib/annualRoleAccess.js';
 import mongoose from 'mongoose';
 import { WithdrawalApplication, Invitation, JoinApplication } from '../models/workflow.js';
 import { Household, HouseholdMember, DistrictGroup } from '../models/organization.js';
@@ -14,7 +15,6 @@ import { AuditLog } from '../models/auditLog.js';
 import { runWithOptionalTransaction } from './associationService.js';
 
 const fail = (message, status = 409) => Object.assign(new Error(message), { status });
-const year = (now = new Date()) => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
 const same = (a, b) => String(a) === String(b);
 const ids = documents => documents.map(document => document._id);
 const validIds = (...values) => { if (!values.every(mongoose.isValidObjectId)) throw fail('申請情報を確認してください。', 400); };
@@ -35,7 +35,7 @@ const notify = async (application, type, recipients) => {
   } catch (error) { console.error('Withdrawal notification failed', error.message); }
 };
 const notifyLeaders = async application => {
-  const leaders = await AnnualLeaderAssignment.find({ association: application.association, districtGroup: application.districtGroup, fiscalYear: year(), cancelledAt: null }).select('representative').lean();
+  const leaders = await AnnualLeaderAssignment.find({ association: application.association, districtGroup: application.districtGroup, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('representative').lean();
   await notify(application, 'withdrawal_leader_requested', leaders.map(leader => leader.representative));
 };
 const safelyNotifyLeaders = async application => { try { await notifyLeaders(application); } catch (error) { console.error('Withdrawal leader notification failed', error.message); } };
@@ -85,7 +85,7 @@ export const decideWithdrawal = async ({ associationId, applicationId, actorId, 
     if (!application) throw fail('班長の承認待ちの申請がありません。', 404);
     const { association, household } = await context(associationId, application.household, session);
     if (!same(household.districtGroup, application.districtGroup) || !same(household.representative, application.originalRepresentative) || !application.householdConfirmedBy || !same(application.householdConfirmedBy, household.representative)) throw fail('世帯主・班が変更されています。申請を取り消して再申請してください。');
-    if (!await AssociationMembership.exists({ association: associationId, user: actorId, status: 'active' }).session(session) || !await AnnualLeaderAssignment.exists({ association: associationId, representative: actorId, districtGroup: household.districtGroup, fiscalYear: year(now), cancelledAt: null }).session(session)) throw fail('担当班の現在年度の班長だけが承認できます。', 403);
+    if (!await AssociationMembership.exists({ association: associationId, user: actorId, status: 'active' }).session(session) || !await AnnualLeaderAssignment.exists({ association: associationId, representative: actorId, districtGroup: household.districtGroup, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).session(session)) throw fail('担当班の現在年度の班長だけが承認できます。', 403);
     const mutate = async (Model, filter, update, fields) => {
       const before = await Model.find(filter).session(session).lean();
       journal.push({ Model, before, fields });
@@ -116,8 +116,8 @@ export const decideWithdrawal = async ({ associationId, applicationId, actorId, 
       if (withdrawn.matchedCount !== memberships.length) throw fail('退会対象の所属が変更されました。再申請してください。');
       await mutate(HouseholdMember, { association: associationId, household: household._id, ...(application.scope === 'household' ? {} : { user: { $in: users } }), endsAt: null }, { $set: { endsAt: now } }, ['endsAt']);
       await mutate(RoleAssignment, { association: associationId, user: { $in: users }, $or: [{ endsAt: null }, { endsAt: { $gte: now } }] }, { $set: { endsAt: new Date(now.getTime() - 1) } }, ['endsAt']);
-      await mutate(AnnualOfficer, { association: associationId, user: { $in: users }, fiscalYear: { $gte: year(now) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
-      await mutate(AnnualLeaderAssignment, { association: associationId, representative: { $in: users }, fiscalYear: { $gte: year(now) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
+      await mutate(AnnualOfficer, { association: associationId, user: { $in: users }, fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
+      await mutate(AnnualLeaderAssignment, { association: associationId, representative: { $in: users }, fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
       await mutate(Invitation, { association: associationId, household: household._id, status: 'pending', ...(application.scope === 'household' ? {} : { invitedBy: { $in: users } }) }, { $set: { status: 'cancelled', cancelledAt: now } }, ['status', 'cancelledAt']);
       if (application.scope === 'household') await mutate(JoinApplication, { association: associationId, household: household._id, status: { $in: ['pending', 'awaiting_household'] } }, { $set: { status: 'cancelled', cancelledAt: now } }, ['status', 'cancelledAt']);
       const group = await Group.findById(association.group).session(session).lean();
@@ -157,7 +157,7 @@ export const cancelWithdrawal = async ({ applicationId, actorId }) => {
 };
 
 export const countPendingLeaderWithdrawals = async (associationId, actorId) => {
-  const districtIds = await AnnualLeaderAssignment.find({ association: associationId, representative: actorId, fiscalYear: year(), cancelledAt: null }).distinct('districtGroup');
+  const districtIds = await AnnualLeaderAssignment.find({ association: associationId, representative: actorId, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).distinct('districtGroup');
   if (!districtIds.length) return 0;
   return WithdrawalApplication.countDocuments({ association: associationId, districtGroup: { $in: districtIds }, status: 'pending' });
 };

@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { equipmentLoanTimes, equipmentLoanWindow, equipmentReservations, equipmentWindowCapacity } from './equipmentTimeService.js';
 import { notifyResponsible } from './notificationRecipients.js';
 import mongoose from 'mongoose';
@@ -168,7 +169,7 @@ export const receiveEquipment = async ({ associationId, userId, equipmentId, inp
 export const equipmentOfficerNotice = async ({ associationId, key, type, title, body, relatedId }) => {
   const today = japanDate(), year = Number(today.slice(0, 4)) - (Number(today.slice(5, 7)) < 4 ? 1 : 0), now = new Date();
   const roles = await RoleDefinition.find({ association: associationId, active: true, permissions: 'association.manage' }).distinct('_id');
-  const [officers, managers] = await Promise.all([AnnualOfficer.find({ association: associationId, fiscalYear: year, cancelledAt: null }).distinct('user'), RoleAssignment.find({ association: associationId, role: { $in: roles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $gte: now } }] }).distinct('user')]);
+  const [officers, managers] = await Promise.all([AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).distinct('user'), RoleAssignment.find({ association: associationId, role: { $in: roles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $gte: now } }] }).distinct('user')]);
   const recipients = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: [...officers, ...managers].filter(Boolean) } }).distinct('user');
   if (!recipients.length) return;
   try { await mongoose.connection.transaction(async session => {

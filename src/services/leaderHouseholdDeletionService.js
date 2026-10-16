@@ -1,3 +1,4 @@
+import { annualRoleYearFilter, annualRoleYears } from '../lib/annualRoleAccess.js';
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
@@ -14,7 +15,6 @@ import { Notification } from '../models/notification.js';
 import { runWithOptionalTransaction } from './associationService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
-const fiscalYear = (date) => date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
 const objectId = (value) => value?._id || value;
 const scopedIds = (documents) => documents.map(document => document._id);
 const uniqueIds = (values) => [...new Map(values.filter(Boolean).map(value => [String(value), value])).values()];
@@ -37,7 +37,7 @@ export const loadLeaderHouseholdDeletion = async ({ associationId, householdId, 
   const association = await NeighborhoodAssociation.findOne({ _id: associationId, status: 'active', deletedAt: { $exists: false } }).session(session).lean();
   if (!association) throw fail('町内会を確認できません。', 404);
   const actorMembership = await AssociationMembership.findOne({ association: associationId, user: actorId, status: 'active' }).session(session).lean();
-  const districtIds = await AnnualLeaderAssignment.find({ association: associationId, representative: actorId, fiscalYear: fiscalYear(now), cancelledAt: null }).session(session).distinct('districtGroup');
+  const districtIds = await AnnualLeaderAssignment.find({ association: associationId, representative: actorId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).session(session).distinct('districtGroup');
   if (!actorMembership || !districtIds.length) throw fail('現在年度の担当班の班長だけが世帯を削除できます。', 403);
   const districts = await DistrictGroup.find({ _id: { $in: districtIds }, association: associationId, active: true }).session(session).lean();
   const household = await Household.findOne({ _id: householdId, association: associationId, districtGroup: { $in: scopedIds(districts) }, active: true }).populate('representative', 'displayname username').populate('districtGroup', 'name').session(session).lean();
@@ -51,8 +51,8 @@ export const loadLeaderHouseholdDeletion = async ({ associationId, householdId, 
   const invitations = await Invitation.find({ association: associationId, household: householdId, status: { $in: ['pending', 'accepted'] } }).session(session).lean();
   const applications = await JoinApplication.find({ association: associationId, household: householdId, status: { $in: ['pending', 'awaiting_household'] } }).session(session).lean();
   const roles = await RoleAssignment.find({ association: associationId, user: { $in: userIds }, $or: [{ endsAt: null }, { endsAt: { $gt: now } }] }).session(session).lean();
-  const officers = await AnnualOfficer.find({ association: associationId, user: { $in: userIds }, fiscalYear: { $gte: fiscalYear(now) }, cancelledAt: null }).session(session).lean();
-  const leaders = await AnnualLeaderAssignment.find({ association: associationId, $or: [{ household: householdId }, { representative: { $in: userIds } }], fiscalYear: { $gte: fiscalYear(now) }, cancelledAt: null }).session(session).lean();
+  const officers = await AnnualOfficer.find({ association: associationId, user: { $in: userIds }, fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }).session(session).lean();
+  const leaders = await AnnualLeaderAssignment.find({ association: associationId, $or: [{ household: householdId }, { representative: { $in: userIds } }], fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }).session(session).lean();
   const details = { association, household, members, memberships, userIds, invitations, applications, roles, officers, leaders };
   return { ...details, fingerprint: householdDeletionFingerprint(details) };
 };

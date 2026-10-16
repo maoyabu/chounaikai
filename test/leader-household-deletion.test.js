@@ -45,7 +45,7 @@ const fixture = (t) => {
   stub(t, Household, 'findOne', () => query(household));
   stub(t, HouseholdMember, 'find', () => query(members));
   stub(t, AssociationMembership, 'find', () => query(memberships));
-  stub(t, AnnualLeaderAssignment, 'find', filter => query(typeof filter.fiscalYear === 'number' ? [{ _id: id(), districtGroup: ids.district }] : [{ _id: ids.resident, household: ids.household, fiscalYear: 2026 }]));
+  stub(t, AnnualLeaderAssignment, 'find', filter => query(Array.isArray(filter.fiscalYear?.$in) ? [{ _id: id(), districtGroup: ids.district }] : [{ _id: ids.resident, household: ids.household, fiscalYear: 2026 }]));
   stub(t, AnnualOfficer, 'find', () => query([{ _id: ids.representative, user: ids.representative, fiscalYear: 2026 }]));
   stub(t, RoleAssignment, 'find', () => query([{ _id: ids.representative, user: ids.representative, startsAt: new Date('2026-04-01') }]));
   stub(t, Invitation, 'find', () => query([{ _id: ids.resident, household: ids.household, status: 'pending' }]));
@@ -67,13 +67,13 @@ const fixture = (t) => {
 const load = () => loadLeaderHouseholdDeletion({ associationId: ids.association, householdId: ids.household, actorId: ids.leader, now });
 const remove = (fingerprint) => deleteLeaderHousehold({ associationId: ids.association, householdId: ids.household, actor, expectedFingerprint: fingerprint, now });
 
-test('confirmation loading is read-only and limited to current-year assigned districts', async (t) => {
+test('confirmation loading is read-only and limited to accessible annual assigned districts', async (t) => {
   fixture(t);
   const details = await load();
   assert.equal(details.members.length, 3);
   assert.deepEqual(Household.findOne.mock.calls[0].arguments[0].districtGroup.$in, [ids.district]);
   const permission = AnnualLeaderAssignment.find.mock.calls[0].arguments[0];
-  assert.equal(permission.fiscalYear, 2026);
+  assert.deepEqual(permission.fiscalYear, { $in: [2026] });
   assert.equal(permission.cancelledAt, null);
   assert.equal(Household.updateOne.mock.callCount(), 0);
   assert.equal(AssociationMembership.updateMany.mock.callCount(), 0);

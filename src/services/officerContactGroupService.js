@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import mongoose from 'mongoose';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AssociationMembership } from '../models/associationMembership.js';
@@ -5,10 +6,9 @@ import { OfficerContactGroup } from '../models/officerContactGroup.js';
 import { requireAnnouncementOfficer } from './officerAnnouncementService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
-const fiscalYear = (date = new Date()) => date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
 
 export const currentOfficerIds = async associationId => {
-  const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: fiscalYear(), cancelledAt: null }).select('user').lean();
+  const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('user').lean();
   const memberships = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: officers.map(item => item.user) } }).select('user').lean();
   return new Set(memberships.map(item => String(item.user)));
 };

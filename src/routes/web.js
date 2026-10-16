@@ -1,3 +1,4 @@
+import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
 import { discloseOfficers, viewerDisclosureAccess } from '../services/officerDisclosureService.js';
 import { pendingEquipmentLoans } from '../services/equipmentService.js';
 import { EquipmentSettings } from '../models/equipment.js';
@@ -92,7 +93,6 @@ webRouter.use(async (req, res, next) => {
       res.locals.currentRoleTags.push('システム管理者');
     } else if (req.user?._id) {
       const now = new Date();
-      const currentFiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
       const [assignments, leaderAssignments, annualOfficers, activeMembership, groupManagerMemberships] = await Promise.all([
         RoleAssignment.find({
           user: req.user._id,
@@ -100,11 +100,11 @@ webRouter.use(async (req, res, next) => {
           $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }]
         }).populate({ path: 'role', match: { active: true }, select: 'name permissions' })
           .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
-        AnnualLeaderAssignment.find({ representative: req.user._id, fiscalYear: { $gte: currentFiscalYear }, cancelledAt: null })
+        AnnualLeaderAssignment.find({ representative: req.user._id, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
           .populate('districtGroup', 'name')
           .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' })
           .sort({ fiscalYear: 1 }).lean(),
-        AnnualOfficer.find({ user: req.user._id, fiscalYear: currentFiscalYear, cancelledAt: null })
+        AnnualOfficer.find({ user: req.user._id, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
           .populate('role', 'name').populate('department', 'name')
           .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
         AssociationMembership.findOne({ user: req.user._id, status: 'active' })
@@ -114,10 +114,9 @@ webRouter.use(async (req, res, next) => {
       res.locals.currentGroupManagers = groupManagerMemberships.filter(item => item.group).map(item => ({ _id: item.group._id, name: item.group.name, association: item.group.association }));
       const roleNames = [
         ...assignments.map((item) => item.role?.name).filter(Boolean),
-        ...annualOfficers.filter((item) => item.association && item.role?.name).map((item) => `${item.fiscalYear}年度 ${item.role.name}`)
+        ...uniqueAnnualMenuRoles(annualOfficers.filter((item) => item.association && item.role?.name), item => String(item.association._id)).map((item) => `${item.fiscalYear}年度 ${item.role.name}`)
       ];
-      const leaderNames = leaderAssignments
-        .filter((item) => item.association && item.districtGroup?.name)
+      const leaderNames = uniqueAnnualMenuRoles(leaderAssignments.filter(item => item.association && item.districtGroup?.name), item => String(item.association._id))
         .map((item) => `${item.fiscalYear}年度 ${item.districtGroup.name} 班長`);
       res.locals.currentRoleTags = [...new Set([...roleNames, ...leaderNames])];
       res.locals.currentManagerAssociations = [...new Map(
@@ -146,7 +145,7 @@ webRouter.use(async (req, res, next) => {
       }
       res.locals.currentLeaderAssociations = [...new Map(
         leaderAssignments
-          .filter((item) => item.association && item.fiscalYear === currentFiscalYear)
+          .filter((item) => item.association)
           .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
       ).values()];
       if (res.locals.currentLeaderAssociations.length) {
@@ -553,8 +552,8 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const visibleMemberships = memberships.filter((item) => item.association);
     const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const [officerAssignments, leaderAssignments] = await Promise.all([
-      AnnualOfficer.find({ user: req.user._id, association: { $in: visibleMemberships.map((item) => item.association._id) }, fiscalYear, cancelledAt: null }).select('association').lean(),
-      AnnualLeaderAssignment.find({ representative: req.user._id, association: { $in: visibleMemberships.map((item) => item.association._id) }, fiscalYear, cancelledAt: null }).select('association').lean()
+      AnnualOfficer.find({ user: req.user._id, association: { $in: visibleMemberships.map((item) => item.association._id) }, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('association').lean(),
+      AnnualLeaderAssignment.find({ representative: req.user._id, association: { $in: visibleMemberships.map((item) => item.association._id) }, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('association').lean()
     ]);
     const officerAssociationIds = new Set(officerAssignments.map((item) => String(item.association)));
     const myAnsweredThreads = await QuestionThread.find({ association: { $in: visibleMemberships.map((item) => item.association._id) }, author: req.user._id, status: { $in: ['unanswered', 'answered'] }, lastOfficerAt: { $exists: true } }).select('association lastOfficerAt residentReadAt').lean();

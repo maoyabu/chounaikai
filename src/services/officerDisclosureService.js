@@ -1,3 +1,4 @@
+import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { DisclosureConsent } from '../models/disclosureConsent.js';
 import { AssociationMembership } from '../models/associationMembership.js';
@@ -11,7 +12,7 @@ export const viewerDisclosureAccess = async (association, user) => {
   const [member, assignments, officer] = await Promise.all([
     AssociationMembership.exists({ association: association._id, user: user._id, status: 'active' }),
     RoleAssignment.find({ association: association._id, user: user._id, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate({ path: 'role', match: { active: true, permissions: 'association.manage' } }).lean(),
-    AnnualOfficer.exists({ association: association._id, user: user._id, fiscalYear: currentFiscalYear(), cancelledAt: null })
+    AnnualOfficer.exists({ association: association._id, user: user._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null })
   ]);
   const manager = assignments.some(item => item.role);
   return { audience: manager || (member && officer) ? 'officers' : member ? 'residents' : 'open', manager, viewerId: member || manager ? user._id : undefined };

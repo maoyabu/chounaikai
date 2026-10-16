@@ -1,3 +1,4 @@
+import { annualRoleYears } from '../lib/annualRoleAccess.js';
 import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { Household, HouseholdMember } from '../models/organization.js';
@@ -13,7 +14,6 @@ import { Notification } from '../models/notification.js';
 import { runWithOptionalTransaction } from './associationService.js';
 
 const fail = (message, status = 409) => Object.assign(new Error(message), { status });
-const fiscalYear = now => now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
 const same = (left, right) => String(left) === String(right);
 
 export const removeLinkedHouseholdMember = async ({ associationId, householdId, memberId, actorId, now = new Date() }) => {
@@ -44,8 +44,8 @@ export const removeLinkedHouseholdMember = async ({ associationId, householdId, 
     if (await update(HouseholdMember, { _id: member._id, user: member.user, endsAt: null }, { $set: { endsAt: now } }, ['endsAt']) !== 1) throw fail('家族の状態が変更されました。画面を開き直してください。');
     await update(AssociationMembership, { association: associationId, household: householdId, user: member.user, status: { $in: ['active', 'pending', 'withdrawal_pending'] } }, { $set: { status: 'inactive', endedAt: now } }, ['status', 'endedAt']);
     await update(RoleAssignment, { association: associationId, user: member.user, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }, { $set: { endsAt: new Date(now.getTime() - 1) } }, ['endsAt']);
-    await update(AnnualOfficer, { association: associationId, user: member.user, fiscalYear: { $gte: fiscalYear(now) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
-    await update(AnnualLeaderAssignment, { association: associationId, representative: member.user, fiscalYear: { $gte: fiscalYear(now) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
+    await update(AnnualOfficer, { association: associationId, user: member.user, fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
+    await update(AnnualLeaderAssignment, { association: associationId, representative: member.user, fiscalYear: { $gte: Math.min(...annualRoleYears(now)) }, cancelledAt: null }, { $set: { cancelledAt: now } }, ['cancelledAt']);
     await update(Invitation, { association: associationId, household: householdId, householdMember: member._id, status: 'pending' }, { $set: { status: 'cancelled', cancelledAt: now } }, ['status', 'cancelledAt']);
     await update(JoinApplication, { association: associationId, household: householdId, applicant: member.user, status: { $in: ['pending', 'awaiting_household'] } }, { $set: { status: 'cancelled', cancelledAt: now } }, ['status', 'cancelledAt']);
     await update(WithdrawalApplication, { association: associationId, household: householdId, requestedBy: member.user, status: { $in: ['pending', 'awaiting_household'] } }, { $set: { status: 'cancelled' } }, ['status']);
