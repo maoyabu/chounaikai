@@ -36,6 +36,7 @@ const groupMembershipSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'pending', 'rejected', 'invited'], default: 'active', index: true },
   invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  withdrawalRequestedAt: Date,
   joinedAt: Date
 }, { timestamps: true, collection: 'association_group_memberships' });
 groupMembershipSchema.index({ group: 1, user: 1 }, { unique: true });

@@ -1685,3 +1685,30 @@ h1, h2, h3, h4, h5, h6,
 .finance-annual-difference-note { margin: 0 0 .75rem; text-align: right; color: var(--muted); font-size: .875rem; line-height: 1.6; }
 
 .group-suspended-banner { color: #c40000; background: #fff; padding: .5rem 1rem; border-radius: .4rem; font-size: 1.5rem; font-weight: 800; }
+
+.group-participation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; max-width: calc(100% - 2.5rem); }
+.group-participation-actions form { margin: 0; }
+.group-participation-actions button:disabled { opacity: 1; cursor: default; }
+
+.group-participation-actions .button-quiet {
+  background: #fde8e7;
+  color: #922b26;
+  border-color: #e6aaa5;
+}
+.group-participation-actions .button-quiet:hover:not(:disabled) {
+  background: #f9d3d0;
+}
+
+.group-member-actions {
+  top: 1.25rem;
+  bottom: 1.25rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.group-member-actions > button, .group-member-actions > form { pointer-events: auto; }
+@media (max-width: 760px) {
+  .association-public-hero:has(.group-member-actions) .association-public-hero-content { padding-top: 6rem; }
+}

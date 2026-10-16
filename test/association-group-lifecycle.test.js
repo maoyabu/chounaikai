@@ -40,11 +40,11 @@ test('suspended PR renders the status over the banner and hides the join button'
   const html = await ejs.renderFile('src/views/association-group-public.ejs', values);
   assert.match(html, /class="group-suspended-banner" role="status">活動停止中/);
   assert.match(html, /src="\/banner.jpg"/);
-  assert.doesNotMatch(html, /このグループに参加/);
+  assert.doesNotMatch(html, /グループに参加する/);
   values.group.status = 'active';
   const active = await ejs.renderFile('src/views/association-group-public.ejs', values);
   assert.doesNotMatch(active, /活動停止中/);
-  assert.match(active, /このグループに参加/);
+  assert.match(active, /グループに参加する/);
 });
 
 test('deleted PR is unavailable while suspended PR remains eligible for lookup', async t => {

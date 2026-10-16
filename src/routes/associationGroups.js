@@ -28,8 +28,9 @@ associationGroupsRouter.get('/:associationId/groups/:groupId', async (req, res, 
     const membership = req.user ? await AssociationMembership.findOne({ association: group.association, user: req.user._id, status: 'active' }) : null;
     if (group.publicVisibility !== 'open' && !membership) throw fail('町内会住人だけが閲覧できます。', 403);
     const [members, allEvents] = await Promise.all([AssociationGroupMembership.find({ group: group._id, status: 'active' }).populate('user', 'displayname username email avatar').sort({ createdAt: 1 }).lean(), AssociationEvent.find({ association: group.association, group: group._id, visible: true }).sort({ startDate: 1, startTime: 1 }).lean()]);
+    const joinRequest = membership ? await AssociationGroupJoinRequest.findOne({ association: group.association, group: group._id, applicant: req.user._id, status: 'pending' }).lean() : null;
     const calendar = calendarWindow(req.query.month), start = `${calendar.first.getFullYear()}-${String(calendar.first.getMonth() + 1).padStart(2, '0')}-01`, endDate = new Date(calendar.first.getFullYear(), calendar.first.getMonth() + 3, 1), end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`, events = allEvents.filter(event => event.startDate < end && event.endDate >= start);
-    return res.render('association-group-public', { title: group.name, association, group, members: members.filter(item => item.user), events, ...calendar, calendarWindow: calendar, isResident: Boolean(membership), isManager: Boolean(req.user && await groupAccess(group._id, group.association, req.user._id)) });
+    return res.render('association-group-public', { title: group.name, association, group, members: members.filter(item => item.user), events, ...calendar, calendarWindow: calendar, joinRequest, isResident: Boolean(membership), isManager: Boolean(req.user && await groupAccess(group._id, group.association, req.user._id)) });
   } catch (error) { return next(error); }
 });
 
@@ -103,9 +104,38 @@ associationGroupsRouter.post('/:associationId/groups/:groupId', verifyCsrfToken,
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: 'active' });
     if (!group || !await AssociationMembership.exists({ association: req.params.associationId, user: req.user._id, status: 'active' })) throw fail('参加できるグループを確認できません。', 403);
     if (await AssociationGroupMembership.exists({ group: group._id, user: req.user._id, status: { $in: ['active', 'pending'] } })) throw fail('すでに参加中、または申請済みです。', 409);
-    await AssociationGroupJoinRequest.create({ association: group.association, group: group._id, applicant: req.user._id });
+    await AssociationGroupJoinRequest.findOneAndUpdate({ association: group.association, group: group._id, applicant: req.user._id, status: { $ne: 'pending' } }, { $set: { status: 'pending' }, $unset: { decidedBy: 1, decidedAt: 1, rejectionReason: 1 } }, { upsert: true, new: true, setDefaultsOnInsert: true }).catch(error => { if (error.code === 11000) throw fail('すでに申請済みです。', 409); throw error; });
     await queueNotice({ association: group.association, recipients: await AssociationGroupMembership.find({ association: group.association, group: group._id, role: 'manager', status: 'active' }).distinct('user'), type: 'group_request', title: 'グループへの参加申請が届きました', relatedId: group._id });
     req.session.notice = 'グループへの参加申請を送信しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}`);
+  } catch (error) { return next(error); }
+});
+
+
+associationGroupsRouter.post('/:associationId/groups/:groupId/withdrawal', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: { $in: ['active', 'suspended'] } }).lean();
+    if (!group) throw fail('グループを確認できません。', 404);
+    const member = await AssociationGroupMembership.findOneAndUpdate({ association: group.association, group: group._id, user: req.user._id, status: 'active', withdrawalRequestedAt: null }, { $set: { withdrawalRequestedAt: new Date() } });
+    if (!member) throw fail('参加中のメンバーでないか、すでに退会申請済みです。', 409);
+    await queueNotice({ association: group.association, recipients: await AssociationGroupMembership.find({ association: group.association, group: group._id, role: 'manager', status: 'active' }).distinct('user'), type: 'group_request', title: 'グループへの退会申請が届きました', relatedId: group._id });
+    req.session.notice = '退会申請を送信しました。責任者の承認をお待ちください。';
+    return res.redirect(`/associations/${group.association}/groups/${group._id}`);
+  } catch (error) { return next(error); }
+});
+
+associationGroupsRouter.post('/:associationId/groups/:groupId/manage/withdrawals/:userId/:decision', verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!['approve', 'reject'].includes(req.params.decision) || !await groupAccess(req.params.groupId, req.params.associationId, req.user._id)) throw fail('操作権限がありません。', 403);
+    const filter = { association: req.params.associationId, group: req.params.groupId, user: req.params.userId, status: 'active', withdrawalRequestedAt: { $ne: null } };
+    const target = await AssociationGroupMembership.findOne(filter);
+    if (!target) throw fail('退会申請を確認できません。', 404);
+    if (req.params.decision === 'approve' && target.role === 'manager' && await AssociationGroupMembership.countDocuments({ association: req.params.associationId, group: req.params.groupId, role: 'manager', status: 'active' }) <= 1) throw fail('最後の責任者は退会できません。先に別のメンバーを責任者に指定してください。');
+    const approved = req.params.decision === 'approve';
+    const updated = await AssociationGroupMembership.findOneAndUpdate(filter, { ...(approved ? { $set: { status: 'rejected', role: 'member' } } : {}), $unset: { withdrawalRequestedAt: 1 } });
+    if (!updated) throw fail('退会申請を確認できません。', 404);
+    await queueNotice({ association: req.params.associationId, recipients: [target.user], type: 'group_request', title: approved ? 'グループからの退会が承認されました' : 'グループからの退会申請が却下されました', relatedId: req.params.groupId });
+    req.session.notice = approved ? '退会を承認しました。' : '退会申請を却下しました。';
+    return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}/manage`);
   } catch (error) { return next(error); }
 });
 
@@ -128,7 +158,7 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/requests/:r
     if (!['approve', 'reject'].includes(req.params.decision) || !await groupAccess(req.params.groupId, req.params.associationId, req.user._id)) throw fail('操作権限がありません。', 403);
     const request = await AssociationGroupJoinRequest.findOne({ _id: req.params.requestId, group: req.params.groupId, status: 'pending' });
     if (!request) throw fail('参加申請を確認できません。', 404);
-    if (req.params.decision === 'approve') await AssociationGroupMembership.findOneAndUpdate({ association: request.association, group: request.group, user: request.applicant }, { $set: { status: 'active', approvedBy: req.user._id, joinedAt: new Date() } }, { upsert: true, new: true, setDefaultsOnInsert: true });
+    if (req.params.decision === 'approve') await AssociationGroupMembership.findOneAndUpdate({ association: request.association, group: request.group, user: request.applicant }, { $set: { status: 'active', role: 'member', approvedBy: req.user._id, joinedAt: new Date() }, $unset: { withdrawalRequestedAt: 1 } }, { upsert: true, new: true, setDefaultsOnInsert: true });
     request.status = req.params.decision === 'approve' ? 'approved' : 'rejected'; request.decidedBy = req.user._id; request.decidedAt = new Date(); await request.save();
     await queueNotice({ association: request.association, recipients: [request.applicant], type: 'group_request', title: request.status === 'approved' ? 'グループ参加が承認されました' : 'グループ参加申請が承認されませんでした', relatedId: request.group });
     return res.redirect(`/associations/${req.params.associationId}/groups/${req.params.groupId}/manage`);
