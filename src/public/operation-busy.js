@@ -45,18 +45,35 @@
       event.preventDefault(); event.stopImmediatePropagation();
     }, { capture: true, passive: false });
   }
+  const isCurrentTarget = target => !target || ['_self', '_top', '_parent'].includes(target.toLowerCase());
+  const isPageUrl = value => {
+    const url = new URL(value, location.href);
+    // These responses leave the current document open (downloads and attachments).
+    return /^https?:$/.test(url.protocol) && !/\/(?:download|export|attachments|question-attachments)(?:\/|$)|\.(?:xlsx?|csv|pdf|zip)$/i.test(url.pathname);
+  };
+  window.addEventListener('click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.('a[href]');
+    if (!link || link.hasAttribute('download') || link.getAttribute('href')?.startsWith('#') || !isCurrentTarget(link.target) || !isPageUrl(link.href)) return;
+    const url = new URL(link.href, location.href);
+    const current = new URL(location.href);
+    if (url.hash && url.origin === current.origin && url.pathname === current.pathname && url.search === current.search) return;
+    begin('ページを読み込み中です');
+  });
   // Bubble after validation, confirmation and AJAX handlers have decided whether to submit.
   window.addEventListener('submit', event => {
     const form = event.target;
     const method = (event.submitter?.getAttribute('formmethod') || form.method).toLowerCase();
-    if (event.defaultPrevented || method === 'dialog' || method === 'get' || form.target === '_blank') return;
-    if (!begin(form.dataset.busyMessage || '送信・更新中です')) event.preventDefault();
+    const target = event.submitter?.getAttribute('formtarget') ?? form.target;
+    const action = event.submitter?.getAttribute('formaction') || form.action || location.href;
+    if (event.defaultPrevented || method === 'dialog' || !isCurrentTarget(target) || !isPageUrl(action)) return;
+    if (!begin(form.dataset.busyMessage || (method === 'get' ? 'ページを読み込み中です' : '送信・更新中です'))) event.preventDefault();
     // Keep controls enabled so named submit buttons and all form values are sent.
   });
   const nativeSubmit = HTMLFormElement.prototype.submit;
   HTMLFormElement.prototype.submit = function () {
     if (active) return;
-    if (this.method !== 'get' && this.method !== 'dialog' && this.target !== '_blank') begin(this.dataset.busyMessage || '送信・更新中です');
+    if (this.method !== 'dialog' && isCurrentTarget(this.target) && isPageUrl(this.action || location.href)) begin(this.dataset.busyMessage || (this.method === 'get' ? 'ページを読み込み中です' : '送信・更新中です'));
     try { return nativeSubmit.call(this); } catch (error) { end(); throw error; }
   };
   // Fetch screens share the same lock, including response-body transfer for uploads/previews.

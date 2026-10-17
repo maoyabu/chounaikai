@@ -82,3 +82,40 @@ test('background notification polling does not lock the screen', async () => {
   await app.window.fetch('/api/notifications/unread-count');
   assert.equal(app.content.inert, false);
 });
+
+test('page links lock until pageshow; non-navigation clicks remain usable', () => {
+  const app = setup(async () => new Response());
+  const click = app.listeners.click.at(-1);
+  const follow = (href, options = {}) => click({
+    button: 0,
+    target: { closest: () => ({ href, target: options.target || '', hasAttribute: name => name === 'download' && options.download, getAttribute: () => href }) },
+    ...options
+  });
+  for (const href of ['#', '#section', 'https://example.com/settings#section', 'mailto:test@example.com', '/report.xlsx', '/annual/export?year=2026', '/files/123/download', '/messages/123/attachments/file']) {
+    follow(href);
+    assert.equal(app.content.inert, false, href);
+  }
+  for (const options of [{ target: '_blank' }, { target: 'preview' }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }, { defaultPrevented: true }, { download: true }]) {
+    follow('/next', options);
+    assert.equal(app.content.inert, false, JSON.stringify(options));
+  }
+  follow('/next');
+  assert.equal(app.content.inert, true);
+  app.listeners.pageshow[0]();
+  assert.equal(app.content.inert, false);
+});
+
+test('GET forms lock for searches and direct year selection, respecting submitter overrides', () => {
+  const app = setup(async () => new Response());
+  const submit = app.listeners.submit.at(-1);
+  const form = new app.HTMLFormElement();
+  Object.assign(form, { method: 'get', action: '/search', dataset: {} });
+  submit({ target: form, submitter: { getAttribute: name => name === 'formtarget' ? '_blank' : null } });
+  assert.equal(app.content.inert, false);
+  submit({ target: form });
+  assert.equal(app.content.inert, true);
+  app.listeners.pageshow[0]();
+  form.submit();
+  assert.equal(app.content.inert, true);
+  assert.equal(app.submissions, 1);
+});
