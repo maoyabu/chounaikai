@@ -141,7 +141,7 @@ Atlasの接続元制限には固定IPの確保とNetwork Access設定が別途�
 
 参加中の住人は、各画面右下の「＋」から写真・タイトル・内容を投稿できます。写真選択時にJPEG/PNG/WebPのEXIF位置情報を読み取り、含まれない場合は端末の現在地を取得します。ブラウザや写真共有時に位置情報が削除される場合は、現在地の利用許可が必要です。GPS取得に失敗した場合はネットワーク位置情報・直近1分以内の位置情報でも再試行します。写真の撮影場所と端末の現在地は取得元を分けて記録し、写真の位置精度は不明として扱います。本番ではHTTPSを使用してください。スマホのカメラ起動はブラウザの対応によって異なります。写真はJPEG/PNG/WebP形式、10MB以下の1枚を設定済みGoogle Driveの「メッセージ添付フォルダ」に自動保存し、所属町内会の有効なメンバーだけに配信します。投稿者と投稿日時はサーバーで記録します。
 
-ホームには日本時間の当日・前日の投稿がある場合だけ、その期間の最新6件を濃い赤の背景で表示し、詳細にGoogleマップと内容を表示します。町内会別の地図・履歴は50件ずつ閲覧できます。`GOOGLE_MAPS_BROWSER_KEY`にMaps JavaScript APIのブラウザ用キーを設定すると、そのページの投稿を同時に1つの地図にプロットします。履歴の写真を押すと対応するピンに移動し、ピンのアニメーションと吹き出しで強調します。タイトルから投稿詳細を開けます。住所入力の投稿も、同じGoogle CloudプロジェクトでGeocoding APIを有効にすれば検索できた場所を大まかなピンとして表示します。検索できない投稿はその旨を表示します。Google Cloudで利用サイトのHTTPリファラーとAPIの制限を設定してください。未設定時はGoogleマップ埋め込みで履歴から選んだ地点を表示します。
+ホームには日本時間の当日・前日の投稿がある場合だけ、その期間の最新6件を濃い赤の背景で表示し、詳細にGoogleマップと内容を表示します。町内会別の地図・履歴は50件ずつ閲覧できます。地図はAPIキー不要の埋め込み表示を使い、写真をタップするとその投稿の場所へ切り替わります。住所入力の投稿は住所・場所の検索結果を表示します。タイトルから投稿詳細を開けます。
 
 Danger report photos use the association Google Drive connection and automatically create the message attachments folder when needed. A failed report save rolls back the uploaded file. Existing database photos migrate to Drive when first viewed; database image data is removed only after the Drive reference is saved.
 

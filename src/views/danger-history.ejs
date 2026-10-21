@@ -1,6 +1,6 @@
 <%- include('partials/head') %><%- include('partials/header') %>
 <main class="page-shell"><a href="/dashboard">← ホーム</a>
 <section class="content-card danger-section"><p class="eyebrow"><%= association.name %></p><h1>緊急・危険情報の地図・履歴</h1>
-<%- include('partials/danger-history-content', { reports, association, mapsKey }) %>
+<%- include('partials/danger-history-content', { reports, association }) %>
 <nav aria-label="履歴のページ"><% if (page > 1) { %><a href="?page=<%= page - 1 %>">← 前の50件</a><% } %> <% if (hasNext) { %><a href="?page=<%= page + 1 %>">次の50件 →</a><% } %></nav>
 </section></main><script src="/assets/danger-history.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

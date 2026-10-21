@@ -1,13 +1,7 @@
 <% if (reports.length) { const points = reports.map(report => ({ id: String(report._id), latitude: report.latitude, longitude: report.longitude, address: report.locationSource === 'address' ? report.address : null, title: report.title, url: `/associations/${association._id}/dangers/${report._id}` })); %>
-<p>写真をタップすると、対応する場所のピンを強調して表示します。住所から検索したピンは大まかな場所です。</p>
-<p id="danger-map-status" role="status"><%= mapsKey ? '地図を読み込んでいます…' : 'Googleマップの複数地点表示には地図の接続設定が必要です。現在は選択した場所を表示します。' %></p>
-<% if (mapsKey) { %>
-<div id="danger-history-map" class="danger-map" data-points="<%= JSON.stringify(points) %>"></div>
-<script src="/assets/danger-map.js?v=<%= assetVersion %>"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=<%= encodeURIComponent(mapsKey) %>&amp;callback=initDangerMap" onerror="window.dangerMapFailed()" referrerpolicy="strict-origin-when-cross-origin" async defer></script>
-<% } else { %>
+<p>写真をタップすると、その投稿の場所を地図に表示します。住所から検索した場所は大まかな位置です。</p>
+<p id="danger-map-status" role="status">最新の投稿場所を表示しています。</p>
 <iframe id="danger-history-frame" class="danger-map" title="緊急・危険情報のGoogleマップ" src="https://www.google.com/maps?q=<%= encodeURIComponent(points[0].address || `${points[0].latitude},${points[0].longitude}`) %>&amp;output=embed" referrerpolicy="no-referrer-when-downgrade"></iframe>
-<% } %>
 <p>このページの投稿（最大50件）を表示しています。</p>
 <div class="danger-history-list"><% reports.forEach((report, index) => { %>
 <article class="danger-history-item" data-danger-report="<%= report._id %>">

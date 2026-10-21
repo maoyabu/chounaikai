@@ -29,7 +29,7 @@ dangerReportsRouter.get('/:associationId/dangers', async (req, res, next) => {
   try {
     const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
     const reports = await DangerReport.find({ association: req.params.associationId }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
-    res.render('danger-history', { title: '緊急・危険情報の地図・履歴', association: res.locals.dangerAssociation, reports: reports.slice(0,50), hasNext: reports.length > 50, page, mapsKey: process.env.GOOGLE_MAPS_BROWSER_KEY || '' });
+    res.render('danger-history', { title: '緊急・危険情報の地図・履歴', association: res.locals.dangerAssociation, reports: reports.slice(0,50), hasNext: reports.length > 50, page });
   } catch (error) { next(error); }
 });
 dangerReportsRouter.get('/:associationId/dangers/:reportId/:photo(photo)?', async (req, res, next) => {

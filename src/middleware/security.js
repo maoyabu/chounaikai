@@ -7,11 +7,11 @@ export const securityHeaders = nodeEnv => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://maps.googleapis.com', 'https://maps.gstatic.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'", 'https://zipcloud.ibsnet.co.jp', 'https://maps.googleapis.com', 'https://maps.gstatic.com'],
+      connectSrc: ["'self'", 'https://zipcloud.ibsnet.co.jp'],
       frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://www.google.com'],
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"],
