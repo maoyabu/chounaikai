@@ -18,7 +18,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean(),
     AssociationGroup.find({ association: association._id, status: { $in: ['active', 'suspended'] } }).sort({ name: 1 }).lean(),
     AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean(),
-    goodPlaceAuthorQuery(GoodPlace.find({ association: association._id }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).limit(6).lean()
+    goodPlaceAuthorQuery(GoodPlace.find({ association: association._id }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).lean()
   ]);
   const officers = await discloseOfficers(association, rawOfficers, publicOnly ? { audience: 'open' } : viewer);
   const groupMembers = groups.length ? await AssociationGroupMembership.aggregate([{ $match: { association: association._id, group: { $in: groups.map(group => group._id) }, status: 'active' } }, { $group: { _id: '$group', count: { $sum: 1 } } }]) : [];
