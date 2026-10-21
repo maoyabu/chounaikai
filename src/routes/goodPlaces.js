@@ -1,3 +1,4 @@
+import { parseCommentsEnabled, setGoodPlaceLike, addGoodPlaceComment, moderateGoodPlaceComment, loadGoodPlaceReactions } from '../services/goodPlaceReactionService.js';
 import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from '../services/goodPlaceDisclosureService.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -31,11 +32,12 @@ goodPlacesRouter.post('/associations/:associationId/good-places', requireLogin, 
   next();
 }), async (req, res, next) => {
   try {
-    const data = validateDangerReport(req.body, req.file);
+    const data = { ...validateDangerReport(req.body, req.file), commentsEnabled: parseCommentsEnabled(req.body.commentsEnabled) };
     const report = await createGoodPlaceWithPhoto({ data, association: req.params.associationId, author: req.user._id });
     try { await queueGoodPlaceNotifications(report); }
     catch (error) { console.error('Good place notification queue failed:', error.name); }
-    res.status(201).json({ url: `/associations/${report.association}/good-places/${report._id}` });
+    req.session.notice = 'いいところ投稿を公開しました。';
+    res.status(201).json({ url: `/associations/${report.association}/public` });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.get('/associations/:associationId/good-places', async (req, res, next) => {
@@ -59,13 +61,41 @@ goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(
       try { canDelete = (await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id })).canAnswer; }
       catch (error) { if (error.status !== 403) throw error; }
     }
-    res.render('good-place-detail', { title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, showGoodPlaceAuthors });
+    const owner = showGoodPlaceAuthors && String(report.author?._id || report.author) === String(req.user._id);
+    const commentPage = Math.max(1, Math.min(100000, Number.parseInt(req.query?.commentPage, 10) || 1));
+    const reactions = showGoodPlaceAuthors ? await loadGoodPlaceReactions({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id, owner, page: commentPage }) : null;
+    res.render('good-place-detail', { reactions, title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, showGoodPlaceAuthors });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/delete', requireLogin, verifyCsrfToken, async (req, res, next) => {
   try {
     const { photoCleanupPending } = await deleteGoodPlace({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id });
     req.session.notice = photoCleanupPending ? 'いいところ投稿を削除しました。Google Driveの写真は削除できませんでした。' : 'いいところ投稿を削除しました。';
-    res.redirect(`/associations/${req.params.associationId}/good-places`);
+    res.redirect(`/associations/${req.params.associationId}/public`);
+  } catch (error) { next(error); }
+});
+
+const reactionInput = req => ({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id });
+const reactionReturn = (req, res) => res.redirect(`/associations/${req.params.associationId}/good-places/${req.params.reportId}#good-place-reactions`);
+goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/like', requireLogin, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!['0', '1'].includes(req.body.liked)) throw Object.assign(new Error('Likeの操作を確認してください。'), { status: 400 });
+    await setGoodPlaceLike(reactionInput(req), req.body.liked === '1');
+    reactionReturn(req, res);
+  } catch (error) { next(error); }
+});
+goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/comments', requireLogin, verifyCsrfToken, async (req, res, next) => {
+  try {
+    await addGoodPlaceComment(reactionInput(req), req.body.body);
+    req.session.notice = 'コメントを投稿しました。';
+    reactionReturn(req, res);
+  } catch (error) { next(error); }
+});
+goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/comments/:commentId/visibility', requireLogin, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!['0', '1'].includes(req.body.hidden)) throw Object.assign(new Error('コメントの表示設定を確認してください。'), { status: 400 });
+    await moderateGoodPlaceComment(reactionInput(req), req.params.commentId, req.body.hidden === '1');
+    req.session.notice = req.body.hidden === '1' ? 'コメントを非表示にしました。' : 'コメントを再表示しました。';
+    reactionReturn(req, res);
   } catch (error) { next(error); }
 });

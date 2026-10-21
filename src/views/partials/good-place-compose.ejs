@@ -5,6 +5,7 @@
 <p id="good-place-location" role="status">写真の撮影場所を使用し、含まれていない場合は現在地を取得します。</p><button type="button" id="good-place-locate">現在地を取得・再取得</button>
 <label>住所・場所（位置情報が取得できない場合）<input name="address" maxlength="300" placeholder="例：○○市○○町付近、○○公園の北側"><small>番地が不明でも、町名や目印など大まかな場所で投稿できます。</small></label>
 <label>タイトル<input name="title" maxlength="120" required></label><label>内容<textarea name="body" maxlength="3000" rows="5" required></textarea></label>
+<label>コメントの受付<select name="commentsEnabled"><option value="on" selected>コメントあり</option><option value="off">コメントなし</option></select></label>
 <p>写真・タイトル・内容・投稿日時・場所はPRページで一般公開します。投稿者氏名は所属町内会の住人にだけ表示します。</p><p id="good-place-error" role="alert"></p><button class="button button-primary" type="submit" id="good-place-submit">投稿する</button></form></dialog>
 <script src="/assets/danger-location.js?v=<%= assetVersion %>" defer></script>
 <script src="/assets/danger-reports.js?v=<%= assetVersion %>" defer></script><% } %>

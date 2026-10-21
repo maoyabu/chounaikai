@@ -4,16 +4,23 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 import ejs from 'ejs';
 const script=fs.readFileSync('src/public/good-place-gallery.js','utf8');
-function fixture(count,reduced=false) {
+function fixture(count,reduced=false,dissolve=false) {
   let tick=null,active=false;
   const element=()=>({handlers:{},addEventListener(name,handler){this.handlers[name]=handler;}});
-  const cards=Array.from({length:count},()=>({hidden:false,style:{},featured:false,classList:{toggle(_name,value){this.owner.featured=value;}}}));
+  const overlays=[];
+  const grid=dissolve?{offsetLeft:20,offsetTop:60,offsetWidth:900,offsetHeight:500,animate(){},cloneNode(){
+    let complete,reject;const finished=new Promise((resolve,fail)=>{complete=resolve;reject=fail;});
+    const link={removeAttribute(){this.hrefRemoved=true;}};
+    const snapshot={style:{},classList:{add(){}},setAttribute(name,value){this[name]=value;},querySelectorAll:()=>[link],remove(){this.removed=true;},animate(frames,options){this.frames=frames;this.options=options;return {finished,cancel(){reject();}};},complete:()=>complete(),link};
+    overlays.push(snapshot);return snapshot;
+  }}:null;
+  const cards=Array.from({length:count},()=>({querySelector:()=>({decode:()=>Promise.resolve()}),hidden:false,style:{},featured:false,classList:{toggle(_name,value){this.owner.featured=value;}}}));
   cards.forEach(card=>{card.classList.owner=card;});
   const controls={hidden:true},pause={...element(),setAttribute(name,value){this[name]=value;}},prev=element(),next=element();
-  const gallery={...element(),dataset:{rotating:String(count===2||count>=4),slots:String(count<=2?1:count<=4?3:5)},querySelectorAll:()=>cards,querySelector:selector=>({'.good-place-gallery-controls':controls,'[data-gallery-pause]':pause,'[data-gallery-prev]':prev,'[data-gallery-next]':next})[selector],contains:()=>false};
-  const context={document:{hidden:false,activeElement:null,querySelectorAll:()=>[gallery],addEventListener(){}},window:{matchMedia:()=>({matches:reduced,addEventListener(){}})},setInterval:fn=>{tick=fn;active=true;return 1;},clearInterval:()=>{active=false;},setTimeout:fn=>fn()};
+  const gallery={...element(),dataset:{rotating:String(count===2||count>=4),slots:String(count<=2?1:count<=4?3:5)},querySelectorAll:()=>cards,append(){},querySelector:selector=>({'.good-place-grid':grid,'.good-place-gallery-controls':controls,'[data-gallery-pause]':pause,'[data-gallery-prev]':prev,'[data-gallery-next]':next})[selector],contains:()=>false};
+  const context={document:{hidden:false,activeElement:null,querySelectorAll:()=>[gallery],addEventListener(){}},window:{addEventListener(){},matchMedia:()=>({matches:reduced,addEventListener(){}})},setInterval:fn=>{tick=fn;active=true;return 1;},clearInterval:()=>{active=false;},setTimeout:fn=>fn()};
   vm.runInNewContext(script,context);
-  return {cards,controls,pause,prev,next,gallery,get active(){return active;},advance(){if(active)tick();}};
+  return {cards,controls,pause,prev,next,gallery,overlays,get active(){return active;},advance(){if(active)tick();}};
 }
 test('1–8 photos render the requested 1 / 3 / 5-slot layout with latest photo featured',async()=>{
   for(let count=1;count<=8;count++){
@@ -50,4 +57,23 @@ test('manual controls, pause and reduced motion work independently of automatic 
   state.gallery.handlers.mouseenter();assert.equal(state.active,false);
   state.gallery.handlers.mouseleave();assert.equal(state.active,true);
   const reduced=fixture(5,true);assert.equal(reduced.active,false);reduced.next.handlers.click();assert.equal(reduced.cards[1].featured,true);
+});
+
+test('cross dissolve keeps an inert copy of the previous layout until the next photos are decoded',async()=>{
+  const state=fixture(4,false,true);
+  state.next.handlers.click();
+  assert.equal(state.overlays.length,1);
+  const outgoing=state.overlays[0];
+  assert.equal(outgoing.inert,true);assert.equal(outgoing['aria-hidden'],'true');assert.equal(outgoing.link.hrefRemoved,true);
+  assert.equal(outgoing.options,undefined);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(outgoing.options.duration,800);assert.equal(outgoing.frames[0].opacity,1);assert.equal(outgoing.frames[1].opacity,0);
+  outgoing.complete();await new Promise(resolve=>setImmediate(resolve));assert.equal(outgoing.removed,true);
+});
+test('rapid photo changes discard stale overlays and reduced motion skips the dissolve',async()=>{
+  const state=fixture(5,false,true);
+  state.next.handlers.click();state.next.handlers.click();
+  assert.equal(state.overlays[0].removed,true);
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(state.overlays[0].options,undefined);assert.equal(state.overlays[1].options.duration,800);
+  const reduced=fixture(4,true,true);reduced.next.handlers.click();assert.equal(reduced.overlays.length,0);
 });

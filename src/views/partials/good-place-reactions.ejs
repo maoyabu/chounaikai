@@ -1,0 +1,24 @@
+<% if (reactions) { const base = `/associations/${association._id}/good-places/${report._id}`; %>
+<section id="good-place-reactions" class="good-place-reactions" aria-label="住人のLikeとコメント">
+  <form action="<%= base %>/like" method="post" class="good-place-like-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="liked" value="<%= reactions.liked ? '0' : '1' %>">
+    <button class="button <%= reactions.liked ? 'button-primary' : 'button-quiet' %>" type="submit" aria-pressed="<%= reactions.liked %>"><%= reactions.liked ? '♥ Like済み' : '♡ Like' %> <%= reactions.likeCount %></button>
+  </form>
+  <h2>住人のコメント</h2><p class="help-text">Likeとコメントは、この町内会の住人だけが閲覧・投稿できます。</p>
+  <% if (report.commentsEnabled !== false) { %>
+  <form action="<%= base %>/comments" method="post" class="form-stack good-place-comment-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>コメント<textarea name="body" rows="3" maxlength="1000" required placeholder="感想などを入力してください"></textarea></label>
+    <button type="submit" class="button button-primary">コメントを投稿</button>
+  </form>
+  <% } else { %><p>この投稿はコメントを受け付けていません。</p><% } %>
+  <div class="good-place-comments"><% reactions.comments.forEach(comment => { %>
+    <article class="good-place-comment <%= comment.hiddenAt ? 'is-hidden' : '' %>">
+      <p><strong><%= comment.user?.displayname || '退会した住人' %></strong> · <time datetime="<%= comment.createdAt.toISOString() %>"><%= comment.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (comment.hiddenAt) { %> <span class="status-badge">非表示（投稿者のみ閲覧）</span><% } %></p>
+      <p class="good-place-comment-body"><%= comment.body %></p>
+      <% if (reactions.owner) { %><form action="<%= base %>/comments/<%= comment._id %>/visibility" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="hidden" value="<%= comment.hiddenAt ? '0' : '1' %>"><button class="button button-quiet button-small" type="submit"><%= comment.hiddenAt ? '再表示する' : '非表示にする' %></button></form><% } %>
+    </article>
+  <% }) %><% if (!reactions.comments.length) { %><p>表示できるコメントはありません。</p><% } %></div>
+  <nav aria-label="コメントのページ"><% if (reactions.page > 1) { %><a href="?commentPage=<%= reactions.page - 1 %>#good-place-reactions">← 新しいコメント</a><% } %> <% if (reactions.hasNext) { %><a href="?commentPage=<%= reactions.page + 1 %>#good-place-reactions">以前のコメント →</a><% } %></nav>
+</section>
+<% } %>

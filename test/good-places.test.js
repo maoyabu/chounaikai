@@ -78,3 +78,18 @@ test('posting, detail and map/history pages render without paid Google API',asyn
   const history=await ejs.renderFile('src/views/good-place-history.ejs',{...globals,association,reports:[report],page:1,hasNext:false});
   assert.match(history,/data-danger-focus/);assert.match(history,/町内の公園/);assert.doesNotMatch(history,/maps.googleapis|\/dangers/);
 });
+
+test('deletion returns to the PR page after successful authorized removal',async t=>{
+  const { AnnualOfficer }=await import('../src/models/annualOfficer.js');
+  const { RoleDefinition }=await import('../src/models/role.js');
+  t.mock.method(NeighborhoodAssociation,'findOne',()=>({lean:async()=>association}));
+  t.mock.method(AssociationMembership,'findOne',()=>({lean:async()=>({user:reportId})}));
+  t.mock.method(RoleDefinition,'find',()=>({select:()=>({lean:async()=>[]})}));
+  t.mock.method(AnnualOfficer,'exists',async()=>true);
+  t.mock.method(GoodPlace,'findOneAndDelete',()=>({lean:async()=>({_id:reportId})}));
+  const req={params:{associationId,reportId},user:{_id:reportId},session:{}};
+  let destination;
+  const handler=route('/associations/:associationId/good-places/:reportId/delete').stack.at(-1).handle;
+  await handler(req,{redirect:url=>{destination=url;}},error=>{throw error;});
+  assert.equal(destination,`/associations/${associationId}/public`);assert.match(req.session.notice,/削除しました/);
+});
