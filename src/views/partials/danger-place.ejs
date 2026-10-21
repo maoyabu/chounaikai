@@ -1,0 +1,7 @@
+<% const isAddress = report.locationSource === 'address'; const query = isAddress ? report.address : `${report.latitude},${report.longitude}`; %>
+<h2><%= isAddress ? '投稿された住所・場所' : report.locationSource === 'photo' ? '写真の撮影場所' : '投稿時の現在地' %></h2>
+<% if (report.address) { %><p><%= report.address %></p><% } %>
+<% if (isAddress) { %><p>入力された大まかな場所を地図で検索しています。正確な現場の位置とは異なる場合があります。</p><% } %>
+<iframe class="danger-map" title="投稿場所のGoogleマップ" src="https://www.google.com/maps?q=<%= encodeURIComponent(query) %>&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+<% if (!isAddress) { %><p><% if (report.locationSource !== 'photo') { %>位置精度：約<%= Math.round(report.accuracy) %>m · <% } %>取得日時：<%= report.locatedAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p><% } %>
+<a href="https://www.google.com/maps/search/?api=1&amp;query=<%= encodeURIComponent(query) %>" target="_blank" rel="noopener noreferrer">Googleマップで開く</a>

@@ -20,6 +20,7 @@
       };
       status.textContent = messages[reason.code] || reason.message || '位置情報を取得できませんでした。';
       if (position) status.textContent += ' 取得済みの位置情報は保持しています。';
+      else status.textContent += ' 住所・場所を入力すれば投稿できます（大まかでも構いません）。';
     };
     if (window.isSecureContext === false) { failed({ message: '現在地の取得にはHTTPSでの接続が必要です。HTTPSのURLで開き直してください。' }); return; }
     if (!navigator.geolocation) { failed({ message: 'このブラウザでは現在地を取得できません。位置情報付きの写真を選択してください。' }); return; }
@@ -50,10 +51,11 @@
     event.preventDefault();
     if (sending) return;
     error.textContent = '';
-    if (!position) { error.textContent = '位置情報を取得してから投稿してください。'; return; }
+    if (!position && !form.elements.address.value.trim()) { error.textContent = '位置情報を取得するか、住所・場所を入力してください（大まかでも構いません）。'; form.elements.address.focus(); return; }
     if (form.elements.photo.files[0]?.size > 10 * 1024 * 1024) { error.textContent = '写真は10MB以下にしてください。'; return; }
     const data = new FormData(form);
-    Object.entries(position).forEach(([key, value]) => data.set(key, value));
+    if (position) Object.entries(position).forEach(([key, value]) => data.set(key, value));
+    else data.set('locationSource', 'address');
     sending = true; submit.disabled = true; submit.textContent = '投稿しています…';
     try {
       const response = await fetch(`/associations/${form.elements.association.value}/dangers`, { method: 'POST', headers: { 'x-csrf-token': document.querySelector('meta[name="csrf-token"]').content }, body: data });

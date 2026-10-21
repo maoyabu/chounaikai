@@ -12,11 +12,12 @@ const schema = new mongoose.Schema({
     bytes: Number
   }, { _id: false }) },
   photoType: { type: String, required: true },
-  latitude: { type: Number, required: true, min: -90, max: 90 },
-  longitude: { type: Number, required: true, min: -180, max: 180 },
-  locationSource: { type: String, enum: ['device', 'photo'], default: 'device' },
+  latitude: { type: Number, min: -90, max: 90 },
+  longitude: { type: Number, min: -180, max: 180 },
+  locationSource: { type: String, enum: ['device', 'photo', 'address'], default: 'device' },
+  address: { type: String, trim: true, maxlength: 300 },
   accuracy: { type: Number, min: 0 },
-  locatedAt: { type: Date, required: true }
+  locatedAt: { type: Date }
 }, { timestamps: true, collection: 'danger_reports' });
 schema.index({ association: 1, createdAt: -1, _id: -1 });
 export const DangerReport = mongoose.model('DangerReport', schema);

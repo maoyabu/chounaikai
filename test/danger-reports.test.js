@@ -46,3 +46,12 @@ test('photo coordinates preserve their source without inventing GPS accuracy', (
   const data = validateDangerReport({ ...body, locationSource: 'photo', accuracy: undefined }, photo, now);
   assert.equal(data.locationSource, 'photo'); assert.equal(data.accuracy, undefined);
 });
+
+test('approximate address allows posting without GPS and does not invent coordinates', () => {
+  const result = validateDangerReport({title:'危険',body:'倒木',locationSource:'address',address:'  ○○町の公園付近  ',latitude:35,longitude:139},photo,now);
+  assert.equal(result.address,'○○町の公園付近');assert.equal(result.locationSource,'address');
+  assert.equal(result.latitude,undefined);assert.equal(result.longitude,undefined);assert.equal(result.locatedAt,undefined);
+});
+test('address fallback requires a nonempty address of at most 300 characters', () => {
+  for (const address of ['', '   ', 'あ'.repeat(301)]) assert.throws(()=>validateDangerReport({title:'危険',body:'倒木',locationSource:'address',address},photo,now));
+});
