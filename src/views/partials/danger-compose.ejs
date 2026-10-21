@@ -1,5 +1,7 @@
 <% if (typeof dangerMemberships !== 'undefined' && dangerMemberships.length) { %>
-<button class="danger-fab" id="danger-open" type="button" aria-label="緊急・危険情報を投稿する">＋</button>
+<button class="danger-fab" id="danger-open" type="button" aria-label="緊急・危険情報を投稿する" aria-describedby="danger-move-help" title="押すと投稿、ドラッグで移動。矢印キーでも移動できます。"><span aria-hidden="true">⚠</span><span>緊急・危険情報を投稿<small>ドラッグで移動</small></span></button>
+<span id="danger-move-help" class="danger-move-help">押すと投稿画面を開きます。ドラッグ、またはボタンにフォーカスして矢印キーで移動できます。</span>
+<script src="/assets/danger-fab.js?v=<%= assetVersion %>" defer></script>
 <dialog id="danger-compose" data-photo-post-dialog="danger" data-post-path="dangers" class="officer-dialog"><div class="dialog-heading"><h2>緊急・危険情報を投稿</h2><button type="button" id="danger-close" aria-label="閉じる">×</button></div>
 <form id="danger-form" class="form-stack"><label>共有する町内会<select name="association" required><% dangerMemberships.forEach(item => { %><option value="<%= item.association._id %>"><%= item.association.name %></option><% }) %></select></label>
 <label>現場の写真（撮影・アルバムから選択／10MB以下）<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label><img id="danger-preview" alt="投稿する写真の確認" hidden>
