@@ -89,3 +89,4 @@
 .danger-home-actions .button:hover{background:#991b1b}
 .danger-home a:focus-visible{outline:3px solid #fecaca;outline-offset:3px}
 @media(max-width:480px){.danger-home .section-heading{padding:16px}.danger-home-content{padding:0 16px 16px}.danger-home-actions .button{width:100%}.danger-home .danger-card{gap:12px}.danger-home .danger-card img{width:80px;flex:0 0 80px}}
+.danger-delete-form{margin-top:24px;padding-top:20px;border-top:1px solid #efcccc}.danger-delete-form .button{max-width:100%;white-space:normal}

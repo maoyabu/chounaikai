@@ -46,7 +46,7 @@ export const canReadMessageAttachment = async (announcement, user) => {
   }
   return false;
 };
-const streamFile = async (req, res, file, inline = true) => {
+export const streamFile = async (req, res, file, inline = true) => {
   const ctx = await attachmentContext(req.params.associationId);
   const item = await assertDriveItem(ctx.client, ctx.root, file.fileId, { allowRoot: false });
   if (item.mimeType === FOLDER_MIME || item.capabilities?.canDownload === false) throw fail();

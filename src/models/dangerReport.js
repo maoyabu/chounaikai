@@ -4,7 +4,13 @@ const schema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   title: { type: String, required: true, trim: true, maxlength: 120 },
   body: { type: String, required: true, trim: true, maxlength: 3000 },
-  photo: { type: Buffer, required: true, select: false },
+  photo: { type: Buffer, select: false }, // Legacy photos migrate to Drive on access.
+  photoAttachment: { type: new mongoose.Schema({
+    fileId: { type: String, required: true },
+    originalName: { type: String, required: true },
+    mimeType: String,
+    bytes: Number
+  }, { _id: false }) },
   photoType: { type: String, required: true },
   latitude: { type: Number, required: true, min: -90, max: 90 },
   longitude: { type: Number, required: true, min: -180, max: 180 },

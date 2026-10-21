@@ -38,7 +38,7 @@ export const saveMessageAttachments = async (files, { client, root }) => {
   }
 };
 export const removeMessageAttachments = async (attachments, client) => {
-  await Promise.allSettled(attachments.map(async item => {
+  return Promise.allSettled(attachments.map(async item => {
     const response = await client.request(`drive/v3/files/${driveId(item.fileId)}?supportsAllDrives=true`, { method: 'DELETE' });
     await response.body?.cancel();
   }));
