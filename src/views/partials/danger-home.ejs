@@ -1,9 +1,9 @@
 <% if (memberships.length && reports.length) { %>
 <section class="admin-section danger-section danger-home" aria-labelledby="danger-home-heading">
-  <div class="section-heading"><h2 id="danger-home-heading">緊急・危険情報</h2></div>
+  <div class="section-heading"><h2 id="danger-home-heading">緊急・危険情報</h2><div class="danger-home-actions"><% memberships.forEach(item => { %><a class="button button-quiet" aria-label="<%= item.association.name %>の緊急・危険情報履歴" href="/associations/<%= item.association._id %>/dangers">地図と履歴</a><% }) %></div></div>
   <div class="danger-home-content">
     <div class="danger-home-reports"><% reports.forEach(report => { %><%- include('danger-card', { report }) %><% }) %></div>
-    <div class="danger-home-actions"><% memberships.forEach(item => { %><a class="button button-quiet" aria-label="<%= item.association.name %>の緊急・危険情報履歴" href="/associations/<%= item.association._id %>/dangers">緊急・危険情報履歴</a><% }) %></div>
+
   </div>
 </section>
 <% } %>

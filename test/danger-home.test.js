@@ -26,6 +26,6 @@ test('recent report displays the alert with photos, details and padded history a
   assert.match(html, /danger-home-actions/);
   assert.match(html, /危険情報/);
   assert.match(html, /住人/);
-  assert.match(html, /緊急・危険情報履歴/);
+  assert.match(html, />地図と履歴<\/a>/);
   assert.doesNotMatch(html, /投稿はありません/);
 });
