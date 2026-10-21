@@ -1,3 +1,5 @@
+import { dangerReportHomeWindow } from '../lib/dangerReportWindow.js';
+import { DangerReport } from '../models/dangerReport.js';
 import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
 import { discloseOfficers, viewerDisclosureAccess } from '../services/officerDisclosureService.js';
 import { pendingEquipmentLoans } from '../services/equipmentService.js';
@@ -82,6 +84,7 @@ webRouter.use(async (req, res, next) => {
     res.locals.notice = req.session.notice || null;
     res.locals.errorMessage = req.session.errorMessage || null;
     res.locals.currentPath = req.path;
+    res.locals.dangerMemberships = req.user ? (await AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean()).filter(item => item.association) : [];
     res.locals.currentRoleTags = [];
     res.locals.currentManagerAssociations = [];
     res.locals.currentLeaderAssociations = [];
@@ -643,7 +646,8 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
     notifications.unshift(...pins.notifications);
-    return res.render('dashboard', { title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    const dangerReports = await DangerReport.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, createdAt: dangerReportHomeWindow() }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).limit(6).lean();
+    return res.render('dashboard', { dangerReports, title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

@@ -7,12 +7,12 @@ export const securityHeaders = nodeEnv => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://maps.googleapis.com', 'https://maps.gstatic.com'],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'", 'https://zipcloud.ibsnet.co.jp'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
+      connectSrc: ["'self'", 'https://zipcloud.ibsnet.co.jp', 'https://maps.googleapis.com', 'https://maps.gstatic.com'],
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://www.google.com'],
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"],
       // Google Drive OAuth starts with a POST followed by a redirect to Google.

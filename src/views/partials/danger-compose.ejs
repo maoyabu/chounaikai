@@ -1,0 +1,10 @@
+<% if (typeof dangerMemberships !== 'undefined' && dangerMemberships.length) { %>
+<button class="danger-fab" id="danger-open" type="button" aria-label="緊急・危険情報を投稿する">＋</button>
+<dialog id="danger-compose" class="officer-dialog"><div class="dialog-heading"><h2>緊急・危険情報を投稿</h2><button type="button" id="danger-close" aria-label="閉じる">×</button></div>
+<form id="danger-form" class="form-stack"><label>共有する町内会<select name="association" required><% dangerMemberships.forEach(item => { %><option value="<%= item.association._id %>"><%= item.association.name %></option><% }) %></select></label>
+<label>現場の写真（10MB以下）<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="environment" required></label><img id="danger-preview" alt="投稿する写真の確認" hidden>
+<p id="danger-location" role="status">写真の撮影場所を使用し、含まれていない場合は現在地を取得します。</p><button type="button" id="danger-locate">現在地を取得・再取得</button>
+<label>タイトル<input name="title" maxlength="120" required></label><label>内容<textarea name="body" maxlength="3000" rows="5" required></textarea></label>
+<p>投稿者氏名、投稿日時、写真の撮影場所または取得した現在地を町内会の住人に共有します。</p><p id="danger-error" role="alert"></p><button class="button button-primary" type="submit" id="danger-submit">投稿する</button></form></dialog>
+<script src="/assets/danger-location.js?v=<%= assetVersion %>" defer></script>
+<script src="/assets/danger-reports.js?v=<%= assetVersion %>" defer></script><% } %>

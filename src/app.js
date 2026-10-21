@@ -1,3 +1,4 @@
+import { dangerReportsRouter } from './routes/dangerReports.js';
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
 import { legalRouter } from './routes/legal.js';
@@ -113,6 +114,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/associations', associationFinanceRouter);
   app.use('/', householdInvitationsRouter);
   app.use('/', withdrawalsRouter);
+  app.use('/associations', dangerReportsRouter);
   app.use('/associations', questionBoxRouter);
   app.use('/associations', officerAnnouncementsRouter);
   app.use('/associations', officerNetworkRouter);

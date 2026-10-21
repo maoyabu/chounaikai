@@ -63,3 +63,29 @@
 .legal-contact-email { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; vertical-align: middle; }
 .legal-contact-email svg { flex-shrink: 0; }
 .legal-contact-email span { min-width: 0; overflow-wrap: anywhere; }
+
+/* 緊急・危険情報 */
+.danger-section{border:2px solid #c62828}.danger-section h1,.danger-section h2,.danger-section .eyebrow{color:#b71c1c}.danger-card{display:flex;gap:16px;padding:16px 0;color:inherit;text-decoration:none;border-bottom:1px solid #efcccc}.danger-card img{width:100px;height:80px;object-fit:cover;border-radius:8px}.danger-card span{min-width:0;overflow-wrap:anywhere}.danger-card strong{display:block;color:#b71c1c}.danger-card small{display:block;margin-top:8px}.danger-photo{max-width:100%;max-height:600px;object-fit:contain}.danger-body{white-space:pre-wrap;overflow-wrap:anywhere}.danger-map{width:100%;height:380px;border:0;border-radius:10px}.danger-fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));width:60px;height:60px;border:0;border-radius:50%;background:#c62828;color:white;font-size:36px;box-shadow:0 4px 16px #0004;z-index:900;cursor:pointer}#danger-compose{max-height:90dvh;overflow:auto;width:min(540px,calc(100% - 32px))}#danger-form label{display:grid;gap:8px;margin:16px 0}#danger-preview{max-width:100%;max-height:220px;object-fit:contain}#danger-error{color:#b71c1c}.site-footer{padding-bottom:100px}
+
+#danger-compose{box-sizing:border-box;min-width:0;max-width:calc(100vw - 24px);width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 24px);margin:auto;padding:clamp(12px,4vw,24px);overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere}
+#danger-compose .dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0}
+#danger-compose .dialog-heading h2{min-width:0;margin:0;font-size:clamp(18px,5vw,24px)}
+#danger-close{flex:0 0 36px;min-height:36px}
+#danger-form{min-width:0;grid-template-columns:minmax(0,1fr);gap:12px}
+#danger-form label{min-width:0;margin:0;grid-template-columns:minmax(0,1fr)}
+#danger-form input,#danger-form select,#danger-form textarea,#danger-form button{box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px}
+#danger-form input[type=file]{overflow:hidden;padding:8px;font-size:14px}
+#danger-form p{margin:0;min-width:0}
+#danger-preview{width:100%;min-width:0}
+
+/* Home alerts expire after the posting day and the following day (Japan time). */
+.admin-section.danger-home{background:#7f1d1d;color:#fecaca;border-color:#991b1b;margin-bottom:24px}
+.danger-home .section-heading{border-bottom-color:#b45454;padding:20px}
+.danger-home .section-heading h2,.danger-home .danger-card strong{color:#fecaca}
+.danger-home-content{padding:0 20px 20px;min-width:0}
+.danger-home .danger-card{border-bottom-color:#b45454;color:#fecaca}
+.danger-home-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.danger-home-actions .button{background:#7f1d1d;border-color:#fca5a5;color:#fecaca;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.danger-home-actions .button:hover{background:#991b1b}
+.danger-home a:focus-visible{outline:3px solid #fecaca;outline-offset:3px}
+@media(max-width:480px){.danger-home .section-heading{padding:16px}.danger-home-content{padding:0 16px 16px}.danger-home-actions .button{width:100%}.danger-home .danger-card{gap:12px}.danger-home .danger-card img{width:80px;flex:0 0 80px}}
