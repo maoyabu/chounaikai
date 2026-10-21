@@ -1,0 +1,6 @@
+<% if (canDelete) { %>
+<form class="danger-delete-form" action="/associations/<%= association._id %>/good-places/<%= report._id %>/delete" method="post" onsubmit="return confirm('このいいところ投稿を削除しますか？削除すると元に戻せません。');">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <button class="button button-danger-outline" type="submit">このいいところ投稿を削除する</button>
+</form>
+<% } %>

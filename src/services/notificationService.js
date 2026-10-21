@@ -2,7 +2,15 @@ import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import { Notification } from '../models/notification.js';
 import { PushSubscription } from '../models/pushSubscription.js';
-import { NotificationSettings, notificationCategory } from '../models/notificationSettings.js';
+import { NotificationSettings, notificationCategory, defaultNotificationChannel } from '../models/notificationSettings.js';
+
+export const notificationDestination = notification => {
+  const paths = { danger_report: 'dangers', good_place: 'good-places' };
+  const path = paths[notification.type];
+  return path && notification.association && notification.relatedId
+    ? `/associations/${notification.association._id || notification.association}/${path}/${notification.relatedId}`
+    : '/dashboard?notifications=open';
+};
 
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 
@@ -20,7 +28,7 @@ const sendEmail = async ({ notification, recipient, required }) => {
   const config = mailConfig();
   if (!wantsEmail({ email: recipient?.email, emailRequired: required }) || !config) return { status: 'skipped' };
   const transporter = nodemailer.createTransport({ ...config.transport, disableFileAccess: true, disableUrlAccess: true });
-  const url = `${config.baseUrl}/dashboard?notifications=open`;
+  const url = `${config.baseUrl}${notificationDestination(notification)}`;
   await transporter.sendMail({
     from: config.from,
     to: recipient.email,
@@ -45,7 +53,7 @@ const sendPush = async ({ notification, recipient }) => {
   const payload = JSON.stringify({
     title: notification.title,
     body: notification.body,
-    url: '/dashboard?notifications=open',
+    url: notificationDestination(notification),
     tag: String(notification._id),
     unreadCount
   });
@@ -91,7 +99,7 @@ export const deliverNotification = async (notification, { emailRequired = false 
     if (!claimed) return notification;
     const settings = await NotificationSettings.findOne({ association: notification.association }).lean();
     const category = notificationCategory(notification.type);
-    const channel = settings?.channels?.[category] || { push: true, email: false };
+    const channel = settings?.channels?.[category] || defaultNotificationChannel(category);
     const user = await import('../models/user.js').then(({ User }) => User.findById(recipient).select('displayname username email').lean());
     if (!user) {
       await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email.status': 'skipped', 'delivery.push.status': 'skipped' } });

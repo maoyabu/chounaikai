@@ -2,15 +2,15 @@ import { DangerReport } from '../models/dangerReport.js';
 import { attachmentContext, saveMessageAttachments, removeMessageAttachments } from './messageAttachmentService.js';
 
 const defaults = { attachmentContext, saveMessageAttachments, removeMessageAttachments, model: DangerReport };
-const photoFile = (buffer, mimeType) => ({
+const photoFile = (buffer, mimeType, prefix = 'danger') => ({
   buffer, size: buffer.length, mimetype: mimeType,
-  originalname: `danger_${Date.now()}.${mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'}`
+  originalname: `${prefix}_${Date.now()}.${mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'}`
 });
 
-export async function createDangerReportWithPhoto({ data, association, author }, dependencies = defaults) {
+export async function createDangerReportWithPhoto({ data, association, author, photoPrefix = 'danger' }, dependencies = defaults) {
   const { photo, ...fields } = data;
   const context = await dependencies.attachmentContext(association);
-  const attachments = await dependencies.saveMessageAttachments([photoFile(photo, data.photoType)], context);
+  const attachments = await dependencies.saveMessageAttachments([photoFile(photo, data.photoType, photoPrefix)], context);
   try {
     return await dependencies.model.create({ ...fields, association, author, photoAttachment: attachments[0] });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { queueDangerReportNotifications } from '../services/dangerReportNotificationService.js';
 import { deleteDangerReport } from '../services/dangerReportDeletionService.js';
 import { loadQuestionBoxAccess } from '../services/questionBoxService.js';
 import { createDangerReportWithPhoto, ensureDangerReportDrivePhoto } from '../services/dangerReportPhotoService.js';
@@ -22,6 +23,8 @@ dangerReportsRouter.post('/:associationId/dangers', verifyCsrfToken, (req, res, 
   try {
     const data = validateDangerReport(req.body, req.file);
     const report = await createDangerReportWithPhoto({ data, association: req.params.associationId, author: req.user._id });
+    try { await queueDangerReportNotifications(report); }
+    catch (error) { console.error('Danger report notification queue failed:', error.name); }
     res.status(201).json({ url: `/associations/${report.association}/dangers/${report._id}` });
   } catch (error) { next(error); }
 });

@@ -598,6 +598,14 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
       if (notification.association) {
         notification.actionUrl = `/associations/${notification.association._id}`;
         notification.actionLabel = '町内会のページを確認';
+        if (notification.type === 'good_place' && notification.relatedId) {
+          notification.actionUrl = `/associations/${notification.association._id}/good-places/${notification.relatedId}`;
+          notification.actionLabel = 'わがまちのいいところを確認';
+        }
+        if (notification.type === 'danger_report' && notification.relatedId) {
+          notification.actionUrl = `/associations/${notification.association._id}/dangers/${notification.relatedId}`;
+          notification.actionLabel = '緊急・危険情報を確認';
+        }
         if (['question_created', 'question_reopened'].includes(notification.type)) {
           notification.actionUrl = `/associations/${notification.association._id}/questions/officer`;
           notification.actionLabel = '質問を確認';

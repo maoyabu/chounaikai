@@ -5,8 +5,8 @@
   <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
   <form method="post" class="form-card form-stack">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <p>この町内会からの通知方法を設定します。OFFでもアプリ内のお知らせは残ります。Pushは受信者が通知を許可した端末に届きます。メールは初期設定でOFFです。</p>
-    <% categories.forEach(([key, label]) => { const setting = channels[key] || { push: true, email: false }; %>
+    <p>この町内会からの通知方法を設定します。OFFでもアプリ内のお知らせは残ります。Pushは受信者が通知を許可した端末に届きます。メールは緊急・危険情報・いいところ投稿は初期設定でON、その他はOFFです。</p>
+    <% categories.forEach(([key, label]) => { const setting = channels[key] || { push: true, email: ['danger_report', 'good_place'].includes(key) }; %>
     <fieldset style="border:1px solid var(--line);border-radius:.75rem;padding:1rem"><legend><%= label %></legend>
       <div style="display:flex;gap:2rem;flex-wrap:wrap">
         <label style="display:flex;align-items:center"><input style="width:auto" role="switch" type="checkbox" name="<%= key %>_push" <%= setting.push ? 'checked' : '' %>>Push通知</label>

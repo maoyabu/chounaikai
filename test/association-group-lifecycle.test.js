@@ -62,14 +62,15 @@ test('deleted PR is unavailable while suspended PR remains eligible for lookup',
 
 test('association PR includes suspended groups and filters deleted groups in its query', async t => {
   const { loadAssociationPageData } = await import('../src/services/associationPublicPageService.js');
+  const { GoodPlace } = await import('../src/models/goodPlace.js');
   const { AssociationEvent } = await import('../src/models/associationEvent.js');
   const { Household, DistrictGroup } = await import('../src/models/organization.js');
   const { AnnualOfficer } = await import('../src/models/annualOfficer.js');
   const { DisclosureConsent } = await import('../src/models/disclosureConsent.js');
   const { AssociationMembership } = await import('../src/models/associationMembership.js');
   const { AnnualDepartmentPlan } = await import('../src/models/annualDepartmentPlan.js');
-  const query = value => ({ sort() { return this; }, select() { return this; }, populate() { return this; }, lean: async () => value });
-  for (const Model of [AssociationEvent, Household, DistrictGroup, AnnualOfficer, AnnualDepartmentPlan, DisclosureConsent, AssociationMembership]) t.mock.method(Model, 'find', () => query([]));
+  const query = value => ({ limit() { return this; }, sort() { return this; }, select() { return this; }, populate() { return this; }, lean: async () => value });
+  for (const Model of [GoodPlace, AssociationEvent, Household, DistrictGroup, AnnualOfficer, AnnualDepartmentPlan, DisclosureConsent, AssociationMembership]) t.mock.method(Model, 'find', () => query([]));
   const suspended = { _id: groupId, status: 'suspended', publicVisibility: 'open', name: '休止中グループ' };
   t.mock.method(AssociationGroup, 'find', filter => {
     assert.deepEqual(filter, { association: associationId, status: { $in: ['active', 'suspended'] } });

@@ -1,0 +1,12 @@
+<% if (reports.length) { const points = reports.map(report => ({ id: String(report._id), latitude: report.latitude, longitude: report.longitude, address: report.locationSource === 'address' ? report.address : null, title: report.title, url: `/associations/${association._id}/good-places/${report._id}` })); %>
+<p>写真をタップすると、その投稿の場所を地図に表示します。住所から検索した場所は大まかな位置です。</p>
+<p id="danger-map-status" role="status">最新の投稿場所を表示しています。</p>
+<iframe id="danger-history-frame" class="danger-map" title="わがまちのいいところのGoogleマップ" src="https://www.google.com/maps?q=<%= encodeURIComponent(points[0].address || `${points[0].latitude},${points[0].longitude}`) %>&amp;output=embed" referrerpolicy="no-referrer-when-downgrade"></iframe>
+<p>このページの投稿（最大50件）を表示しています。</p>
+<div class="danger-history-list"><% reports.forEach((report, index) => { %>
+<article class="danger-history-item" data-danger-report="<%= report._id %>">
+  <button type="button" class="danger-history-photo" data-danger-focus="<%= report._id %>" data-danger-query="<%= points[index].address || `${points[index].latitude},${points[index].longitude}` %>" aria-label="<%= report.title %>の場所を地図で表示" aria-pressed="false"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>の現場写真" loading="lazy"></button>
+  <div class="danger-history-description"><a href="<%= points[index].url %>"><strong><%= report.title %></strong></a><p><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></p><% if (points[index].address) { %><p><%= report.address %>（大まかな場所）</p><% } %></div>
+</article>
+<% }) %></div>
+<% } else { %><p>わがまちのいいところの投稿はありません。</p><% } %>

@@ -1,3 +1,5 @@
+import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from './goodPlaceDisclosureService.js';
+import { GoodPlace } from '../models/goodPlace.js';
 import { discloseOfficers } from './officerDisclosureService.js';
 import { Household, HouseholdMember, DistrictGroup } from '../models/organization.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
@@ -8,13 +10,15 @@ import { AssociationGroup, AssociationGroupMembership } from '../models/associat
 export const loadAssociationPageData = async (association, { publicOnly = true, month, viewer = {} } = {}) => {
   const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
   const window = calendarWindow(month, now);
-  const [events, districtGroups, households, rawOfficers, groups, departmentPlans] = await Promise.all([
+  const showGoodPlaceAuthors = !publicOnly && await canViewGoodPlaceAuthors(association._id, viewer.viewerId);
+  const [events, districtGroups, households, rawOfficers, groups, departmentPlans, goodPlaces] = await Promise.all([
     visibleEvents([association._id], { publicOnly, now: window.first }),
     DistrictGroup.find({ association: association._id, active: true, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
     Household.find({ association: association._id, active: true, deletedAt: { $exists: false } }).select('_id districtGroup').lean(),
     AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean(),
     AssociationGroup.find({ association: association._id, status: { $in: ['active', 'suspended'] } }).sort({ name: 1 }).lean(),
-    AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean()
+    AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean(),
+    goodPlaceAuthorQuery(GoodPlace.find({ association: association._id }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).limit(6).lean()
   ]);
   const officers = await discloseOfficers(association, rawOfficers, publicOnly ? { audience: 'open' } : viewer);
   const groupMembers = groups.length ? await AssociationGroupMembership.aggregate([{ $match: { association: association._id, group: { $in: groups.map(group => group._id) }, status: 'active' } }, { $group: { _id: '$group', count: { $sum: 1 } } }]) : [];
@@ -33,7 +37,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     officers: officers.filter((officer) => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || ''))
   }));
   return {
-    events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans: plansWithOfficers, districtStats,
+    goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans: plansWithOfficers, districtStats,
     groups: groups.filter(group => !publicOnly || group.publicVisibility === 'open').map(group => ({ ...group, memberCount: groupCount.get(String(group._id)) || 0 })),
     householdCount: households.length,
     residentCount: households.reduce((sum, household) => sum + (memberCountByHousehold.get(String(household._id)) || 0), 0)

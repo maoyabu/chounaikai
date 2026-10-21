@@ -1,0 +1,4 @@
+<% if (typeof goodPlaces !== 'undefined' && goodPlaces.length) { %>
+<section class="content-card good-place-gallery"><div class="section-heading"><h2>わがまちのいいところ</h2><a class="button button-quiet" href="/associations/<%= association._id %>/good-places">地図と履歴</a></div>
+<div class="good-place-grid"><% goodPlaces.forEach(report => { %><a class="good-place-feature" href="/associations/<%= association._id %>/good-places/<%= report._id %>"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>" loading="lazy"><div><strong><%= report.title %></strong><small><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></small></div></a><% }) %></div></section>
+<% } %>

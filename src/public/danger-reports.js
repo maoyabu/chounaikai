@@ -1,7 +1,9 @@
-(() => {
-  const dialog = document.getElementById('danger-compose');
-  if (!dialog) return;
-  const form = document.getElementById('danger-form'), status = document.getElementById('danger-location'), error = document.getElementById('danger-error'), submit = document.getElementById('danger-submit');
+document.querySelectorAll('[data-photo-post-dialog]').forEach(dialog => {
+  if (dialog.dataset.initialized) return;
+  dialog.dataset.initialized = 'true';
+  const prefix = dialog.dataset.photoPostDialog;
+  const field = suffix => document.getElementById(`${prefix}-${suffix}`);
+  const form = field('form'), status = field('location'), error = field('error'), submit = field('submit');
   let position = null, request = 0, previewUrl, sending = false;
   function showPosition() {
     status.textContent = position.locationSource === 'photo'
@@ -29,13 +31,14 @@
       position = result; showPosition();
     }, failed);
   }
-  document.getElementById('danger-open').addEventListener('click', () => dialog.showModal());
-  document.getElementById('danger-close').addEventListener('click', () => { if (!sending) dialog.close(); });
+  field('open')?.addEventListener('click', () => dialog.showModal());
+  if (dialog.dataset.autoOpen === 'true') dialog.showModal();
+  field('close').addEventListener('click', () => { if (!sending) dialog.close(); });
   dialog.addEventListener('cancel', event => { if (sending) event.preventDefault(); });
-  document.getElementById('danger-locate').addEventListener('click', locate);
+  field('locate').addEventListener('click', locate);
   form.elements.photo.addEventListener('change', async () => {
     position = null; const selection = ++request;
-    const preview = document.getElementById('danger-preview'), file = form.elements.photo.files[0];
+    const preview = field('preview'), file = form.elements.photo.files[0];
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     preview.hidden = true;
     if (!file) { status.textContent = '写真を選ぶと撮影場所または現在地を取得します。'; return; }
@@ -58,11 +61,11 @@
     else data.set('locationSource', 'address');
     sending = true; submit.disabled = true; submit.textContent = '投稿しています…';
     try {
-      const response = await fetch(`/associations/${form.elements.association.value}/dangers`, { method: 'POST', headers: { 'x-csrf-token': document.querySelector('meta[name="csrf-token"]').content }, body: data });
+      const response = await fetch(`/associations/${form.elements.association.value}/${dialog.dataset.postPath}`, { method: 'POST', headers: { 'x-csrf-token': document.querySelector('meta[name="csrf-token"]').content }, body: data });
       if (!response.ok) throw new Error('投稿できませんでした。写真の形式、入力内容、ログイン状態を確認して再度お試しください。');
       const result = await response.json();
       location.assign(result.url);
     } catch (reason) { error.textContent = reason.message; }
     finally { sending = false; submit.disabled = false; submit.textContent = '投稿する'; }
   });
-})();
+});

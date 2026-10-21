@@ -1,3 +1,4 @@
+import { goodPlacesRouter } from './routes/goodPlaces.js';
 import { dangerReportsRouter } from './routes/dangerReports.js';
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
@@ -103,6 +104,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/', webRouter);
+  app.use('/', goodPlacesRouter);
   // Disclosure views need the navigation and flash locals initialized by webRouter.
   app.use('/', disclosureRouter);
   app.use('/', privacyAuditRouter);

@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 
 export const notificationCategories = [
+  ['good_place', 'わがまちのいいところ投稿'],
+  ['danger_report', '緊急・危険情報'],
   ['officer_announcement', '役員から住民への連絡'], ['officer_network', '役員間の連絡'],
   ['district_message', '地区・班の連絡'], ['group_message', 'グループ内の連絡'],
   ['join', '町内会への参加申請・承認結果'], ['household', '世帯への確認依頼・所属変更'],
@@ -23,3 +25,5 @@ const schema = new mongoose.Schema({
   channels: { type: Map, of: new mongoose.Schema({ push: Boolean, email: Boolean }, { _id: false }) }
 }, { timestamps: true });
 export const NotificationSettings = mongoose.model('NotificationSettings', schema);
+
+export const defaultNotificationChannel = category => ({ push: true, email: ['danger_report', 'good_place'].includes(category) });

@@ -146,3 +146,11 @@ Atlasの接続元制限には固定IPの確保とNetwork Access設定が別途�
 Danger report photos use the association Google Drive connection and automatically create the message attachments folder when needed. A failed report save rolls back the uploaded file. Existing database photos migrate to Drive when first viewed; database image data is removed only after the Drive reference is saved.
 
 緊急・危険情報は詳細画面から、所属町内会の現任役員または町内会管理者が確認後に削除できます。削除時はサーバーで権限を再確認し、Google Driveの写真も削除します。Driveの写真削除に失敗した場合はその旨を表示します。
+
+### わがまちのいいところ
+
+所属町内会の住人はハンバーガーメニューの「ホーム」の下にある「いいところ投稿」から、写真（撮影・アルバム）、タイトル、内容を投稿できます。緊急・危険情報と同じ位置情報取得・EXIF読み取り・住所入力、10MB以下の写真制限を使います。写真は設定済みGoogle Driveのメッセージ添付フォルダに自動保存します。
+
+投稿は写真・タイトル・内容・投稿日時・場所を町内会PRページで一般公開します。公開PRページでは投稿者氏名を表示せず、所属町内会の有効な住人が見るページのみに氏名を表示します。詳細・履歴でも同じルールを適用し、未ログイン・他町内会の利用者には投稿者情報を渡しません。PRページの行事カレンダーの上に最新6件を大きな写真で表示し、詳細には内容・Googleマップ・地図と履歴へのリンクを表示します。履歴は50件ずつ閲覧でき、写真をタップして表示場所を切り替えます。APIキーや有料地図APIは使用しません。
+
+投稿時は町内会の有効なメンバー全員へアプリ内のお知らせを作成し、既存の配信処理でWeb Push・メール通知を送ります。初期設定は両方ONで、町内会の通知設定で変更できます。SMTP/VAPIDの設定と受信者の通知許可・メールアドレスが必要です。役員・町内会管理者は詳細画面から投稿とDriveの写真を削除できます。
