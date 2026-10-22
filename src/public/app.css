@@ -148,10 +148,10 @@
 .good-place-history-reactions{flex:1 1 50%;min-width:0;overflow-wrap:anywhere}
 .good-place-history-likes{font-weight:700;text-decoration:none;color:var(--green-dark)}
 .good-place-history-comment{margin:6px 0;white-space:pre-wrap}
-.good-place-photo-dialog{width:fit-content;max-width:94vw;max-height:90dvh;padding:16px;border:1px solid var(--line);border-radius:12px}
+.good-place-photo-dialog{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;border-radius:0;background:transparent;overflow:hidden;outline:none}
+.good-place-photo-dialog[open]{display:flex;align-items:center;justify-content:center}
 .good-place-photo-dialog::backdrop{background:#000b}
-.good-place-photo-dialog button{display:block;margin:0 0 12px auto;padding:8px 16px;font:inherit;cursor:pointer}
-.good-place-photo-dialog img{display:block;max-width:100%;max-height:75dvh;object-fit:contain}
+.good-place-photo-dialog img{display:block;width:auto;height:auto;max-width:98vw;max-height:98vh;max-height:98dvh;object-fit:contain}
 @media(max-width:760px){.good-place-history-page .danger-history-item{flex-wrap:wrap}.good-place-history-page .danger-history-description{flex:1 1 150px}.good-place-history-reactions{flex-basis:100%}}
 
 .good-place-gallery .good-place-layout-2{grid-template-columns:repeat(2,minmax(0,1fr))}

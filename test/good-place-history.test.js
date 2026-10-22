@@ -18,7 +18,7 @@ test('history renders reaction counts and escapes comment text', async () => {
 
 test('photo selection updates map and opens the selected full photo; close works', () => {
   const photo = {}, frame = {}, status = {}, close = {};
-  const dialog = { querySelector: selector => selector === 'img' ? photo : close, showModal() { this.open = true; }, close() { this.open = false; }, addEventListener() {} };
+  const dialog = { querySelector: selector => selector === 'img' ? photo : close, showModal() { this.open = true; }, close() { this.open = false; }, addEventListener(_event,handler) { this.backdropClick=handler; } };
   close.addEventListener = (_type, handler) => { close.click = handler; };
   const button = { dataset: { dangerQuery: '35,139' }, hasAttribute: () => true, querySelector: () => ({ src: '/photo', alt: '写真' }), setAttribute() {}, addEventListener(_type, handler) { this.click = handler; } };
   vm.runInNewContext(fs.readFileSync('src/public/danger-history.js', 'utf8'), { document: { querySelectorAll: selector => selector === '[data-danger-focus]' ? [button] : [], getElementById: id => ({ 'danger-history-frame': frame, 'danger-map-status': status, 'good-place-photo-dialog': dialog })[id] } });
@@ -27,7 +27,8 @@ test('photo selection updates map and opens the selected full photo; close works
   assert.equal(dialog.open, true);
   assert.equal(photo.src, '/photo');
   assert.equal(photo.alt, '写真');
-  close.click();
+  dialog.backdropClick({target:photo});assert.equal(dialog.open,true);
+  dialog.backdropClick({target:dialog});
   assert.equal(dialog.open, false);
 });
 
@@ -60,7 +61,7 @@ test('location thumbnail opens a large separate map window and keeps native fall
 
 test('detail photo tap opens enlargement and close returns to the page',()=>{
   let tap,close;
-  const dialog={showModal(){this.open=true;},close(){this.open=false;},addEventListener(){},querySelector:()=>({addEventListener(_event,handler){close=handler;}})};
+  const dialog={showModal(){this.open=true;},close(){this.open=false;},addEventListener(_event,handler){close=handler;},querySelector:()=>null};
   vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:id=>id==='good-place-detail-photo-dialog'?dialog:null,querySelector:selector=>selector==='[data-open-detail-photo]'?{addEventListener(_event,handler){tap=handler;}}:null}});
-  tap();assert.equal(dialog.open,true);close();assert.equal(dialog.open,false);
+  tap();assert.equal(dialog.open,true);close({target:{}});assert.equal(dialog.open,true);close({target:dialog});assert.equal(dialog.open,false);
 });

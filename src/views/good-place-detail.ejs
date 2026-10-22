@@ -17,4 +17,4 @@
 <p class="danger-body"><%= report.body %></p>
 
 <%- include('partials/good-place-reactions', { reactions: typeof reactions !== 'undefined' ? reactions : null, report, association }) %>
-</section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" aria-label="投稿写真の拡大表示"><button type="button" data-close-detail-photo autofocus>閉じる</button><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>
+</section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" tabindex="-1" aria-label="投稿写真の拡大表示"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

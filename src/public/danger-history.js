@@ -18,11 +18,8 @@ document.querySelectorAll('[data-danger-focus]').forEach(button => button.addEve
 
 const photoDialog = document.getElementById('good-place-photo-dialog');
 if (photoDialog?.querySelector) {
-  photoDialog.querySelector('[data-close-good-place-photo]').addEventListener('click', () => photoDialog.close());
   photoDialog.addEventListener('click', event => {
-    if (event.target !== photoDialog) return;
-    const bounds = photoDialog.getBoundingClientRect();
-    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) photoDialog.close();
+    if (event.target === photoDialog) photoDialog.close();
   });
 }
 
