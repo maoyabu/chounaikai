@@ -1,3 +1,4 @@
+import { GoodPlace } from '../models/goodPlace.js';
 import { dangerReportHomeWindow } from '../lib/dangerReportWindow.js';
 import { DangerReport } from '../models/dangerReport.js';
 import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
@@ -655,7 +656,11 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
     notifications.unshift(...pins.notifications);
     const dangerReports = await DangerReport.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, createdAt: dangerReportHomeWindow() }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).limit(6).lean();
-    return res.render('dashboard', { dangerReports, title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    const goodPlaceGalleries = await Promise.all(visibleMemberships.map(async membership => ({
+      association: membership.association,
+      goodPlaces: await GoodPlace.find({ association: membership.association._id }).select('-author').sort({ createdAt: -1, _id: -1 }).lean()
+    })));
+    return res.render('dashboard', { goodPlaceGalleries, dangerReports, title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

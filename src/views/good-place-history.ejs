@@ -1,6 +1,6 @@
 <%- include('partials/head') %><%- include('partials/header') %>
 <main class="page-shell"><a href="/associations/<%= association._id %>/public">← 町内会PRページ</a>
-<section class="content-card good-place-section"><p class="eyebrow"><%= association.name %></p><h1>わがまちのいいところの地図・履歴</h1>
+<section class="content-card good-place-section"><p class="eyebrow"><%= association.name %></p><h1>わがまちのいいところ</h1>
 <%- include('partials/good-place-history-content', { reports, association, showGoodPlaceAuthors: typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors }) %>
 <nav aria-label="履歴のページ"><% if (page > 1) { %><a href="?page=<%= page - 1 %>">← 前の50件</a><% } %> <% if (hasNext) { %><a href="?page=<%= page + 1 %>">次の50件 →</a><% } %></nav>
 </section></main><script src="/assets/danger-history.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

@@ -4,5 +4,4 @@ document.querySelectorAll('[data-danger-focus]').forEach(button => button.addEve
   frame.src = `https://www.google.com/maps?q=${encodeURIComponent(button.dataset.dangerQuery)}&output=embed`;
   document.querySelectorAll('[data-danger-focus]').forEach(photo => photo.setAttribute('aria-pressed', String(photo === button)));
   document.getElementById('danger-map-status').textContent = `${button.querySelector('img').alt}の場所を表示しています。`;
-  frame.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
 }));

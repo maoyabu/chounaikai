@@ -2,7 +2,7 @@
 <% if (currentUser) { %><%- include('partials/header') %><% } %>
 <main class="page-shell association-public-page">
   <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
-  <a class="back-link" href="/associations">← 町内会一覧へ戻る</a>
+  <a class="back-link" href="<%= currentUser ? "/dashboard" : "/associations" %>">← <%= currentUser ? "ホームへ戻る" : "町内会一覧へ戻る" %></a>
   <%- include('partials/association-page-content', { isResidentPage: false, calendarPath: `/associations/${association._id}/public` }) %>
 </main>
 <%- include('partials/foot') %>

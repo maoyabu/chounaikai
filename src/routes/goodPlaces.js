@@ -45,7 +45,7 @@ goodPlacesRouter.get('/associations/:associationId/good-places', async (req, res
     const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
     const showGoodPlaceAuthors = await canViewGoodPlaceAuthors(req.params.associationId, req.user?._id);
     const reports = await goodPlaceAuthorQuery(GoodPlace.find({ association: req.params.associationId }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
-    res.render('good-place-history', { title: 'わがまちのいいところの地図・履歴', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: reports.slice(0, 50).map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), hasNext: reports.length > 50, page });
+    res.render('good-place-history', { title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: reports.slice(0, 50).map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), hasNext: reports.length > 50, page });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(photo)?', async (req, res, next) => {
