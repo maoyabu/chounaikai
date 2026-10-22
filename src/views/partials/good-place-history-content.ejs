@@ -1,6 +1,5 @@
 <% if (reports.length) { const points = reports.map(report => ({ id: String(report._id), latitude: report.latitude, longitude: report.longitude, address: report.locationSource === 'address' ? report.address : null, title: report.title, url: `/associations/${association._id}/good-places/${report._id}` })); %>
-<p>写真をタップすると、その投稿の場所を地図に表示します。住所から検索した場所は大まかな位置です。</p>
-<p id="danger-map-status" role="status">最新の投稿場所を表示しています。</p>
+<p id="danger-map-status" class="visually-hidden-status" role="status"></p>
 <iframe id="danger-history-frame" class="danger-map" title="わがまちのいいところのGoogleマップ" src="https://www.google.com/maps?q=<%= encodeURIComponent(points[0].address || `${points[0].latitude},${points[0].longitude}`) %>&amp;output=embed" referrerpolicy="no-referrer-when-downgrade"></iframe>
 <p>このページの投稿（最大50件）を表示しています。</p>
 <div class="danger-history-list" role="region" aria-label="投稿履歴" tabindex="0"><% reports.forEach((report, index) => { %>

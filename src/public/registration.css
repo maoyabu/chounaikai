@@ -1717,3 +1717,14 @@ h1, h2, h3, h4, h5, h6,
 @media (max-width: 760px) {
   .association-public-hero:has(.group-member-actions) .association-public-hero-content { padding-top: 6rem; }
 }
+
+.good-place-history-page{padding:0}
+.good-place-history-heading{padding:20px;background:#dbeafe;color:#1e3a8a;border-bottom:1px solid #93c5fd;border-radius:15px 15px 0 0}
+.good-place-history-heading h1{margin:0;font-size:1.5rem}
+.good-place-history-body{padding:20px}
+.visually-hidden-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.group-pr-messages{padding:0}
+.group-pr-messages>.section-heading{margin:0;padding:20px;border-radius:15px 15px 0 0;background:var(--green-pale);border-bottom:1px solid var(--line)}
+.group-pr-messages>.section-heading h2{margin:0;font-size:1.5rem;color:var(--green-dark)}
+.group-pr-messages>.help-text{margin:20px 20px 0}
+.group-pr-messages>.question-home-list{padding:0 20px 20px}

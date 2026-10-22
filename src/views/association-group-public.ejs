@@ -8,7 +8,7 @@
 <% } else { %><form method="post" action="/associations/<%= group.association %>/groups/<%= group._id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-primary">グループに参加する</button></form><% } %></div><% } %></section>
 <section class="content-card association-public-introduction"><details class="association-info-details" open><summary><div class="association-info-summary-main"><h2>グループの基本情報</h2><p class="body-copy"><%= group.publicDescription || group.purpose || '紹介文は準備中です。' %></p></div><span aria-hidden="true">⌄</span></summary><div class="association-info-expanded"><p class="body-copy"><%= group.publicDescription || group.purpose || '紹介文は準備中です。' %></p></div></details></section>
 <% if (myMembership && group.status === 'active') { %>
-<section class="content-card communication-theme group-communication-theme question-home-section" aria-labelledby="group-pr-messages-title">
+<section class="content-card communication-theme group-communication-theme question-home-section group-pr-messages" aria-labelledby="group-pr-messages-title">
   <div class="section-heading"><h2 id="group-pr-messages-title">グループ内の連絡</h2></div>
   <p class="help-text">このグループの参加メンバー同士で連絡できます。</p>
   <div class="question-home-list">
