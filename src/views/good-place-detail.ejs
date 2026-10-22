@@ -4,7 +4,7 @@
 <a class="back-link" href="/associations/<%= association._id %>/good-places">← わがまちのいいところ</a>
 <section class="content-card good-place-section">
 <div class="good-place-detail-heading"><div><p class="eyebrow">わがまちのいいところ · <%= association.name %></p><h1><%= report.title %></h1></div><%- include('partials/good-place-delete', { canDelete: typeof canDelete !== 'undefined' && canDelete, association, report }) %></div>
-<div class="good-place-detail-photo"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>">
+<div class="good-place-detail-photo"><button type="button" class="good-place-detail-photo-open" data-open-detail-photo aria-label="写真を拡大表示" aria-haspopup="dialog"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></button>
 <% if (typeof reactions !== 'undefined' && reactions) { const base = `/associations/${association._id}/good-places/${report._id}`; %>
 <div class="good-place-photo-actions">
 <form action="<%= base %>/like" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="liked" value="<%= reactions.liked ? '0' : '1' %>"><button type="submit" aria-label="ライク♡ <%= reactions.likeCount %>" aria-pressed="<%= reactions.liked %>"><span aria-hidden="true"><%= reactions.liked ? '♥' : '♡' %></span><small><%= reactions.likeCount %></small></button></form>
@@ -17,4 +17,4 @@
 <p class="danger-body"><%= report.body %></p>
 
 <%- include('partials/good-place-reactions', { reactions: typeof reactions !== 'undefined' ? reactions : null, report, association }) %>
-</section></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>
+</section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" aria-label="投稿写真の拡大表示"><button type="button" data-close-detail-photo autofocus>閉じる</button><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

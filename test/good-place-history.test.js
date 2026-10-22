@@ -57,3 +57,10 @@ test('location thumbnail opens a large separate map window and keeps native fall
   assert.equal(destination,link.href);assert.equal(popup.opener,null);assert.equal(prevented,true);
   prevented=false;blocked=true;click({preventDefault(){prevented=true;}});assert.equal(prevented,false);
 });
+
+test('detail photo tap opens enlargement and close returns to the page',()=>{
+  let tap,close;
+  const dialog={showModal(){this.open=true;},close(){this.open=false;},addEventListener(){},querySelector:()=>({addEventListener(_event,handler){close=handler;}})};
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:id=>id==='good-place-detail-photo-dialog'?dialog:null,querySelector:selector=>selector==='[data-open-detail-photo]'?{addEventListener(_event,handler){tap=handler;}}:null}});
+  tap();assert.equal(dialog.open,true);close();assert.equal(dialog.open,false);
+});

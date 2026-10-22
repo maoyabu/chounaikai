@@ -20,3 +20,15 @@ if (locationLink) {
     event.preventDefault();
   });
 }
+
+const detailPhotoDialog = document.getElementById('good-place-detail-photo-dialog');
+const detailPhotoTrigger = document.querySelector('[data-open-detail-photo]');
+if (detailPhotoDialog && detailPhotoTrigger) {
+  detailPhotoTrigger.addEventListener('click', () => detailPhotoDialog.showModal());
+  detailPhotoDialog.querySelector('[data-close-detail-photo]').addEventListener('click', () => detailPhotoDialog.close());
+  detailPhotoDialog.addEventListener('click', event => {
+    if (event.target !== detailPhotoDialog) return;
+    const bounds = detailPhotoDialog.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) detailPhotoDialog.close();
+  });
+}

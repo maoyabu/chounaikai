@@ -1732,7 +1732,7 @@ h1, h2, h3, h4, h5, h6,
 .good-place-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .good-place-delete-form{margin:0;flex:none}
 .good-place-detail-photo{position:relative;width:fit-content;max-width:100%;margin:0 auto}
-.good-place-detail-photo>img{display:block;width:auto;max-width:100%;height:auto;max-height:70vh;max-height:70dvh;object-fit:contain;border-radius:10px}
+.good-place-detail-photo-open>img{display:block;width:auto;max-width:100%;height:auto;max-height:70vh;max-height:70dvh;object-fit:contain;border-radius:10px}
 .good-place-photo-actions{position:absolute;right:16px;bottom:16px;display:grid;gap:12px;padding:12px;border-radius:12px;background:#0009;color:#fff}
 .good-place-photo-actions button{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit}
 .good-place-photo-actions button>span{font-size:32px;line-height:1}
@@ -1756,3 +1756,6 @@ h1, h2, h3, h4, h5, h6,
 
 .good-place-detail-photo>.good-place-location-link{position:absolute;left:12px;bottom:12px;width:clamp(90px,22vw,150px);height:clamp(72px,16vw,110px);max-width:40%;box-shadow:0 2px 8px #0003;background:#fff}
 @media(max-width:480px){.good-place-photo-actions{right:8px;bottom:8px;padding:6px;gap:6px}.good-place-detail-photo>.good-place-location-link{left:8px;bottom:8px}}
+
+.good-place-detail-photo-open{display:block;max-width:100%;padding:0;border:0;border-radius:10px;background:transparent;cursor:zoom-in}
+.good-place-detail-photo-open:focus-visible{outline:3px solid var(--green);outline-offset:3px}
