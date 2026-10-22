@@ -1,10 +1,10 @@
 <% if (reactions) { const base = `/associations/${association._id}/good-places/${report._id}`; %>
-<section id="good-place-reactions" class="good-place-reactions" aria-label="住人のLikeとコメント">
+<section id="good-place-reactions" class="good-place-reactions" aria-label="住人のライク♡とコメント">
   <form action="<%= base %>/like" method="post" class="good-place-like-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="liked" value="<%= reactions.liked ? '0' : '1' %>">
-    <button class="button <%= reactions.liked ? 'button-primary' : 'button-quiet' %>" type="submit" aria-pressed="<%= reactions.liked %>"><%= reactions.liked ? '♥ Like済み' : '♡ Like' %> <%= reactions.likeCount %></button>
+    <button class="button <%= reactions.liked ? 'button-primary' : 'button-quiet' %>" type="submit" aria-pressed="<%= reactions.liked %>"><%= reactions.liked ? 'ライク♡済み' : 'ライク♡' %> <%= reactions.likeCount %></button>
   </form>
-  <h2>住人のコメント</h2><p class="help-text">Likeとコメントは、この町内会の住人だけが閲覧・投稿できます。</p>
+  <h2>住人のコメント</h2><p class="help-text">ライク♡とコメントは、この町内会の住人だけが閲覧・投稿できます。</p>
   <% if (report.commentsEnabled !== false) { %>
   <form action="<%= base %>/comments" method="post" class="form-stack good-place-comment-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">

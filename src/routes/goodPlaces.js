@@ -81,7 +81,7 @@ const reactionInput = req => ({ associationId: req.params.associationId, reportI
 const reactionReturn = (req, res) => res.redirect(`/associations/${req.params.associationId}/good-places/${req.params.reportId}#good-place-reactions`);
 goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/like', requireLogin, verifyCsrfToken, async (req, res, next) => {
   try {
-    if (!['0', '1'].includes(req.body.liked)) throw Object.assign(new Error('Likeの操作を確認してください。'), { status: 400 });
+    if (!['0', '1'].includes(req.body.liked)) throw Object.assign(new Error('ライク♡の操作を確認してください。'), { status: 400 });
     await setGoodPlaceLike(reactionInput(req), req.body.liked === '1');
     reactionReturn(req, res);
   } catch (error) { next(error); }

@@ -9,7 +9,7 @@ test('history renders reaction counts and escapes comment text', async () => {
     association: { _id: 'association' },
     reports: [{ _id: 'report', title: '写真', latitude: 35, longitude: 139, createdAt: new Date(), historyReactions: { likeCount: 3, comments: [{ body: '<script>bad</script>', user: { displayname: '住人' } }, { body: '最新の感想' }] } }]
   });
-  assert.match(html, /♥ Like 3/);
+  assert.match(html, /ライク♡ 3/);
   assert.match(html, /&lt;script&gt;bad&lt;\/script&gt;/);
   assert.match(html, /最新の感想/);
   assert.match(html, /data-good-place-enlarge/);
