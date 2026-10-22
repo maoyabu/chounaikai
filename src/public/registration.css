@@ -1759,3 +1759,19 @@ h1, h2, h3, h4, h5, h6,
 
 .good-place-detail-photo-open{display:block;max-width:100%;padding:0;border:0;border-radius:10px;background:transparent;cursor:zoom-in}
 .good-place-detail-photo-open:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+
+/* Keep directory discovery first, with a compact photo gallery below the request card. */
+.association-list-sidebar { display: grid; gap: 1.25rem; min-width: 0; }
+.association-list-sidebar .directory-gallery-accordion { margin: 0; min-width: 0; }
+.association-list-sidebar .directory-gallery-accordion > summary { padding: 1rem; gap: .5rem; flex-wrap: nowrap; }
+.association-list-sidebar .directory-gallery-title { gap: .5rem; }
+.association-list-sidebar .directory-gallery-title h2 { font-size: 1.1rem; }
+.association-list-sidebar .good-place-gallery-latest { display: none; }
+.association-list-sidebar .good-place-grid { margin: 1rem; }
+.association-list-sidebar .good-place-layout-1 .good-place-feature > img { height: auto; aspect-ratio: 4 / 3; flex: none; }
+.association-list-sidebar .good-place-feature > div { height: 8.5rem; overflow: hidden; }
+.association-list-sidebar .good-place-feature small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.association-list-sidebar .good-place-gallery-controls { margin: 0 1rem 1rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
+.association-list-sidebar .good-place-gallery-controls[hidden] { display: none; }
+.association-list-sidebar .good-place-gallery-controls .button { min-width: 0; padding: .5rem .2rem; font-size: .8rem; }
+.directory-gallery-likes { display: block; margin-top: .5rem; color: var(--green-dark); font-size: .85rem; font-weight: 700; }

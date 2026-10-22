@@ -1,4 +1,5 @@
 import { GoodPlace } from '../models/goodPlace.js';
+import { GoodPlaceLike } from '../models/goodPlaceReaction.js';
 import { dangerReportHomeWindow } from '../lib/dangerReportWindow.js';
 import { DangerReport } from '../models/dangerReport.js';
 import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
@@ -199,6 +200,14 @@ webRouter.get('/associations', async (req, res, next) => {
     const prefectures = Object.keys(locations).sort((a, b) => a.localeCompare(b, 'ja'));
     const citiesByPrefecture = Object.fromEntries(prefectures.map((name) => [name, [...locations[name]].sort((a, b) => a.localeCompare(b, 'ja'))]));
     const directoryGoodPlaces = await GoodPlace.find({ association: { $in: locationAssociations.map(item => item._id) } }).select('-author').populate('association', 'name').sort({ createdAt: -1, _id: -1 }).lean();
+    if (directoryGoodPlaces.length) {
+      const counts = await GoodPlaceLike.aggregate([
+        { $match: { association: { $in: locationAssociations.map(item => item._id) }, report: { $in: directoryGoodPlaces.map(item => item._id) } } },
+        { $group: { _id: '$report', count: { $sum: 1 } } }
+      ]);
+      const countById = new Map(counts.map(item => [String(item._id), item.count]));
+      directoryGoodPlaces.forEach(report => { report.likeCount = countById.get(String(report._id)) || 0; });
+    }
     return res.render('association-list', { directoryGoodPlaces, title: '町内会一覧', associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
   } catch (error) { return next(error); }
 });

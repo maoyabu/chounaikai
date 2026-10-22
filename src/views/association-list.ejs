@@ -1,7 +1,6 @@
 <%- include('partials/head') %>
 <% if (currentUser) { %><%- include('partials/header') %><% } %>
 <main class="page-shell association-list-shell">
-  <%- include('partials/directory-good-place-gallery', { goodPlaces: typeof directoryGoodPlaces !== 'undefined' ? directoryGoodPlaces : [] }) %>
   <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
   <div class="association-list-layout">
   <div class="association-list-main">
@@ -20,6 +19,7 @@
     <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
   </section>
   </div>
+  <aside class="association-list-sidebar" aria-label="町内会の申請と地域の写真">
   <section class="content-card association-list-request"><div class="association-list-request-heading"><h2>町内会が見つからない場合</h2></div><p>一覧を確認しても該当する町内会がない場合は、新規で町内会を申請できます。</p><p>※申請者が町内会の管理者となりますが、後で別の人に変更も可能です</p>
     <div class="association-list-request-actions"><div class="form-actions">
       <% if (currentUser) { %>
@@ -30,6 +30,8 @@
       <% } %>
     </div></div>
   </section>
+  <%- include('partials/directory-good-place-gallery', { goodPlaces: typeof directoryGoodPlaces !== 'undefined' ? directoryGoodPlaces : [] }) %>
+  </aside>
   </div>
 </main>
 <script>
