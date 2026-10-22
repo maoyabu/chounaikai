@@ -39,3 +39,21 @@ test('changing sort submits the selected order automatically', () => {
   select.change();
   assert.equal(submitted, true);
 });
+
+test('detail comment icon opens modal and return from comment submission reopens it',()=>{
+  const dialog={open:false,showModal(){this.open=true;},close(){this.open=false;},querySelector(){return {addEventListener(_event,handler){dialog.closeClick=handler;}};}};
+  let openClick;
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>dialog,querySelector:selector=>selector === '[data-open-comments]' ? {addEventListener(_event,handler){openClick=handler;}} : null},window:{addEventListener(){}},location:{hash:'#good-place-reactions',search:''},URLSearchParams});
+  assert.equal(dialog.open,true);dialog.closeClick();assert.equal(dialog.open,false);openClick();assert.equal(dialog.open,true);
+});
+
+test('location thumbnail opens a large separate map window and keeps native fallback',()=>{
+  let click, prevented=false, destination;
+  const popup={opener:{},location:{replace(url){destination=url;}}};
+  const link={href:'https://www.google.com/maps/search/?api=1&query=35%2C139',addEventListener(_event,handler){click=handler;}};
+  let blocked=false;
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>null,querySelector:()=>link},window:{open(url,target,features){assert.match(features,/width=1200/);return blocked?null:popup;}}});
+  click({preventDefault(){prevented=true;}});
+  assert.equal(destination,link.href);assert.equal(popup.opener,null);assert.equal(prevented,true);
+  prevented=false;blocked=true;click({preventDefault(){prevented=true;}});assert.equal(prevented,false);
+});

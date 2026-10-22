@@ -69,7 +69,7 @@ goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(
     if (req.params.photo) return await streamFile(req, res, report.photoAttachment);
     let canDelete = false;
     if (req.user && showGoodPlaceAuthors) {
-      try { canDelete = (await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id })).canAnswer; }
+      try { canDelete = (await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id })).canAnswer || String(report.author?._id || report.author) === String(req.user._id); }
       catch (error) { if (error.status !== 403) throw error; }
     }
     const owner = showGoodPlaceAuthors && String(report.author?._id || report.author) === String(req.user._id);

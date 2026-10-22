@@ -53,3 +53,11 @@ test('delete endpoint requires CSRF and confirmation button is restricted to aut
   const allowed=await ejs.renderFile('src/views/partials/danger-delete.ejs',{...locals,canDelete:true});
   assert.match(allowed,/confirm\(/);assert.match(allowed,/name="_csrf" value="token"/);assert.match(allowed,/method="post"/);
 });
+
+test('good-place author deletion is scoped to the actor; other residents cannot delete',async()=>{
+  const {deps,calls}=fixture(false);
+  await deleteDangerReport({...input,allowAuthor:true},deps);
+  assert.deepEqual(calls[0],{_id:input.reportId,association:input.associationId,author:input.userId});
+  deps.model.findOneAndDelete=filter=>({lean:async()=>filter.author==='other-author'?{}:null});
+  await assert.rejects(deleteDangerReport({...input,allowAuthor:true},deps),{status:404});
+});

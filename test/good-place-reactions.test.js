@@ -54,10 +54,10 @@ test('only original post author can hide and restore comments in that report',as
   await assert.rejects(moderateGoodPlaceComment(input,commentId,true),{status:403});
 });
 test('residents only retrieve visible comments; author may retrieve hidden comments for moderation',async t=>{
-  t.mock.method(GoodPlaceLike,'countDocuments',async()=>3);t.mock.method(GoodPlaceLike,'exists',async()=>true);
+  t.mock.method(GoodPlaceComment,'countDocuments',async()=>2);t.mock.method(GoodPlaceLike,'countDocuments',async()=>3);t.mock.method(GoodPlaceLike,'exists',async()=>true);
   let queryFilter;
   t.mock.method(GoodPlaceComment,'find',filter=>{queryFilter=filter;return {populate(_field,fields){assert.equal(fields,'displayname');return this;},sort(){return this;},skip(){return this;},limit(){return this;},lean:async()=>[]};});
-  const result=await loadGoodPlaceReactions({...input,owner:false});assert.equal(queryFilter.hiddenAt,null);assert.equal(result.likeCount,3);assert.equal(result.liked,true);
+  const result=await loadGoodPlaceReactions({...input,owner:false});assert.equal(queryFilter.hiddenAt,null);assert.equal(result.likeCount,3);assert.equal(result.commentCount,2);assert.equal(result.liked,true);
   await loadGoodPlaceReactions({...input,owner:true});assert.equal(Object.hasOwn(queryFilter,'hiddenAt'),false);
 });
 test('every mutation endpoint requires login and CSRF',()=>{
@@ -71,7 +71,7 @@ test('public page renders no reaction data; residents see controls, escaped comm
   assert.equal((await ejs.renderFile('src/views/partials/good-place-reactions.ejs',{...locals,reactions:null})).trim(),'');
   const reactions={liked:true,likeCount:3,owner:true,page:1,hasNext:false,comments:[{_id:commentId,user:{displayname:'住人'},body:'<script>alert(1)</script>',createdAt:new Date(),hiddenAt:new Date()}]};
   const html=await ejs.renderFile('src/views/partials/good-place-reactions.ejs',{...locals,reactions});
-  assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/再表示する/);assert.match(html,/name="liked" value="0"/);
+  assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/再表示する/);assert.match(html,/<dialog/);assert.ok(html.indexOf('good-place-comments-scroll') < html.indexOf('good-place-comments-composer'));
   const disabled=await ejs.renderFile('src/views/partials/good-place-reactions.ejs',{...locals,report:{...locals.report,commentsEnabled:false},reactions:{...reactions,owner:false,comments:[]}});
   assert.doesNotMatch(disabled,/<textarea|非表示にする/);assert.match(disabled,/コメントを受け付けていません/);
 });

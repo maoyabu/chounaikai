@@ -1,6 +1,6 @@
 <% if (canDelete) { %>
-<form class="danger-delete-form" action="/associations/<%= association._id %>/good-places/<%= report._id %>/delete" method="post" onsubmit="return confirm('このいいところ投稿を削除しますか？削除すると元に戻せません。');">
+<form class="good-place-delete-form" action="/associations/<%= association._id %>/good-places/<%= report._id %>/delete" method="post" onsubmit="return confirm('このいいところ投稿を削除しますか？削除すると元に戻せません。');">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <button class="button button-danger-outline" type="submit">このいいところ投稿を削除する</button>
+  <button class="button button-danger-outline" type="submit" aria-label="このいいところ投稿を削除する" title="投稿を削除"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>
 </form>
 <% } %>

@@ -15,4 +15,4 @@ export async function loadGoodPlaceAssociation(id) {
 }
 export const createGoodPlaceWithPhoto = input => createDangerReportWithPhoto({ ...input, photoPrefix: 'good_place' }, { model: GoodPlace, attachmentContext, saveMessageAttachments, removeMessageAttachments });
 export const queueGoodPlaceNotifications = report => queueDangerReportNotifications(report, { type: 'good_place', label: 'わがまちのいいところ', relatedType: 'GoodPlace' });
-export const deleteGoodPlace = input => deleteDangerReport({ ...input, label: 'いいところ投稿' }, { model: GoodPlace, loadAccess: loadQuestionBoxAccess, attachmentContext, removeMessageAttachments });
+export const deleteGoodPlace = input => deleteDangerReport({ ...input, label: 'いいところ投稿', allowAuthor: true }, { model: GoodPlace, loadAccess: loadQuestionBoxAccess, attachmentContext, removeMessageAttachments });

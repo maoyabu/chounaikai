@@ -1728,3 +1728,28 @@ h1, h2, h3, h4, h5, h6,
 .group-pr-messages>.section-heading h2{margin:0;font-size:1.5rem;color:var(--green-dark)}
 .group-pr-messages>.help-text{margin:20px 20px 0}
 .group-pr-messages>.question-home-list{padding:0 20px 20px}
+
+.good-place-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.good-place-delete-form{margin:0;flex:none}
+.good-place-detail-photo{position:relative}
+.good-place-detail-photo>img{display:block;width:100%;height:auto;border-radius:10px}
+.good-place-photo-actions{position:absolute;right:16px;bottom:16px;display:grid;gap:12px;padding:12px;border-radius:12px;background:#0009;color:#fff}
+.good-place-photo-actions button{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit}
+.good-place-photo-actions button>span{font-size:32px;line-height:1}
+.good-place-photo-actions button[aria-pressed=true]{color:#ffadc2}
+.good-place-photo-actions small{font-size:14px}
+.good-place-detail-meta{color:var(--muted);font-size:.85rem}
+.good-place-location-link{position:relative;display:block;width:150px;height:110px;border:1px solid var(--line);border-radius:12px;overflow:hidden;text-decoration:none}
+.good-place-location-link iframe{width:100%;height:100%;border:0;pointer-events:none}
+.good-place-location-link span{position:absolute;bottom:0;left:0;right:0;background:#fffe;font-size:11px;padding:4px;text-align:center}
+.good-place-comments-dialog{width:min(640px,calc(100vw - 24px));height:min(760px,90dvh);max-height:90dvh;padding:0;border:1px solid var(--line);border-radius:16px;color:var(--ink)}
+.good-place-comments-dialog[open]{display:flex;flex-direction:column}
+.good-place-comments-dialog::backdrop{background:#0009}
+.good-place-comments-heading{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line);flex:none}
+.good-place-comments-heading h2{margin:0;font-size:1.2rem}
+.good-place-comments-heading button{font:inherit;font-size:24px;min-width:44px;min-height:44px;border:0;background:transparent;cursor:pointer}
+.good-place-comments-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px}
+.good-place-comments-composer{flex:none;padding:16px;border-top:1px solid var(--line);background:#fff}
+.good-place-comments-composer .good-place-comment-form{margin:0;gap:8px}
+.good-place-comments-composer textarea{max-height:20dvh;resize:vertical}
+.good-place-comments-composer .help-text{margin:0}

@@ -42,12 +42,13 @@ export async function moderateGoodPlaceComment(input, commentId, hidden) {
 }
 export async function loadGoodPlaceReactions({ associationId, reportId, userId, owner, page = 1 }) {
   const filter = { association: associationId, report: reportId };
-  const [likeCount, liked, comments] = await Promise.all([
+  const [likeCount, liked, comments, commentCount] = await Promise.all([
     GoodPlaceLike.countDocuments(filter),
     GoodPlaceLike.exists({ ...filter, user: userId }),
-    GoodPlaceComment.find({ ...filter, ...(!owner ? { hiddenAt: null } : {}) }).populate('user', 'displayname').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean()
+    GoodPlaceComment.find({ ...filter, ...(!owner ? { hiddenAt: null } : {}) }).populate('user', 'displayname').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean(),
+    GoodPlaceComment.countDocuments({ ...filter, hiddenAt: null })
   ]);
-  return { likeCount, liked: Boolean(liked), comments: comments.slice(0, 50), hasNext: comments.length > 50, page, owner };
+  return { likeCount, commentCount, liked: Boolean(liked), comments: comments.slice(0, 50), hasNext: comments.length > 50, page, owner };
 }
 
 export async function loadGoodPlaceHistoryReactions(associationId, reports) {

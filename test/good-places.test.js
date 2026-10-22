@@ -74,7 +74,7 @@ test('posting, detail and map/history pages render without paid Google API',asyn
   const post=await ejs.renderFile('src/views/good-place-new.ejs',{...globals,memberships:[{association}]});
   assert.match(post,/data-post-path="good-places"/);assert.match(post,/一般公開/);assert.doesNotMatch(post,/capture=/);
   const detail=await ejs.renderFile('src/views/good-place-detail.ejs',{...globals,association,report,canDelete:false});
-  assert.match(detail,/春の景色/);assert.match(detail,/good-places">わがまち/);assert.doesNotMatch(detail,/maps.googleapis|削除する/);
+  assert.match(detail,/春の景色/);assert.match(detail,/good-places">← わがまち/);assert.doesNotMatch(detail,/maps.googleapis|削除する/);
   const history=await ejs.renderFile('src/views/good-place-history.ejs',{...globals,association,reports:[report],page:1,hasNext:false});
   assert.match(history,/data-danger-focus/);assert.match(history,/町内の公園/);assert.doesNotMatch(history,/maps.googleapis|\/dangers/);
 });
