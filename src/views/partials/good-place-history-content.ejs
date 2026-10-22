@@ -4,8 +4,12 @@
 <p>このページの投稿（最大50件）を表示しています。</p>
 <div class="danger-history-list" role="region" aria-label="投稿履歴" tabindex="0"><% reports.forEach((report, index) => { %>
 <article class="danger-history-item" data-danger-report="<%= report._id %>">
-  <button type="button" class="danger-history-photo" data-danger-focus="<%= report._id %>" data-danger-query="<%= points[index].address || `${points[index].latitude},${points[index].longitude}` %>" aria-label="<%= report.title %>の場所を地図で表示" aria-pressed="false"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>の現場写真" loading="lazy"></button>
+  <button type="button" class="danger-history-photo" data-good-place-enlarge aria-haspopup="dialog" data-danger-focus="<%= report._id %>" data-danger-query="<%= points[index].address || `${points[index].latitude},${points[index].longitude}` %>" aria-label="<%= report.title %>の場所を地図で表示" aria-pressed="false"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>の現場写真" loading="lazy"></button>
   <div class="danger-history-description"><a href="<%= points[index].url %>"><strong><%= report.title %></strong></a><p><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></p><% if (points[index].address) { %><p><%= report.address %>（大まかな場所）</p><% } %></div>
+  <% if (report.historyReactions) { %><div class="good-place-history-reactions"><a href="<%= points[index].url %>#good-place-reactions" class="good-place-history-likes">♥ Like <%= report.historyReactions.likeCount %></a>
+  <% report.historyReactions.comments.forEach(comment => { %><p class="good-place-history-comment"><strong><%= comment.user?.displayname || '退会した住人' %></strong>：<%= comment.body %></p><% }) %>
+  </div><% } %>
 </article>
 <% }) %></div>
+<dialog id="good-place-photo-dialog" class="good-place-photo-dialog" aria-label="投稿写真の拡大表示"><button type="button" data-close-good-place-photo autofocus>閉じる</button><img alt=""></dialog>
 <% } else { %><p>わがまちのいいところの投稿はありません。</p><% } %>

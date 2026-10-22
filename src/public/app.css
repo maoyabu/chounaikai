@@ -143,3 +143,13 @@
 
 .good-place-gallery .good-place-grid{margin:20px}
 .good-place-gallery .good-place-gallery-controls{margin:0 20px 20px}
+
+.good-place-history-page .danger-history-description{flex:1 1 260px}
+.good-place-history-reactions{flex:1 1 50%;min-width:0;overflow-wrap:anywhere}
+.good-place-history-likes{font-weight:700;text-decoration:none;color:var(--green-dark)}
+.good-place-history-comment{margin:6px 0;white-space:pre-wrap}
+.good-place-photo-dialog{width:fit-content;max-width:94vw;max-height:90dvh;padding:16px;border:1px solid var(--line);border-radius:12px}
+.good-place-photo-dialog::backdrop{background:#000b}
+.good-place-photo-dialog button{display:block;margin:0 0 12px auto;padding:8px 16px;font:inherit;cursor:pointer}
+.good-place-photo-dialog img{display:block;max-width:100%;max-height:75dvh;object-fit:contain}
+@media(max-width:760px){.good-place-history-page .danger-history-item{flex-wrap:wrap}.good-place-history-page .danger-history-description{flex:1 1 150px}.good-place-history-reactions{flex-basis:100%}}

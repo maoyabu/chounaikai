@@ -49,3 +49,21 @@ export async function loadGoodPlaceReactions({ associationId, reportId, userId, 
   ]);
   return { likeCount, liked: Boolean(liked), comments: comments.slice(0, 50), hasNext: comments.length > 50, page, owner };
 }
+
+export async function loadGoodPlaceHistoryReactions(associationId, reports) {
+  if (!reports.length) return reports;
+  const association = new mongoose.Types.ObjectId(String(associationId));
+  const counts = await GoodPlaceLike.aggregate([
+    { $match: { association, report: { $in: reports.map(report => report._id) } } },
+    { $group: { _id: '$report', count: { $sum: 1 } } }
+  ]);
+  const countById = new Map(counts.map(item => [String(item._id), item.count]));
+  return Promise.all(reports.map(async report => ({
+    ...report,
+    historyReactions: {
+      likeCount: countById.get(String(report._id)) || 0,
+      comments: await GoodPlaceComment.find({ association: associationId, report: report._id, hiddenAt: null })
+        .select('body user createdAt').populate('user', 'displayname').sort({ createdAt: -1, _id: -1 }).limit(2).lean()
+    }
+  })));
+}
