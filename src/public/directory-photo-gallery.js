@@ -1,6 +1,12 @@
 document.querySelectorAll('[data-directory-photo-gallery]').forEach(gallery => {
   const track = gallery.querySelector('.directory-photo-track');
-  if (track.children.length <= 3) return;
+  const intervalSelect = gallery.querySelector('[data-photo-interval]');
+  const storageKey = 'directory-photo-interval';
+  const allowedSeconds = [3, 5, 10, 15, 30];
+  const validSeconds = value => allowedSeconds.includes(Number(value)) ? Number(value) : 5;
+  let seconds = 5;
+  try { seconds = validSeconds(window.localStorage.getItem(storageKey)); } catch { /* Storage is optional. */ }
+  intervalSelect.value = String(seconds);
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let timer, animation, hovering = false;
   function reset() {
@@ -10,7 +16,7 @@ document.querySelectorAll('[data-directory-photo-gallery]').forEach(gallery => {
   }
   function schedule() {
     clearInterval(timer);
-    if (motion.matches || hovering || gallery.contains(document.activeElement) || document.hidden || !gallery.open) return;
+    if (motion.matches || hovering || gallery.contains(document.activeElement) || document.hidden || track.children.length <= 3) return;
     timer = setInterval(() => {
       if (animation) return;
       const first = track.firstElementChild;
@@ -25,14 +31,19 @@ document.querySelectorAll('[data-directory-photo-gallery]').forEach(gallery => {
         track.append(first);
         reset();
       }, () => {});
-    }, 5000);
+    }, seconds * 1000);
   }
   function stop() { clearInterval(timer); reset(); }
   gallery.addEventListener('mouseenter', () => { hovering = true; stop(); });
   gallery.addEventListener('mouseleave', () => { hovering = false; schedule(); });
   gallery.addEventListener('focusin', stop);
   gallery.addEventListener('focusout', () => setTimeout(schedule, 0));
-  gallery.addEventListener('toggle', () => { stop(); schedule(); });
+  intervalSelect.addEventListener('change', () => {
+    seconds = validSeconds(intervalSelect.value);
+    intervalSelect.value = String(seconds);
+    try { window.localStorage.setItem(storageKey, String(seconds)); } catch { /* Storage is optional. */ }
+    stop(); schedule();
+  });
   document.addEventListener('visibilitychange', () => { stop(); schedule(); });
   motion.addEventListener('change', () => { stop(); schedule(); });
   window.addEventListener('resize', () => { stop(); schedule(); });

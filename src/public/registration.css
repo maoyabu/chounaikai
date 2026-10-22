@@ -1762,11 +1762,12 @@ h1, h2, h3, h4, h5, h6,
 
 /* Keep directory discovery first, with a compact photo gallery below the request card. */
 .association-list-sidebar { display: grid; gap: 1.25rem; min-width: 0; }
-.association-list-sidebar .directory-gallery-accordion { margin: 0; min-width: 0; }
-.association-list-sidebar .directory-gallery-accordion > summary { padding: 1rem; gap: .5rem; flex-wrap: nowrap; }
-.association-list-sidebar .directory-gallery-title { gap: .5rem; }
-.association-list-sidebar .directory-gallery-title h2 { font-size: 1.1rem; }
- .directory-photo-viewport { margin: 1rem; overflow: hidden; --photo-height: 180px; --photo-gap: 12px; max-height: calc(var(--photo-height) * 3 + var(--photo-gap) * 2); }
+.association-list-sidebar .directory-photo-gallery { margin: 0; min-width: 0; }
+.directory-photo-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; padding: 1rem; background: #dbeafe; color: #1e3a8a; border-bottom: 1px solid #93c5fd; border-radius: 15px 15px 0 0; }
+.directory-photo-gallery .directory-photo-heading h2 { margin: 0; font-size: 1.1rem; }
+.directory-photo-heading select { min-height: 44px; padding: .4rem .5rem; border: 1px solid #93c5fd; border-radius: .5rem; background: #fff; color: #1e3a8a; font: inherit; cursor: pointer; }
+.directory-photo-heading select:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+.directory-photo-viewport { margin: 1rem; overflow: hidden; --photo-height: 180px; --photo-gap: 12px; max-height: calc(var(--photo-height) * 3 + var(--photo-gap) * 2); }
 .directory-photo-track { display: flex; flex-direction: column; gap: var(--photo-gap); }
 .directory-photo-card { position: relative; display: block; flex: 0 0 var(--photo-height); height: var(--photo-height); overflow: hidden; border-radius: 10px; text-decoration: none; color: #fff; }
 .directory-photo-card[hidden] { display: none; }

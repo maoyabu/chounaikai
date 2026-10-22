@@ -1,6 +1,6 @@
 <% if (typeof goodPlaces !== 'undefined' && goodPlaces.length) { %>
-<details open class="content-card good-place-gallery directory-gallery-accordion" data-directory-photo-gallery>
-  <summary class="section-heading good-place-gallery-link"><span class="directory-gallery-title"><h2>わがまちのいいところ</h2></span><span class="directory-gallery-chevron" aria-hidden="true">⌄</span></summary>
+<section class="content-card good-place-gallery directory-photo-gallery" data-directory-photo-gallery>
+  <div class="directory-photo-heading"><h2>わがまちのいいところ</h2><select data-photo-interval aria-label="写真の切り替え間隔"><% [3, 5, 10, 15, 30].forEach(seconds => { %><option value="<%= seconds %>" <%= seconds === 5 ? 'selected' : '' %>><%= seconds %>秒</option><% }) %></select></div>
   <div class="directory-photo-viewport"><div class="directory-photo-track">
     <% goodPlaces.forEach((report, index) => { %>
     <a class="directory-photo-card" href="/associations/<%= report.association._id %>/good-places/<%= report._id %>" <%= index >= 3 ? 'hidden' : '' %>>
@@ -10,6 +10,6 @@
     </a>
     <% }) %>
   </div></div>
-</details>
+</section>
 <script src="/assets/directory-photo-gallery.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '' %>" defer></script>
 <% } %>

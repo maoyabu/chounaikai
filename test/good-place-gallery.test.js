@@ -124,6 +124,8 @@ test('directory displays three photos with overlay likes and hides remaining pho
     assert.equal((html.match(/aria-label="ライク 0件"/g) || []).length, count);
     assert.equal((html.match(/ hidden>/g) || []).length, Math.max(0, count - 3));
     assert.match(html, /&lt;風景&gt;/);
-    assert.doesNotMatch(html, /<button/);
+    assert.doesNotMatch(html, /<button|<details|<summary/);
+    assert.match(html, /data-photo-interval/);
+    for (const seconds of [3, 5, 10, 15, 30]) assert.match(html, new RegExp(`value="${seconds}"`));
   }
 });
