@@ -68,7 +68,7 @@ document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
   function schedule() {
     clearInterval(timer);
     const focused = gallery.contains(document.activeElement);
-    if (!paused && !hovering && !focused && !document.hidden) {
+    if (!paused && !hovering && !focused && !document.hidden && (gallery.tagName !== 'DETAILS' || gallery.open)) {
       timer = setInterval(() => { offset = (offset + 1) % cards.length; render(true); }, 6000);
     }
     pause.textContent = paused ? '自動再生' : '一時停止';
@@ -78,6 +78,7 @@ document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
   gallery.querySelector('[data-gallery-prev]').addEventListener('click', () => step(-1));
   gallery.querySelector('[data-gallery-next]').addEventListener('click', () => step(1));
   pause.addEventListener('click', () => { paused = !paused; schedule(); });
+  gallery.addEventListener('toggle', () => { discardTransition(); schedule(); });
   gallery.addEventListener('mouseenter', () => { hovering = true; schedule(); });
   gallery.addEventListener('mouseleave', () => { hovering = false; schedule(); });
   gallery.addEventListener('focusin', schedule);

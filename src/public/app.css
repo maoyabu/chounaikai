@@ -157,3 +157,9 @@
 .good-place-gallery .good-place-layout-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .good-place-gallery .good-place-layout-4{grid-template-columns:repeat(2,minmax(0,1fr))}
 .good-place-gallery .good-place-layout-2 .good-place-feature>img,.good-place-gallery .good-place-layout-4 .good-place-feature>img{flex:none;height:240px}
+
+.directory-gallery-accordion>summary{cursor:pointer;list-style:none}
+.directory-gallery-accordion>summary::-webkit-details-marker{display:none}
+.directory-gallery-accordion:not([open])>summary{border-bottom:0;border-radius:15px}
+.directory-gallery-chevron{font-size:1.5rem;line-height:1}
+.directory-gallery-accordion[open] .directory-gallery-chevron{transform:rotate(180deg)}
