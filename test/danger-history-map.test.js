@@ -18,7 +18,7 @@ test('empty history has no map',async()=>{
 test('photo taps switch coordinates or approximate address on the same map',()=>{
   const frame={scrollIntoView(){}},status={};
   const buttons=['35,139','○○公園付近'].map(query=>({dataset:{dangerQuery:query},addEventListener(_event,handler){this.click=handler;},setAttribute(name,value){this[name]=value;},querySelector(){return {alt:'現場写真'};}}));
-  vm.runInNewContext(fs.readFileSync('src/public/danger-history.js','utf8'),{document:{querySelectorAll:()=>buttons,getElementById:id=>id==='danger-history-frame'?frame:status},window:{matchMedia:()=>({matches:false})}});
+  vm.runInNewContext(fs.readFileSync('src/public/danger-history.js','utf8'),{document:{querySelectorAll:selector=>selector === '[data-danger-focus]' ? buttons : [],getElementById:id=>id==='danger-history-frame'?frame:status},window:{matchMedia:()=>({matches:false})}});
   buttons[0].click();assert.match(frame.src,/35%2C139/);assert.equal(buttons[0]['aria-pressed'],'true');
   buttons[1].click();assert.ok(frame.src.includes(encodeURIComponent('○○公園付近')));assert.equal(buttons[0]['aria-pressed'],'false');assert.equal(buttons[1]['aria-pressed'],'true');
 });

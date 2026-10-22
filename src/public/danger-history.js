@@ -25,3 +25,7 @@ if (photoDialog?.querySelector) {
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) photoDialog.close();
   });
 }
+
+document.querySelectorAll('[data-good-place-sort]').forEach(select => {
+  select.addEventListener('change', () => select.form.requestSubmit());
+});
