@@ -163,3 +163,19 @@
 .directory-gallery-accordion:not([open])>summary{border-bottom:0;border-radius:15px}
 .directory-gallery-chevron{font-size:1.5rem;line-height:1}
 .directory-gallery-accordion[open] .directory-gallery-chevron{transform:rotate(180deg)}
+
+.linked-gallery-accordion>summary{list-style:none;cursor:pointer}
+.linked-gallery-accordion>summary::-webkit-details-marker{display:none}
+.good-place-gallery.linked-gallery-accordion>.good-place-gallery-link{padding:0;gap:0;flex-wrap:nowrap}
+.good-place-gallery-title{flex:1;min-width:0;padding:20px;color:inherit;text-decoration:none;border-radius:15px 0 0 0}
+.linked-gallery-toggle{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:60px;min-height:60px}
+.linked-gallery-chevron{font-size:1.5rem;line-height:1}
+.linked-gallery-accordion[open] .linked-gallery-chevron{transform:rotate(180deg)}
+.linked-gallery-accordion:not([open])>summary{border-bottom:0;border-radius:15px}
+.good-place-gallery-title:focus-visible{outline:3px solid #1d4ed8;outline-offset:-4px}
+.gallery-toggle-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.good-place-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}
+.good-place-history-toolbar p{margin:0}
+.good-place-history-sort{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.good-place-history-sort select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}

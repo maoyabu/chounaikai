@@ -1,4 +1,4 @@
-import { loadGoodPlaceHistoryReactions, parseCommentsEnabled, setGoodPlaceLike, addGoodPlaceComment, moderateGoodPlaceComment, loadGoodPlaceReactions } from '../services/goodPlaceReactionService.js';
+import { goodPlaceIdsByLikes, loadGoodPlaceHistoryReactions, parseCommentsEnabled, setGoodPlaceLike, addGoodPlaceComment, moderateGoodPlaceComment, loadGoodPlaceReactions } from '../services/goodPlaceReactionService.js';
 import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from '../services/goodPlaceDisclosureService.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -44,10 +44,19 @@ goodPlacesRouter.get('/associations/:associationId/good-places', async (req, res
   try {
     const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
     const showGoodPlaceAuthors = await canViewGoodPlaceAuthors(req.params.associationId, req.user?._id);
-    const reports = await goodPlaceAuthorQuery(GoodPlace.find({ association: req.params.associationId }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
+    const sort = showGoodPlaceAuthors && req.query.sort === 'likes' ? 'likes' : 'newest';
+    let reports;
+    if (sort === 'likes') {
+      const ids = await goodPlaceIdsByLikes(req.params.associationId, page);
+      const rows = await goodPlaceAuthorQuery(GoodPlace.find({ association: req.params.associationId, _id: { $in: ids } }), showGoodPlaceAuthors).lean();
+      const byId = new Map(rows.map(report => [String(report._id), report]));
+      reports = ids.map(id => byId.get(String(id))).filter(Boolean);
+    } else {
+      reports = await goodPlaceAuthorQuery(GoodPlace.find({ association: req.params.associationId }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
+    }
     const historyReports = reports.slice(0, 50).map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors));
     const visibleReports = showGoodPlaceAuthors ? await loadGoodPlaceHistoryReactions(req.params.associationId, historyReports) : historyReports;
-    res.render('good-place-history', { title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: visibleReports, hasNext: reports.length > 50, page });
+    res.render('good-place-history', { sort, title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: visibleReports, hasNext: reports.length > 50, page });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(photo)?', async (req, res, next) => {

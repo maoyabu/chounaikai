@@ -67,3 +67,19 @@ export async function loadGoodPlaceHistoryReactions(associationId, reports) {
     }
   })));
 }
+
+export async function goodPlaceIdsByLikes(associationId, page) {
+  const rows = await GoodPlace.aggregate([
+    { $match: { association: new mongoose.Types.ObjectId(String(associationId)) } },
+    { $lookup: { from: GoodPlaceLike.collection.name, let: { reportId: '$_id', associationId: '$association' }, pipeline: [
+      { $match: { $expr: { $and: [{ $eq: ['$report', '$$reportId'] }, { $eq: ['$association', '$$associationId'] }] } } },
+      { $count: 'count' }
+    ], as: 'likes' } },
+    { $set: { likeCount: { $ifNull: [{ $arrayElemAt: ['$likes.count', 0] }, 0] } } },
+    { $sort: { likeCount: -1, createdAt: -1, _id: -1 } },
+    { $skip: (page - 1) * 50 },
+    { $limit: 51 },
+    { $project: { _id: 1 } }
+  ]);
+  return rows.map(row => row._id);
+}
