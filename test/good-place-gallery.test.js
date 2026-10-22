@@ -96,8 +96,9 @@ test('directory cards link to their own association and hide author identities',
   const html=await ejs.renderFile('src/views/partials/directory-good-place-gallery.ejs',{goodPlaces:[{_id:'photo',association:{_id:'town',name:'町内会名'},title:'風景',likeCount:12,createdAt:new Date(),author:{displayname:'非公開氏名'}}]});
   assert.match(html,/href="\/associations\/town\/good-places\/photo"/);
   assert.match(html,/町内会名/);
-  assert.match(html,/ライク♡ 12/);
-  assert.match(html,/data-slots="1"/);
+  assert.match(html,/aria-label="ライク 12件"/);
+  assert.match(html,/directory-photo-caption/);
+  assert.doesNotMatch(html,/data-gallery-(prev|next|pause)/);
   assert.doesNotMatch(html,/非公開氏名/);
 });
 
@@ -116,10 +117,13 @@ test('gallery restores and saves accordion state separately for each page',()=>{
   const blocked=visit('/dashboard',true);assert.equal(blocked.open,true);assert.doesNotThrow(()=>blocked.toggle());
 });
 
-test('directory displays zero likes and keeps only the first photo visible initially', async () => {
-  const goodPlaces = Array.from({ length: 3 }, (_, index) => ({ _id: String(index), association: { _id: 'town', name: '町内会' }, title: '風景', createdAt: new Date() }));
-  const html = await ejs.renderFile('src/views/partials/directory-good-place-gallery.ejs', { goodPlaces });
-  assert.equal((html.match(/ライク♡ 0/g) || []).length, 3);
-  assert.equal((html.match(/ hidden>/g) || []).length, 3); // Two photos and the controls until JS initializes.
-  assert.match(html, /data-slots="1" data-rotating="true"/);
+test('directory displays three photos with overlay likes and hides remaining photos', async () => {
+  for (const count of [1, 2, 3, 5]) {
+    const goodPlaces = Array.from({ length: count }, (_, index) => ({ _id: String(index), association: { _id: 'town', name: '町内会' }, title: '<風景>', createdAt: new Date() }));
+    const html = await ejs.renderFile('src/views/partials/directory-good-place-gallery.ejs', { goodPlaces });
+    assert.equal((html.match(/aria-label="ライク 0件"/g) || []).length, count);
+    assert.equal((html.match(/ hidden>/g) || []).length, Math.max(0, count - 3));
+    assert.match(html, /&lt;風景&gt;/);
+    assert.doesNotMatch(html, /<button/);
+  }
 });
