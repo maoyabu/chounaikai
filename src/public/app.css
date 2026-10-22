@@ -179,3 +179,10 @@
 .good-place-history-toolbar p{margin:0}
 .good-place-history-sort{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .good-place-history-sort select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+
+.good-place-gallery-title,.directory-gallery-title{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.directory-gallery-title{flex:1;min-width:0}
+.good-place-gallery-latest{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;line-height:1.5;font-weight:400}
+.good-place-gallery-latest img{display:block;width:44px;height:36px;object-fit:cover;border-radius:5px;flex:none}
+.good-place-gallery-latest time{display:inline-block}
+@media(max-width:600px){.good-place-gallery-title,.directory-gallery-title{gap:8px}.good-place-gallery-latest{font-size:.7rem}}

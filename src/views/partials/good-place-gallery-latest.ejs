@@ -1,0 +1,2 @@
+<% const latest = goodPlaces.reduce((newest, report) => report.createdAt > newest.createdAt ? report : newest); const latestAssociationId = typeof galleryAssociationId !== 'undefined' ? galleryAssociationId : latest.association._id; %>
+<span class="good-place-gallery-latest"><img src="/associations/<%= latestAssociationId %>/good-places/<%= latest._id %>/photo" alt="最新投稿：<%= latest.title %>" loading="lazy"><span>最新投稿 <time datetime="<%= latest.createdAt.toISOString() %>"><%= latest.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time></span></span>
