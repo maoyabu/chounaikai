@@ -100,7 +100,7 @@
 /* Local highlights share photo/location posting controls with emergency reports. */
 #good-place-compose{background:#eef7f0;box-sizing:border-box;min-width:0;max-width:calc(100vw - 24px);width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 24px);margin:auto;padding:clamp(12px,4vw,24px);overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere}
 #good-place-compose .dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0}#good-place-compose h2{min-width:0;margin:0;font-size:clamp(18px,5vw,24px)}#good-place-close{flex:0 0 36px;min-height:36px}#good-place-form{min-width:0;grid-template-columns:minmax(0,1fr);gap:12px}#good-place-form label{min-width:0;margin:0;grid-template-columns:minmax(0,1fr)}#good-place-form input,#good-place-form select,#good-place-form textarea,#good-place-form button{box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px}#good-place-form input[type=file]{overflow:hidden;padding:8px;font-size:14px}#good-place-form p{margin:0;min-width:0}#good-place-preview{width:100%;min-width:0;max-height:220px;object-fit:contain}#good-place-error{color:#b71c1c}
-.good-place-gallery{margin-bottom:24px}.good-place-gallery .section-heading{padding:0 0 16px;align-items:center;gap:12px;flex-wrap:wrap}.good-place-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px;margin-top:20px}.good-place-feature{display:block;min-width:0;text-decoration:none;overflow-wrap:anywhere}.good-place-feature>img{display:block;width:100%;height:clamp(220px,30vw,400px);object-fit:cover;border-radius:12px}.good-place-feature>div{padding-top:10px}.good-place-feature strong{display:block;font-size:1rem}.good-place-feature small{display:block;font-size:.8rem;color:var(--muted);margin-top:6px}.good-place-section .danger-history-description strong{color:var(--green-dark)}
+.good-place-gallery{margin-bottom:24px;padding:0}.good-place-gallery .section-heading{padding:0 0 16px;align-items:center;gap:12px;flex-wrap:wrap}.good-place-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px;margin-top:20px}.good-place-feature{display:block;min-width:0;text-decoration:none;overflow-wrap:anywhere}.good-place-feature>img{display:block;width:100%;height:clamp(220px,30vw,400px);object-fit:cover;border-radius:12px}.good-place-feature>div{padding-top:10px}.good-place-feature strong{display:block;font-size:1rem}.good-place-feature small{display:block;font-size:.8rem;color:var(--muted);margin-top:6px}.good-place-section .danger-history-description strong{color:var(--green-dark)}
 
 .good-place-gallery .good-place-grid{gap:16px;min-width:0}
 .good-place-gallery .good-place-feature[hidden]{display:none}
@@ -136,7 +136,10 @@
 .danger-history-list{max-height:40vh;max-height:40dvh;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable}
 .danger-history-list:focus-visible{outline:3px solid var(--green);outline-offset:3px}
 
-.good-place-gallery .good-place-gallery-link{display:flex;justify-content:space-between;padding:20px;background:#dbeafe;color:#1e3a8a;border-bottom:1px solid #93c5fd;border-radius:10px;text-decoration:none}
-.good-place-gallery-link h2{color:inherit}
+.good-place-gallery .good-place-gallery-link{display:flex;justify-content:space-between;padding:20px;background:#dbeafe;color:#1e3a8a;border-bottom:1px solid #93c5fd;border-radius:15px 15px 0 0;text-decoration:none}
+.good-place-gallery-link h2{color:inherit;margin:0}
 .good-place-gallery-link:hover{background:#bfdbfe}
 .good-place-gallery-link:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}
+
+.good-place-gallery .good-place-grid{margin:20px}
+.good-place-gallery .good-place-gallery-controls{margin:0 20px 20px}
