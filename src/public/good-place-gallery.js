@@ -28,8 +28,25 @@ document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
       outgoing.querySelectorAll('a').forEach(link => { link.removeAttribute('href'); link.tabIndex = -1; });
       gallery.append(outgoing);
     }
-    cards.forEach((card, index) => {
-      const rank = (index - offset + cards.length) % cards.length;
+    const ordered = cards.map((_, index) => cards[(offset + index) % cards.length]);
+    let selected = ordered.slice(0, slots);
+    if (gallery.dataset.diverseAssociations === 'true') {
+      selected = [];
+      const associations = new Set();
+      for (const card of ordered) {
+        if (associations.has(card.dataset.association)) continue;
+        selected.push(card);
+        associations.add(card.dataset.association);
+        if (selected.length === slots) break;
+      }
+      for (const card of ordered) {
+        if (selected.length === slots) break;
+        if (!selected.includes(card)) selected.push(card);
+      }
+    }
+    cards.forEach((card) => {
+      const selectedRank = selected.indexOf(card);
+      const rank = selectedRank < 0 ? slots : selectedRank;
       card.hidden = rank >= slots;
       card.style.order = String(rank);
       card.classList.toggle('is-featured', rank === 0);

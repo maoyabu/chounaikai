@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 import ejs from 'ejs';
 const script=fs.readFileSync('src/public/good-place-gallery.js','utf8');
-function fixture(count,reduced=false,dissolve=false) {
+function fixture(count,reduced=false,dissolve=false,associations=null) {
   let tick=null,active=false;
   const element=()=>({handlers:{},addEventListener(name,handler){this.handlers[name]=handler;}});
   const overlays=[];
@@ -18,6 +18,7 @@ function fixture(count,reduced=false,dissolve=false) {
   cards.forEach(card=>{card.classList.owner=card;});
   const controls={hidden:true},pause={...element(),setAttribute(name,value){this[name]=value;}},prev=element(),next=element();
   const gallery={...element(),dataset:{rotating:String(count===2||count>=4),slots:String(count<=2?1:count<=4?3:5)},querySelectorAll:()=>cards,append(){},querySelector:selector=>({'.good-place-grid':grid,'.good-place-gallery-controls':controls,'[data-gallery-pause]':pause,'[data-gallery-prev]':prev,'[data-gallery-next]':next})[selector],contains:()=>false};
+  if (associations) { gallery.dataset.diverseAssociations='true'; gallery.dataset.slots=String(Math.min(5,count)); cards.forEach((card,index)=>{card.dataset={association:associations[index]};}); }
   const context={document:{hidden:false,activeElement:null,querySelectorAll:()=>[gallery],addEventListener(){}},window:{addEventListener(){},matchMedia:()=>({matches:reduced,addEventListener(){}})},setInterval:fn=>{tick=fn;active=true;return 1;},clearInterval:()=>{active=false;},setTimeout:fn=>fn()};
   vm.runInNewContext(script,context);
   return {cards,controls,pause,prev,next,gallery,overlays,get active(){return active;},advance(){if(active)tick();}};
@@ -76,4 +77,24 @@ test('rapid photo changes discard stale overlays and reduced motion skips the di
   assert.equal(state.overlays[0].removed,true);
   await new Promise(resolve=>setImmediate(resolve));assert.equal(state.overlays[0].options,undefined);assert.equal(state.overlays[1].options.duration,800);
   const reduced=fixture(4,true,true);reduced.next.handlers.click();assert.equal(reduced.overlays.length,0);
+});
+
+test('directory rotation prefers distinct associations and eventually features every photo',()=>{
+  for (const associations of [['a','a','a','b','c','d','e','f'], ['a','a','a','a','a','a'], ['a','a','a','b','b','c']]) {
+    const state=fixture(associations.length,false,false,associations), seen=new Set();
+    for(let step=0;step<associations.length;step++) {
+      const visible=state.cards.filter(card=>!card.hidden);
+      assert.equal(visible.length,5);
+      assert.equal(new Set(visible.map(card=>card.dataset.association)).size,Math.min(5,new Set(associations).size));
+      seen.add(state.cards.findIndex(card=>card.featured));
+      state.advance();
+    }
+    assert.equal(seen.size,associations.length);
+  }
+});
+test('directory cards link to their own association and hide author identities',async()=>{
+  const html=await ejs.renderFile('src/views/partials/directory-good-place-gallery.ejs',{goodPlaces:[{_id:'photo',association:{_id:'town',name:'町内会名'},title:'風景',createdAt:new Date(),author:{displayname:'非公開氏名'}}]});
+  assert.match(html,/href="\/associations\/town\/good-places\/photo"/);
+  assert.match(html,/町内会名/);
+  assert.doesNotMatch(html,/非公開氏名/);
 });

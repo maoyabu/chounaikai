@@ -198,7 +198,8 @@ webRouter.get('/associations', async (req, res, next) => {
     });
     const prefectures = Object.keys(locations).sort((a, b) => a.localeCompare(b, 'ja'));
     const citiesByPrefecture = Object.fromEntries(prefectures.map((name) => [name, [...locations[name]].sort((a, b) => a.localeCompare(b, 'ja'))]));
-    return res.render('association-list', { title: '町内会一覧', associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
+    const directoryGoodPlaces = await GoodPlace.find({ association: { $in: locationAssociations.map(item => item._id) } }).select('-author').populate('association', 'name').sort({ createdAt: -1, _id: -1 }).lean();
+    return res.render('association-list', { directoryGoodPlaces, title: '町内会一覧', associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
   } catch (error) { return next(error); }
 });
 

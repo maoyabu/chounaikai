@@ -1,6 +1,7 @@
 <%- include('partials/head') %>
 <% if (currentUser) { %><%- include('partials/header') %><% } %>
 <main class="page-shell association-list-shell">
+  <%- include('partials/directory-good-place-gallery', { goodPlaces: typeof directoryGoodPlaces !== 'undefined' ? directoryGoodPlaces : [] }) %>
   <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
   <div class="association-list-layout">
   <div class="association-list-main">
