@@ -1,4 +1,15 @@
 document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
+  if (gallery.dataset.galleryStateKey && !gallery.dataset.stateInitialized) {
+    gallery.dataset.stateInitialized = 'true';
+    const key = `gallery-open:${window.location.pathname}:${gallery.dataset.galleryStateKey}`;
+    try {
+      const saved = window.localStorage.getItem(key);
+      if (saved === 'closed' || saved === 'open') gallery.open = saved === 'open';
+    } catch { /* Opening and closing still work when storage is unavailable. */ }
+    gallery.addEventListener('toggle', () => {
+      try { window.localStorage.setItem(key, gallery.open ? 'open' : 'closed'); } catch { /* Storage is optional. */ }
+    });
+  }
   if (gallery.dataset.initialized || gallery.dataset.rotating !== 'true') return;
   gallery.dataset.initialized = 'true';
   const cards = [...gallery.querySelectorAll('.good-place-feature')];

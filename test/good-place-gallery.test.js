@@ -98,3 +98,18 @@ test('directory cards link to their own association and hide author identities',
   assert.match(html,/町内会名/);
   assert.doesNotMatch(html,/非公開氏名/);
 });
+
+test('gallery restores and saves accordion state separately for each page',()=>{
+  const saved=new Map([['gallery-open:/dashboard:good-places-town','closed']]);
+  function visit(path, unavailable=false) {
+    const gallery={open:true,dataset:{galleryStateKey:'good-places-town',rotating:'false'},addEventListener(_event,handler){this.toggle=handler;}};
+    const storage={getItem(key){if(unavailable)throw Error('blocked');return saved.get(key);},setItem(key,value){if(unavailable)throw Error('blocked');saved.set(key,value);}};
+    vm.runInNewContext(script,{document:{querySelectorAll:()=>[gallery]},window:{location:{pathname:path},localStorage:storage}});
+    return gallery;
+  }
+  const home=visit('/dashboard');assert.equal(home.open,false);
+  assert.equal(visit('/associations/town/public').open,true);
+  home.open=true;home.toggle();assert.equal(visit('/dashboard').open,true);
+  home.open=false;home.toggle();assert.equal(visit('/dashboard').open,false);
+  const blocked=visit('/dashboard',true);assert.equal(blocked.open,true);assert.doesNotThrow(()=>blocked.toggle());
+});
