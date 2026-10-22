@@ -10,7 +10,7 @@
     </article>
   <% }) %><% if (!reactions.comments.length) { %><p>表示できるコメントはありません。</p><% } %></div>
   <nav aria-label="コメントのページ"><% if (reactions.page > 1) { %><a href="?commentPage=<%= reactions.page - 1 %>#good-place-reactions">← 新しいコメント</a><% } %> <% if (reactions.hasNext) { %><a href="?commentPage=<%= reactions.page + 1 %>#good-place-reactions">以前のコメント →</a><% } %></nav></div>
-<div class="good-place-comments-composer">  <% if (report.commentsEnabled !== false) { %>
+<div class="good-place-comments-composer">  <% if (reactions.commented) { %><p>コメント投稿済みです（1人1回まで）。</p><% } else if (report.commentsEnabled !== false) { %>
   <form action="<%= base %>/comments" method="post" class="form-stack good-place-comment-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <label>コメント<textarea name="body" rows="3" maxlength="1000" required placeholder="感想などを入力してください"></textarea></label>

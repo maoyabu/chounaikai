@@ -29,7 +29,13 @@ export async function addGoodPlaceComment(input, body) {
   if (report.commentsEnabled === false) throw fail('この投稿はコメントを受け付けていません。', 403);
   const text = String(body || '').trim();
   if (!text || text.length > 1000) throw fail('コメントは1〜1000文字で入力してください。');
-  return GoodPlaceComment.create({ association: input.associationId, report: input.reportId, user: input.userId, body: text });
+  const identity = { association: input.associationId, report: input.reportId, user: input.userId };
+  if (await GoodPlaceComment.exists(identity)) throw fail('この投稿には既にコメント済みです。コメントは1人1回までです。', 409);
+  try { return await GoodPlaceComment.create({ ...identity, body: text }); }
+  catch (error) {
+    if (error.code === 11000) throw fail('この投稿には既にコメント済みです。コメントは1人1回までです。', 409);
+    throw error;
+  }
 }
 export async function moderateGoodPlaceComment(input, commentId, hidden) {
   validId(commentId);
@@ -42,13 +48,14 @@ export async function moderateGoodPlaceComment(input, commentId, hidden) {
 }
 export async function loadGoodPlaceReactions({ associationId, reportId, userId, owner, page = 1 }) {
   const filter = { association: associationId, report: reportId };
-  const [likeCount, liked, comments, commentCount] = await Promise.all([
+  const [likeCount, liked, comments, commentCount, commented] = await Promise.all([
     GoodPlaceLike.countDocuments(filter),
     GoodPlaceLike.exists({ ...filter, user: userId }),
     GoodPlaceComment.find({ ...filter, ...(!owner ? { hiddenAt: null } : {}) }).populate('user', 'displayname').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean(),
-    GoodPlaceComment.countDocuments({ ...filter, hiddenAt: null })
+    GoodPlaceComment.countDocuments({ ...filter, hiddenAt: null }),
+    GoodPlaceComment.exists({ ...filter, user: userId })
   ]);
-  return { likeCount, commentCount, liked: Boolean(liked), comments: comments.slice(0, 50), hasNext: comments.length > 50, page, owner };
+  return { likeCount, commentCount, commented: Boolean(commented), liked: Boolean(liked), comments: comments.slice(0, 50), hasNext: comments.length > 50, page, owner };
 }
 
 export async function loadGoodPlaceHistoryReactions(associationId, reports) {

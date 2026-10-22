@@ -40,7 +40,7 @@ test('comments OFF is enforced server-side, not only by hiding the form',async t
   await assert.rejects(addGoodPlaceComment(input,'コメント'),{status:403});
 });
 test('comments validate length and store the authenticated user scoped to the report',async t=>{
-  access(t);let record;t.mock.method(GoodPlaceComment,'create',async data=>{record=data;return data;});
+  access(t);t.mock.method(GoodPlaceComment,'exists',async()=>null);let record;t.mock.method(GoodPlaceComment,'create',async data=>{record=data;return data;});
   for(const body of ['', ' ', 'あ'.repeat(1001)])await assert.rejects(addGoodPlaceComment(input,body),{status:400});
   await addGoodPlaceComment(input,'  綺麗ですね  ');assert.deepEqual(record,{association:input.associationId,report:input.reportId,user:input.userId,body:'綺麗ですね'});
 });
@@ -54,7 +54,7 @@ test('only original post author can hide and restore comments in that report',as
   await assert.rejects(moderateGoodPlaceComment(input,commentId,true),{status:403});
 });
 test('residents only retrieve visible comments; author may retrieve hidden comments for moderation',async t=>{
-  t.mock.method(GoodPlaceComment,'countDocuments',async()=>2);t.mock.method(GoodPlaceLike,'countDocuments',async()=>3);t.mock.method(GoodPlaceLike,'exists',async()=>true);
+  t.mock.method(GoodPlaceComment,'exists',async()=>true);t.mock.method(GoodPlaceComment,'countDocuments',async()=>2);t.mock.method(GoodPlaceLike,'countDocuments',async()=>3);t.mock.method(GoodPlaceLike,'exists',async()=>true);
   let queryFilter;
   t.mock.method(GoodPlaceComment,'find',filter=>{queryFilter=filter;return {populate(_field,fields){assert.equal(fields,'displayname');return this;},sort(){return this;},skip(){return this;},limit(){return this;},lean:async()=>[]};});
   const result=await loadGoodPlaceReactions({...input,owner:false});assert.equal(queryFilter.hiddenAt,null);assert.equal(result.likeCount,3);assert.equal(result.commentCount,2);assert.equal(result.liked,true);
@@ -87,4 +87,21 @@ test('unknown post and foreign comment IDs cannot be used to change another repo
 test('new-post form sends explicit comment setting and defaults to comments enabled',async()=>{
   const html=await ejs.renderFile('src/views/partials/good-place-compose.ejs',{memberships:[{association:{_id:input.associationId,name:'町内会'}}],assetVersion:'test'});
   assert.match(html,/select name="commentsEnabled"/);assert.match(html,/value="on" selected>コメントあり/);assert.match(html,/value="off">コメントなし/);
+});
+
+test('repeat comments including hidden ones are rejected and concurrent duplicate becomes a conflict',async t=>{
+  access(t);
+  const exists=t.mock.method(GoodPlaceComment,'exists',async()=>({_id:commentId}));
+  t.mock.method(GoodPlaceComment,'create',async()=>{throw Object.assign(new Error('duplicate'),{code:11000});});
+  await assert.rejects(addGoodPlaceComment(input,'再投稿'),{status:409});
+  exists.mock.mockImplementation(async()=>null);
+  await assert.rejects(addGoodPlaceComment(input,'同時投稿'),{status:409});
+  assert.ok(GoodPlaceComment.schema.indexes().some(([fields,options])=>fields.user===1&&options.unique&&options.partialFilterExpression.singleComment));
+});
+test('Like returns to detail without opening comments',async t=>{
+  access(t);t.mock.method(GoodPlaceLike,'updateOne',async()=>({}));
+  const route=goodPlacesRouter.stack.find(layer=>layer.route?.path==='/associations/:associationId/good-places/:reportId/like').route;
+  let destination;
+  await route.stack.at(-1).handle({params:{associationId:input.associationId,reportId:input.reportId},user:{_id:input.userId},body:{liked:'1'}},{redirect:url=>{destination=url;}},error=>{throw error;});
+  assert.equal(destination,`/associations/${input.associationId}/good-places/${input.reportId}`);
 });

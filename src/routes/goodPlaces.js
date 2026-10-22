@@ -92,7 +92,7 @@ goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/like',
   try {
     if (!['0', '1'].includes(req.body.liked)) throw Object.assign(new Error('ライク♡の操作を確認してください。'), { status: 400 });
     await setGoodPlaceLike(reactionInput(req), req.body.liked === '1');
-    reactionReturn(req, res);
+    res.redirect(`/associations/${req.params.associationId}/good-places/${req.params.reportId}`);
   } catch (error) { next(error); }
 });
 goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/comments', requireLogin, verifyCsrfToken, async (req, res, next) => {
