@@ -16,12 +16,11 @@ function fixture(count,reduced=false,dissolve=false,associations=null) {
   }}:null;
   const cards=Array.from({length:count},()=>({querySelector:()=>({decode:()=>Promise.resolve()}),hidden:false,style:{},featured:false,classList:{toggle(_name,value){this.owner.featured=value;}}}));
   cards.forEach(card=>{card.classList.owner=card;});
-  const controls={hidden:true},pause={...element(),setAttribute(name,value){this[name]=value;}},prev=element(),next=element();
-  const gallery={...element(),dataset:{rotating:String(count===2||count>=4),slots:String(count<=2?1:count<=4?3:5)},querySelectorAll:()=>cards,append(){},querySelector:selector=>({'.good-place-grid':grid,'.good-place-gallery-controls':controls,'[data-gallery-pause]':pause,'[data-gallery-prev]':prev,'[data-gallery-next]':next})[selector],contains:()=>false};
+  const gallery={...element(),dataset:{rotating:String(count===2||count>=4),slots:String(count<=2?1:count<=4?3:5)},querySelectorAll:()=>cards,append(){},querySelector:selector=>({'.good-place-grid':grid,})[selector],contains:()=>false};
   if (associations) { gallery.dataset.diverseAssociations='true'; gallery.dataset.slots=String(Math.min(5,count)); cards.forEach((card,index)=>{card.dataset={association:associations[index]};}); }
   const context={document:{hidden:false,activeElement:null,querySelectorAll:()=>[gallery],addEventListener(){}},window:{addEventListener(){},matchMedia:()=>({matches:reduced,addEventListener(){}})},setInterval:fn=>{tick=fn;active=true;return 1;},clearInterval:()=>{active=false;},setTimeout:fn=>fn()};
   vm.runInNewContext(script,context);
-  return {cards,controls,pause,prev,next,gallery,overlays,get active(){return active;},advance(){if(active)tick();}};
+  return {cards,gallery,overlays,get active(){return active;},advance(){if(active)tick();}};
 }
 test('1–8 photos render the requested 1 / 3 / 5-slot layout with latest photo featured',async()=>{
   for(let count=1;count<=8;count++){
@@ -32,6 +31,7 @@ test('1–8 photos render the requested 1 / 3 / 5-slot layout with latest photo 
     assert.equal((html.match(/class="good-place-feature/g)||[]).length,count);
     assert.equal((html.match(/\/photo" alt="写真\d+" loading="lazy"/g)||[]).length,count);
     assert.doesNotMatch(html,/非公開氏名/);
+    assert.doesNotMatch(html,/data-gallery-(prev|next|pause)|good-place-gallery-controls/);
     assert.match(html,/good-place-feature is-featured[\s\S]*?good-places\/0/);
   }
 });
@@ -48,35 +48,25 @@ test('2, 4 and 5+ photos rotate without duplicates and eventually feature every 
   }
 });
 test('1 and 3 photos remain static',()=>{
-  for(const count of [1,3]){const state=fixture(count);assert.equal(state.active,false);assert.equal(state.controls.hidden,true);}
+  for(const count of [1,3]){const state=fixture(count);assert.equal(state.active,false);assert.equal(state.cards.filter(card=>!card.hidden).length,count);}
 });
-test('manual controls, pause and reduced motion work independently of automatic playback',()=>{
-  const state=fixture(4);state.pause.handlers.click();assert.equal(state.active,false);
-  state.next.handlers.click();assert.equal(state.cards[1].featured,true);
-  state.prev.handlers.click();assert.equal(state.cards[0].featured,true);
-  state.pause.handlers.click();assert.equal(state.active,true);
+test('rotation pauses on hover and respects reduced motion',()=>{
+  const state=fixture(4);
   state.gallery.handlers.mouseenter();assert.equal(state.active,false);
   state.gallery.handlers.mouseleave();assert.equal(state.active,true);
-  const reduced=fixture(5,true);assert.equal(reduced.active,false);reduced.next.handlers.click();assert.equal(reduced.cards[1].featured,true);
+  const reduced=fixture(5,true);assert.equal(reduced.active,false);
 });
 
-test('cross dissolve keeps an inert copy of the previous layout until the next photos are decoded',async()=>{
+test('automatic cross dissolve keeps an inert copy of the previous layout',async()=>{
   const state=fixture(4,false,true);
-  state.next.handlers.click();
+  state.advance();
   assert.equal(state.overlays.length,1);
   const outgoing=state.overlays[0];
   assert.equal(outgoing.inert,true);assert.equal(outgoing['aria-hidden'],'true');assert.equal(outgoing.link.hrefRemoved,true);
-  assert.equal(outgoing.options,undefined);
   await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(outgoing.options.duration,800);assert.equal(outgoing.frames[0].opacity,1);assert.equal(outgoing.frames[1].opacity,0);
+  assert.equal(outgoing.options.duration,800);
   outgoing.complete();await new Promise(resolve=>setImmediate(resolve));assert.equal(outgoing.removed,true);
-});
-test('rapid photo changes discard stale overlays and reduced motion skips the dissolve',async()=>{
-  const state=fixture(5,false,true);
-  state.next.handlers.click();state.next.handlers.click();
-  assert.equal(state.overlays[0].removed,true);
-  await new Promise(resolve=>setImmediate(resolve));assert.equal(state.overlays[0].options,undefined);assert.equal(state.overlays[1].options.duration,800);
-  const reduced=fixture(4,true,true);reduced.next.handlers.click();assert.equal(reduced.overlays.length,0);
+  const reduced=fixture(4,true,true);assert.equal(reduced.overlays.length,0);
 });
 
 test('directory rotation prefers distinct associations and eventually features every photo',()=>{

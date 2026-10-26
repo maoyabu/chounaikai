@@ -15,11 +15,8 @@ document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
   const cards = [...gallery.querySelectorAll('.good-place-feature')];
   const slots = Number(gallery.dataset.slots);
   const grid = gallery.querySelector('.good-place-grid');
-  const controls = gallery.querySelector('.good-place-gallery-controls');
-  const pause = gallery.querySelector('[data-gallery-pause]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let offset = 0, timer, paused = reducedMotion.matches, hovering = false;
-  controls.hidden = false;
+  let offset = 0, timer, hovering = false;
   let outgoing = null, fade = null;
   function discardTransition() {
     fade?.cancel();
@@ -79,23 +76,17 @@ document.querySelectorAll('[data-good-place-gallery]').forEach(gallery => {
   function schedule() {
     clearInterval(timer);
     const focused = gallery.contains(document.activeElement);
-    if (!paused && !hovering && !focused && !document.hidden && (gallery.tagName !== 'DETAILS' || gallery.open)) {
+    if (!reducedMotion.matches && !hovering && !focused && !document.hidden && (gallery.tagName !== 'DETAILS' || gallery.open)) {
       timer = setInterval(() => { offset = (offset + 1) % cards.length; render(true); }, 6000);
     }
-    pause.textContent = paused ? '自動再生' : '一時停止';
-    pause.setAttribute('aria-pressed', String(paused));
   }
-  function step(amount) { offset = (offset + amount + cards.length) % cards.length; render(true); schedule(); }
-  gallery.querySelector('[data-gallery-prev]').addEventListener('click', () => step(-1));
-  gallery.querySelector('[data-gallery-next]').addEventListener('click', () => step(1));
-  pause.addEventListener('click', () => { paused = !paused; schedule(); });
   gallery.addEventListener('toggle', () => { discardTransition(); schedule(); });
   gallery.addEventListener('mouseenter', () => { hovering = true; schedule(); });
   gallery.addEventListener('mouseleave', () => { hovering = false; schedule(); });
   gallery.addEventListener('focusin', schedule);
   gallery.addEventListener('focusout', () => setTimeout(schedule, 0));
   document.addEventListener('visibilitychange', schedule);
-  reducedMotion.addEventListener('change', event => { paused = event.matches; discardTransition(); schedule(); });
+  reducedMotion.addEventListener('change', () => { discardTransition(); schedule(); });
   window.addEventListener('resize', discardTransition);
   render(); schedule();
 });
