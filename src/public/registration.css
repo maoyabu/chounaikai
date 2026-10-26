@@ -1779,4 +1779,10 @@ h1, h2, h3, h4, h5, h6,
 .directory-photo-likes > span { color: #ffadc4; }
 .directory-photo-card:focus-visible { outline: 3px solid #fff; outline-offset: -4px; }
 
-.finance-entry-classification { display: block; color: var(--muted); }
+.finance-entry-title { display: flex; align-items: center; gap: .6rem; flex-wrap: nowrap; white-space: nowrap; min-width: 0; max-width: 100%; overflow-x: auto; }
+.finance-entry-type { display: inline-flex; align-items: center; flex: none; padding: .15rem .55rem; border-radius: 999px; font-size: .8rem; font-weight: 700; }
+.finance-entry-type-income { color: #1e40af; background: #dbeafe; }
+.finance-entry-type-expense { color: #991b1b; background: #fee2e2; }
+.finance-entry-group { color: var(--muted); }
+.finance-entry-title > strong { text-align: left; }
+.finance-public-entry-head, .finance-public-entry-row { grid-template-columns: 7rem minmax(14rem, 2fr) 2fr 1fr 8rem; }
