@@ -1797,3 +1797,6 @@ h1, h2, h3, h4, h5, h6,
 .finance-entry-modal .page-heading { margin-top: 0; }
 .finance-entry-modal .finance-entry-form { margin: 0; padding: 0; border: 0; box-shadow: none; }
 .finance-entry-form textarea[name="content"], .finance-entry-form textarea[name="memo"] { min-height: 0; }
+
+.event-start-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.event-start-row .event-start-fields label[data-event-end-time] { grid-column: 3; }

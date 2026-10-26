@@ -17,7 +17,7 @@ import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { JoinApplication, Invitation } from '../models/workflow.js';
 import { Notification } from '../models/notification.js';
 import { QuestionThread } from '../models/questionThread.js';
-import { OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
+import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { DistrictGroup, Household, HouseholdMember } from '../models/organization.js';
 import { AnnualOfficer } from '../models/annualOfficer.js';
@@ -37,7 +37,9 @@ import { acceptProfileImage, uploadProfileImage } from '../services/profileImage
 import { requestPasswordReset, isPasswordResetValid, resetPassword } from '../services/passwordResetService.js';
 import { recordPrimaryAuth } from '../middleware/mfa.js';
 import { changePassword } from '../services/passwordChangeService.js';
-import { AssociationGroupMembership } from '../models/associationGroup.js';
+import { notificationAction } from '../services/notificationDestination.js';
+import { AssociationEvent } from '../models/associationEvent.js';
+import { AssociationGroupJoinRequest, AssociationGroupMembership } from '../models/associationGroup.js';
 
 export const webRouter = express.Router();
 
@@ -117,6 +119,14 @@ webRouter.use(async (req, res, next) => {
         AssociationGroupMembership.find({ user: req.user._id, role: 'manager', status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name association' }).lean()
       ]);
       res.locals.currentGroupManagers = groupManagerMemberships.filter(item => item.group).map(item => ({ _id: item.group._id, name: item.group.name, association: item.group.association }));
+      if (res.locals.currentGroupManagers.length) {
+        const counts = await Promise.all(res.locals.currentGroupManagers.map(async group => ({
+          ...group,
+          actionCount: await AssociationGroupJoinRequest.countDocuments({ association: group.association, group: group._id, status: 'pending' }),
+          withdrawalCount: await AssociationGroupMembership.countDocuments({ association: group.association, group: group._id, status: 'active', withdrawalRequestedAt: { $ne: null } })
+        })));
+        res.locals.currentGroupManagers = counts;
+      }
       const roleNames = [
         ...assignments.map((item) => item.role?.name).filter(Boolean),
         ...uniqueAnnualMenuRoles(annualOfficers.filter((item) => item.association && item.role?.name), item => String(item.association._id)).map((item) => `${item.fiscalYear}年度 ${item.role.name}`)
@@ -555,6 +565,29 @@ webRouter.post('/profile', requireLogin, acceptProfileImage, verifyCsrfToken, as
   }
 });
 
+const resolveNotificationAction = async (notification, req, res) => {
+  const context = { ...res.locals, isAdmin: Boolean(req.user.isAdmin) };
+  if (['group_message', 'group_message_reminder'].includes(notification.type) && notification.relatedId) {
+    const announcement = await OfficerAnnouncement.findOne({ _id: notification.relatedId, association: notification.association?._id || notification.association }).select('associationGroup').lean();
+    context.messageGroup = announcement?.associationGroup;
+  }
+  if (notification.type === 'group_event' && notification.relatedId) {
+    const event = await AssociationEvent.findOne({ _id: notification.relatedId, association: notification.association?._id || notification.association }).select('group').lean();
+    context.eventGroup = event?.group;
+  }
+  return notificationAction(notification, context);
+};
+
+webRouter.get('/notifications/:notificationId/open', requireLogin, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.sendStatus(404);
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).lean();
+    if (!notification) return res.sendStatus(404);
+    const action = await resolveNotificationAction(notification, req, res);
+    return res.redirect(action.actionUrl);
+  } catch (error) { return next(error); }
+});
+
 webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
   try {
     await syncCompletedNotifications({ recipient: req.user._id });
@@ -606,57 +639,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const notifications = [...unreadNotifications, ...readNotifications].slice(0, 20);
     const residentRegistration = await ResidentRegistration.findOne({ user: req.user._id }).lean();
     for (const notification of notifications) {
-      if (notification.association) {
-        notification.actionUrl = `/associations/${notification.association._id}`;
-        notification.actionLabel = '町内会のページを確認';
-        if (notification.type === 'good_place' && notification.relatedId) {
-          notification.actionUrl = `/associations/${notification.association._id}/good-places/${notification.relatedId}`;
-          notification.actionLabel = 'わがまちのいいところを確認';
-        }
-        if (notification.type === 'danger_report' && notification.relatedId) {
-          notification.actionUrl = `/associations/${notification.association._id}/dangers/${notification.relatedId}`;
-          notification.actionLabel = '緊急・危険情報を確認';
-        }
-        if (['question_created', 'question_reopened'].includes(notification.type)) {
-          notification.actionUrl = `/associations/${notification.association._id}/questions/officer`;
-          notification.actionLabel = '質問を確認';
-        }
-        if (['equipment_inventory', 'equipment_expiry', 'equipment_loan'].includes(notification.type)) {
-          const equipmentBase = `/associations/${notification.association._id}/equipment`;
-          notification.actionUrl = notification.type === 'equipment_inventory' ? `${equipmentBase}/inventory` : notification.type === 'equipment_expiry' ? `${equipmentBase}/purchase-list` : notification.relatedId ? `${equipmentBase}/${notification.relatedId}/loans#equipment-loan-requests` : equipmentBase;
-          notification.actionLabel = '設備・備品を確認';
-        }
-        if (notification.type === 'join_application_received' && res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id))) {
-          notification.actionUrl = `/associations/${notification.association._id}/manage/applications`;
-          notification.actionLabel = '参加申請を確認';
-        }
-      }
-      if (notification.type === 'system_contact' && notification.association && notification.relatedId) {
-        notification.actionUrl = req.user.isAdmin ? `/admin/system-contacts/${notification.relatedId}` : `/associations/${notification.association._id}/manage/system-contacts/${notification.relatedId}`;
-        notification.actionLabel = 'システム管理者への連絡を確認';
-      }
-      if (notification.type === 'withdrawal_leader_requested' && notification.association && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
-        notification.actionUrl = `/associations/${notification.association._id}/leader?tab=withdrawals#withdrawal-${notification.relatedId}`;
-        notification.actionLabel = '班長メニューの退会申請を開く';
-      } else if (['withdrawal_head_requested', 'withdrawal_approved', 'withdrawal_rejected'].includes(notification.type)) {
-        notification.actionUrl = '/profile/withdrawals';
-        notification.actionLabel = '退会申請を確認';
-      } else if (notification.type === 'question_answered' && notification.association && notification.relatedId) {
-        notification.actionUrl = `/associations/${notification.association._id}/questions?open=own-${notification.relatedId}`;
-        notification.actionLabel = '回答を確認';
-      } else if (['officer_announcement', 'officer_announcement_reminder'].includes(notification.type) && notification.association && notification.relatedId) {
-        notification.actionUrl = `/associations/${notification.association._id}/announcements/${notification.relatedId}`;
-        notification.actionLabel = '連絡を確認';
-      } else if (['officer_network', 'officer_network_reminder'].includes(notification.type) && notification.association && notification.relatedId) {
-        notification.actionUrl = `/associations/${notification.association._id}/officer-network/inbox/${notification.relatedId}`;
-        notification.actionLabel = '役員間の連絡を確認';
-      } else if (['district_message', 'district_message_reminder'].includes(notification.type) && notification.association && notification.relatedId) {
-        notification.actionUrl = `/associations/${notification.association._id}/district-messages/inbox/${notification.relatedId}`;
-        notification.actionLabel = '班内の連絡を確認';
-      }
-      if (notification.type === 'join_application_received' && notification.association && !res.locals.currentManagerAssociations.some(item => String(item._id) === String(notification.association._id)) && res.locals.currentLeaderAssociations.some(association => String(association._id) === String(notification.association._id))) {
-        notification.actionUrl = `/associations/${notification.association._id}/leader?tab=applications#application-${notification.relatedId}`;
-      }
+      Object.assign(notification, await resolveNotificationAction(notification, req, res));
     }
     const privateEquipmentSettings = await EquipmentSettings.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, loanPublic: false }).select('association').lean();
     const privateEquipmentIds = new Set(privateEquipmentSettings.map(setting => String(setting.association)));

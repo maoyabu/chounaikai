@@ -10,9 +10,9 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { AssociationGroupRequest, AssociationGroup, AssociationGroupMembership, AssociationGroupJoinRequest } from '../models/associationGroup.js';
 import { AssociationEvent } from '../models/associationEvent.js';
 import { acceptPublicPhotos, acceptEventImage, uploadPublicPhoto, deletePublicPhoto } from '../services/publicPageImageService.js';
-import { eventValues, calendarWindow } from '../services/associationEventService.js';
+import { eventValues, calendarWindow, expandRecurringEvents } from '../services/associationEventService.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
-import { publishAnnouncement } from '../services/officerAnnouncementService.js';
+import { loadRecipientAnnouncement, confirmAnnouncement, publishAnnouncement } from '../services/officerAnnouncementService.js';
 
 export const associationGroupsRouter = express.Router();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -29,7 +29,7 @@ associationGroupsRouter.get('/:associationId/groups/:groupId', async (req, res, 
     if (group.publicVisibility !== 'open' && !membership) throw fail('町内会住人だけが閲覧できます。', 403);
     const [members, allEvents] = await Promise.all([AssociationGroupMembership.find({ group: group._id, status: 'active' }).populate('user', 'displayname username email avatar').sort({ createdAt: 1 }).lean(), AssociationEvent.find({ association: group.association, group: group._id, visible: true }).sort({ startDate: 1, startTime: 1 }).lean()]);
     const joinRequest = membership ? await AssociationGroupJoinRequest.findOne({ association: group.association, group: group._id, applicant: req.user._id, status: 'pending' }).lean() : null;
-    const calendar = calendarWindow(req.query.month), start = `${calendar.first.getFullYear()}-${String(calendar.first.getMonth() + 1).padStart(2, '0')}-01`, endDate = new Date(calendar.first.getFullYear(), calendar.first.getMonth() + 3, 1), end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`, events = allEvents.filter(event => event.startDate < end && event.endDate >= start);
+    const calendar = calendarWindow(req.query.month), start = `${calendar.first.getFullYear()}-${String(calendar.first.getMonth() + 1).padStart(2, '0')}-01`, endDate = new Date(calendar.first.getFullYear(), calendar.first.getMonth() + 3, 1), end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`, events = expandRecurringEvents(allEvents, start, end).filter(event => event.startDate < end && event.endDate >= start);
     return res.render('association-group-public', { title: group.name, association, group, members: members.filter(item => item.user), events, ...calendar, calendarWindow: calendar, joinRequest, isResident: Boolean(membership), isManager: Boolean(req.user && await groupAccess(group._id, group.association, req.user._id)) });
   } catch (error) { return next(error); }
 });
@@ -41,12 +41,15 @@ associationGroupsRouter.get('/:associationId/groups/:groupId/messages', async (r
     const membership = await AssociationGroupMembership.findOne({ association: req.params.associationId, group: req.params.groupId, user: req.user._id, status: 'active' });
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: 'active' }).lean();
     if (!membership || !group) throw fail('グループの参加者だけが利用できます。', 403);
-    const today = new Date().toISOString().slice(0, 10);
-    const [announcements, groupEvents] = await Promise.all([OfficerAnnouncement.find({ association: group.association, associationGroup: group._id, channel: 'association_group', sender: req.user._id }).sort({ createdAt: -1 }).limit(50).lean(), AssociationEvent.find({ association: group.association, group: group._id, visible: true, endDate: { $gte: today } }).sort({ startDate: 1, startTime: 1 }).lean()]);
+    const [announcements, groupEvents] = await Promise.all([OfficerAnnouncement.find({ association: group.association, associationGroup: group._id, channel: 'association_group', sender: req.user._id }).sort({ createdAt: -1 }).limit(50).lean(), AssociationEvent.find({ association: group.association, group: group._id, visible: true }).sort({ startDate: 1, startTime: 1 }).lean()]);
     const calendar = calendarWindow(req.query.month);
+    const start = calendar.months[0].cells.find(Boolean);
+    const after = new Date(calendar.first.getFullYear(), calendar.first.getMonth() + 1, 1);
+    const end = `${after.getFullYear()}-${String(after.getMonth() + 1).padStart(2, '0')}-01`;
+    const expandedEvents = expandRecurringEvents(groupEvents, start, end).filter(event => event.startDate < end && event.endDate >= start);
     const allIds = await OfficerAnnouncement.find({ association: group.association, associationGroup: group._id, channel: 'association_group' }).select('_id').lean();
     const unreadCount = await OfficerAnnouncementReceipt.countDocuments({ association: group.association, recipient: req.user._id, readAt: null, announcement: { $in: allIds.map(item => item._id) } });
-    return res.render('association-group-messages', { title: `${group.name}の連絡`, group, announcements, unreadCount, events: groupEvents, months: calendar.months.slice(0, 1), calendarWindow: calendar });
+    return res.render('association-group-messages', { title: `${group.name}の連絡`, group, announcements, unreadCount, events: expandedEvents, months: calendar.months.slice(0, 1), calendarWindow: calendar });
   } catch (error) { return next(error); }
 });
 
@@ -56,6 +59,30 @@ associationGroupsRouter.get('/:associationId/groups/:groupId/messages/new', asyn
 
 associationGroupsRouter.get('/:associationId/groups/:groupId/messages/inbox', async (req, res, next) => {
   try { const membership = await AssociationGroupMembership.findOne({ association: req.params.associationId, group: req.params.groupId, user: req.user._id, status: 'active' }); const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: 'active' }).lean(); if (!membership || !group) throw fail('グループの参加者だけが利用できます。', 403); const receipts = await OfficerAnnouncementReceipt.find({ association: group.association, recipient: req.user._id }).populate({ path: 'announcement', match: { associationGroup: group._id, channel: 'association_group', mutedAt: { $exists: false } } }).sort({ createdAt: -1 }).lean(); return res.render('association-group-messages-inbox', { title: `${group.name} 届いた連絡`, group, receipts: receipts.filter(item => item.announcement) }); } catch (error) { return next(error); }
+});
+
+const recipientGroupMessage = async req => {
+  const membership = await AssociationGroupMembership.exists({ association: req.params.associationId, group: req.params.groupId, user: req.user._id, status: 'active' });
+  if (!membership) throw fail('グループの参加者だけが利用できます。', 403);
+  const result = await loadRecipientAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, channel: 'association_group' });
+  if (String(result.announcement.associationGroup) !== req.params.groupId) throw fail('連絡を確認できません。', 404);
+  return result;
+};
+
+associationGroupsRouter.get('/:associationId/groups/:groupId/messages/inbox/:announcementId', async (req, res, next) => {
+  try {
+    const { announcement, receipt } = await recipientGroupMessage(req);
+    return res.render('resident-announcement-detail', { title: announcement.title, associationId: req.params.associationId, announcement, receipt, messageGroupId: req.params.groupId });
+  } catch (error) { return next(error); }
+});
+
+associationGroupsRouter.post('/:associationId/groups/:groupId/messages/inbox/:announcementId/confirm', verifyCsrfToken, async (req, res, next) => {
+  try {
+    await recipientGroupMessage(req);
+    await confirmAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, selectedOptions: req.body.selectedOptions, channel: 'association_group' });
+    req.session.notice = '連絡を確認・回答しました。';
+    return res.redirect('/dashboard');
+  } catch (error) { return next(error); }
 });
 
 associationGroupsRouter.post('/:associationId/groups/:groupId/messages', acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {

@@ -17,18 +17,21 @@ export const eventValues = body => {
   if (!validDate(startDate) || !validDate(endDate) || endDate < startDate || (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000 > 366) throw fail('行事の日付を確認してください（期間は366日以内）。');
   const startTime = body.allDay === 'on' ? '00:00' : String(body.startTime || ''), endTime = body.allDay === 'on' ? '23:59' : String(body.endTime || '');
   if (![startTime, endTime].every(value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value))) throw fail('開始時間と終了時間を確認してください。');
-  if (hasEndDate && startDate === endDate && endTime <= startTime) throw fail('終了時間は開始時間より後にしてください。');
+  if (startDate === endDate && endTime <= startTime) throw fail('終了時間は開始時間より後にしてください。');
   const category = required(body.category, 40, '行事分類');
   const color = String(body.color || '');
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw fail('分類カラーを選択してください。');
   const frequency = ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(body.recurrenceFrequency) ? body.recurrenceFrequency : 'none';
   const weekdays = [...new Set([].concat(body.weekdays || []).map(Number).filter(day => day >= 0 && day <= 6))];
   const monthDays = [...new Set(String(body.monthDays || '').split(',').map(value => Number(value.trim())).filter(day => day >= 1 && day <= 31))];
+  const monthlyMode = body.monthlyMode === 'weekday' ? 'weekday' : 'dates';
+  const monthWeek = Number(body.monthWeek), monthWeekday = Number(body.monthWeekday);
+  if (frequency === 'monthly' && monthlyMode === 'weekday' && (!Number.isInteger(monthWeek) || monthWeek < 1 || monthWeek > 5 || !Number.isInteger(monthWeekday) || monthWeekday < 0 || monthWeekday > 6)) throw fail('毎月の第何曜日かを選択してください。');
   const yearMonth = Number(body.yearMonth), yearDay = Number(body.yearDay);
   const until = String(body.recurrenceUntil || '');
   if (frequency !== 'none' && until && !validDate(until)) throw fail('繰り返し終了日を確認してください。');
   return { title, body: description, startDate, endDate, startTime, endTime, hasEndDate, allDay: body.allDay === 'on', category, color,
-    recurrence: { frequency, weekdays: frequency === 'weekly' ? weekdays : [], monthDays: frequency === 'monthly' ? monthDays : [], yearMonth: frequency === 'yearly' && yearMonth >= 1 && yearMonth <= 12 ? yearMonth : undefined, yearDay: frequency === 'yearly' && yearDay >= 1 && yearDay <= 31 ? yearDay : undefined, until: frequency === 'none' ? '' : until },
+    recurrence: { frequency, weekdays: frequency === 'weekly' ? weekdays : [], monthDays: frequency === 'monthly' && monthlyMode === 'dates' ? monthDays : [], monthlyMode: frequency === 'monthly' ? monthlyMode : undefined, monthWeek: frequency === 'monthly' && monthlyMode === 'weekday' ? monthWeek : undefined, monthWeekday: frequency === 'monthly' && monthlyMode === 'weekday' ? monthWeekday : undefined, yearMonth: frequency === 'yearly' && yearMonth >= 1 && yearMonth <= 12 ? yearMonth : undefined, yearDay: frequency === 'yearly' && yearDay >= 1 && yearDay <= 31 ? yearDay : undefined, until: frequency === 'none' ? '' : until },
     visible: body.visible === 'on', open: body.open === 'on', imageCaption: String(body.imageCaption || '').trim().slice(0, 200), youtubeUrl: String(body.youtubeUrl || '').trim(), qrUrl: String(body.qrUrl || '').trim(), qrCaption: String(body.qrCaption || '').trim().slice(0, 200) };
 };
 
@@ -61,8 +64,10 @@ export const expandRecurringEvents = (events, rangeStart, rangeEnd) => {
     const start = new Date(event.startDate + 'T00:00:00Z'), limit = new Date((recurrence.until || rangeEnd) + 'T00:00:00Z');
     for (let cursor = new Date(start); cursor <= limit && cursor <= new Date(rangeEnd + 'T00:00:00Z'); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
       const day = cursor.getUTCDay(), date = cursor.toISOString().slice(0, 10);
-      const matches = recurrence.frequency === 'daily' || (recurrence.frequency === 'weekly' && (recurrence.weekdays || []).includes(day)) || (recurrence.frequency === 'monthly' && (recurrence.monthDays || []).includes(cursor.getUTCDate())) || (recurrence.frequency === 'yearly' && cursor.getUTCMonth() + 1 === recurrence.yearMonth && cursor.getUTCDate() === recurrence.yearDay);
-      if (matches && date >= rangeStart) result.push({ ...event, startDate: date, endDate: date });
+      const matches = recurrence.frequency === 'daily' || (recurrence.frequency === 'weekly' && (recurrence.weekdays || []).includes(day)) || (recurrence.frequency === 'monthly' && (recurrence.monthlyMode === 'weekday' ? day === recurrence.monthWeekday && Math.ceil(cursor.getUTCDate() / 7) === recurrence.monthWeek : (recurrence.monthDays || []).includes(cursor.getUTCDate()))) || (recurrence.frequency === 'yearly' && cursor.getUTCMonth() + 1 === recurrence.yearMonth && cursor.getUTCDate() === recurrence.yearDay);
+      const duration = Math.max(0, (Date.parse((event.endDate || event.startDate) + 'T00:00:00Z') - start.getTime()) / 86400000);
+      const endDate = new Date(cursor.getTime() + duration * 86400000).toISOString().slice(0, 10);
+      if (matches && endDate >= rangeStart) result.push({ ...event, startDate: date, endDate });
     }
   }
   return result;

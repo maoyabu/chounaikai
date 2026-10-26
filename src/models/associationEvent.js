@@ -15,6 +15,9 @@ const schema = new mongoose.Schema({
     frequency: { type: String, enum: ['none', 'daily', 'weekly', 'monthly', 'yearly'], default: 'none' },
     weekdays: { type: [Number], default: [] },
     monthDays: { type: [Number], default: [] },
+    monthlyMode: { type: String, enum: ['dates', 'weekday'], default: 'dates' },
+    monthWeek: { type: Number, min: 1, max: 5 },
+    monthWeekday: { type: Number, min: 0, max: 6 },
     yearMonth: Number,
     yearDay: Number,
     until: String

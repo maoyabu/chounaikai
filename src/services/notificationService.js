@@ -4,12 +4,12 @@ import { Notification } from '../models/notification.js';
 import { PushSubscription } from '../models/pushSubscription.js';
 import { NotificationSettings, notificationCategory, defaultNotificationChannel } from '../models/notificationSettings.js';
 
+import { notificationAction } from './notificationDestination.js';
+
 export const notificationDestination = notification => {
-  const paths = { danger_report: 'dangers', good_place: 'good-places' };
-  const path = paths[notification.type];
-  return path && notification.association && notification.relatedId
-    ? `/associations/${notification.association._id || notification.association}/${path}/${notification.relatedId}`
-    : '/dashboard?notifications=open';
+  const contextualTypes = ['join_application_received', 'system_contact', 'group_message', 'group_message_reminder', 'group_event'];
+  if (contextualTypes.includes(notification.type) && notification._id) return `/notifications/${notification._id}/open`;
+  return notificationAction(notification).actionUrl;
 };
 
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
