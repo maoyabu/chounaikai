@@ -12,7 +12,8 @@ const budgets = [
   { year: '2026', cf: '支出', expense_department: '防災部', expense_item: '備品費', details: [{ name: '防災用品' }] },
   { year: '2026', cf: '支出', expense_department: '総務部', expense_item: '通信費' },
   { year: '2025', cf: '支出', expense_department: '総務部', expense_item: '旧項目' },
-  { year: '2026', cf: '収入', income_item: '会費' }
+  { year: '2026', cf: '収入', income_category: '会費収入', income_item: '会費' },
+  { year: '2026', cf: '収入', income_category: 'その他', income_item: '寄付金' }
 ];
 const invoke = async (body, editing = false) => {
   const path = editing ? '/:associationId/finance/entries/:entryId/update' : '/:associationId/finance/entries';
@@ -44,9 +45,14 @@ for (const editing of [false, true]) {
     assert.equal(result.error, undefined);
     assert.equal(writes[0].expense_department, '防災部');
     assert.equal(writes[0].expense_item, '備品費');
-    const income = await invoke({ cf: '収入', item: '会費' }, editing);
+    const income = await invoke({ cf: '収入', income_category: '会費収入', item: '会費' }, editing);
     assert.equal(income.error, undefined);
     assert.equal(writes[1].expense_department, '');
+    assert.equal(writes[1].income_category, '会費収入');
+    for (const body of [{ cf: '収入', item: '会費' }, { cf: '収入', income_category: 'その他', item: '会費' }]) {
+      assert.equal((await invoke(body, editing)).error?.status, 400);
+    }
+    assert.equal(writes.length, 2);
   });
 }
 
@@ -64,11 +70,11 @@ test('entry form selects department before items, resets tags and filters by fis
   }
   const fields = Object.fromEntries(['date', 'cf', 'item', 'expense_department', 'payment_type', 'amount'].map(name => [name, new Element()]));
   fields.cf.value = '支出'; fields.item.dataset.selected = '';
-  const ids = Object.fromEntries(['finance-entry-department-field', 'finance-entry-item-label', 'finance-entry-tags-field', 'finance-entry-tag-input', 'finance-entry-tag-options', 'finance-entry-tags', 'finance-entry-fiscal-year'].map(name => [name, new Element()]));
+  const ids = Object.fromEntries(['finance-entry-group-label', 'finance-entry-department-field', 'finance-entry-item-label', 'finance-entry-tags-field', 'finance-entry-tag-input', 'finance-entry-tag-options', 'finance-entry-tags', 'finance-entry-fiscal-year'].map(name => [name, new Element()]));
   const form = new Element(); form.querySelector = selector => fields[selector.match(/name="([^"]+)"/)[1]];
   const document = { querySelector: () => form, getElementById: id => ids[id], createElement: () => new Element() };
   const template = await readFile(new URL('../src/views/association-finance-entry.ejs', import.meta.url), 'utf8');
-  const data = budgets.map(row => ({ year: row.year, cf: row.cf, name: row.expense_item || row.income_item, department: row.expense_department || '未設定', details: row.details || [] }));
+  const data = budgets.map(row => ({ year: row.year, cf: row.cf, name: row.expense_item || row.income_item, department: (row.cf === '収入' ? row.income_category : row.expense_department) || '未設定', details: row.details || [] }));
   const script = template.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/<%-[\s\S]*?%>/, JSON.stringify(data)).replace(/<%= Number\(association.financeFiscalStartMonth\) \|\| 4 %>/, '4').replace(/<%= year %>/, '2026');
   vm.runInNewContext(script, { document });
   assert.equal(fields.item.disabled, true);
@@ -89,8 +95,16 @@ test('entry form selects department before items, resets tags and filters by fis
   fields.expense_department.change('総務部');
   assert.deepEqual(fields.item.children.map(option => option.value), ['', '旧項目']);
   fields.cf.change('収入');
-  assert.equal(fields.expense_department.disabled, true);
-  assert.equal(ids['finance-entry-department-field'].hidden, true);
+  assert.equal(fields.expense_department.disabled, false);
+  assert.equal(fields.expense_department.name, 'income_category');
+  assert.equal(ids['finance-entry-group-label'].textContent, '項目分類');
+  assert.equal(ids['finance-entry-department-field'].hidden, false);
   fields.date.change('2026-04-01');
+  assert.equal(fields.item.disabled, true);
+  fields.expense_department.change('会費収入');
   assert.deepEqual(fields.item.children.map(option => option.value), ['', '会費']);
+  fields.item.change('会費');
+  fields.expense_department.change('その他');
+  assert.equal(fields.item.value, '');
+  assert.deepEqual(fields.item.children.map(option => option.value), ['', '寄付金']);
 });

@@ -1,3 +1,4 @@
+import { buildAnnualRows, financeClassification, classificationFilter } from '../lib/financeAnnual.js';
 import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -25,14 +26,18 @@ const fiscalYear = (date, startMonth = 4) => {
   return value.getMonth() + 1 >= Number(startMonth) ? value.getFullYear() : value.getFullYear() - 1;
 };
 
-async function expenseDepartmentForEntry(req, date, cf) {
-  if (cf !== '支出') return { expense_department: '', expense_department_name: '' };
+async function classificationForEntry(req, date, cf) {
   const { association, groupId } = req.financeContext;
-  const department = String(req.body.expense_department || '').trim();
-  const budgets = await FinanceBudget.find({ group: groupId, year: String(fiscalYear(date, association.financeFiscalStartMonth || 4)), cf: '支出' }).lean();
-  const budget = budgets.find(row => (row.expense_department_name || row.expense_department || '未設定') === department && row.expense_item === req.body.item);
-  if (!department || !budget) throw Object.assign(new Error('部と、その部の支出予算項目を選択してください。'), { status: 400 });
-  return { expense_department: budget.expense_department || '', expense_department_name: budget.expense_department_name || budget.expense_department || '' };
+  const expense = cf === '支出';
+  const classification = String(req.body[expense ? 'expense_department' : 'income_category'] || '').trim();
+  const budgets = await FinanceBudget.find({ group: groupId, year: String(fiscalYear(date, association.financeFiscalStartMonth || 4)), cf }).lean();
+  const budget = budgets.find(row => financeClassification(row) === classification && (expense ? row.expense_item : row.income_item) === req.body.item);
+  if (!classification || !budget) throw Object.assign(new Error(expense ? '部と、その部の支出予算項目を選択してください。' : '項目分類と、その分類の収入予算項目を選択してください。'), { status: 400 });
+  return {
+    income_category: expense ? '' : budget.income_category || '',
+    expense_department: expense ? budget.expense_department || '' : '',
+    expense_department_name: expense ? budget.expense_department_name || budget.expense_department || '' : ''
+  };
 }
 
 async function availableFinanceYears(groupId, startMonth) {
@@ -88,7 +93,7 @@ associationFinanceRouter.get('/:associationId/finance/entries', async (req, res,
     if (req.query.payment_type) query.payment_type = req.query.payment_type;
     if (req.query.item) query.$and = [{ $or: [{ expense_item: req.query.item }, { income_item: req.query.item }] }];
     if (req.query.month && req.query.year) { const selectedMonth = Number(req.query.month); const selectedYear = Number(req.query.year) + (selectedMonth < Number(req.financeContext.association.financeFiscalStartMonth || 4) ? 1 : 0); query.date = { $gte: new Date(selectedYear, selectedMonth - 1, 1), $lt: new Date(selectedYear, selectedMonth, 1) }; }
-    if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }];
+    if (classificationFilter(req.query)) (query.$and ||= []).push(classificationFilter(req.query)); if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }];
     if (req.query.from || req.query.to) query.date = {}; if (req.query.from) query.date.$gte = new Date(req.query.from); if (req.query.to) query.date.$lte = new Date(`${req.query.to}T23:59:59.999`);
     const entries = await Finance.find(query).populate('user', 'displayname username').sort(req.query.sort === 'updated' ? { update_date: -1, entry_date: -1 } : { date: -1, entry_date: -1 }).limit(300).lean();
     const [expenseItems, incomeItems, paymentTypes] = await Promise.all([Finance.distinct('expense_item', { group: groupId, expense_item: { $nin: ['', null] } }), Finance.distinct('income_item', { group: groupId, income_item: { $nin: ['', null] } }), Finance.distinct('payment_type', { group: groupId, payment_type: { $nin: ['', null] } })]);
@@ -98,7 +103,7 @@ associationFinanceRouter.get('/:associationId/finance/entries', async (req, res,
 
 associationFinanceRouter.get('/:associationId/finance/public/annual', (req, res) => res.redirect(`/associations/${req.params.associationId}/finance/annual?public=1`));
 associationFinanceRouter.get('/:associationId/finance/public', async (req, res, next) => { try { const { association, groupId, year: currentYear } = req.financeContext; const year = Number(req.query.year) || currentYear; const startMonth = Number(association.financeFiscalStartMonth || 4); const start = new Date(year, startMonth - 1, 1); const end = new Date(year + 1, startMonth - 1, 1); const [rows, budgets] = await Promise.all([Finance.aggregate([{ $match: { group: new mongoose.Types.ObjectId(groupId), date: { $gte: start, $lt: end } } }, { $group: { _id: '$cf', total: { $sum: '$amount' } } }]), FinanceBudget.find({ group: groupId, year: String(year) }).lean()]); const actual = rows.reduce((result, row) => ({ ...result, [row._id]: row.total }), {}); const budget = budgets.reduce((result, item) => ({ ...result, [item.cf]: (result[item.cf] || 0) + Number(item.budget || 0) }), {}); return res.render('association-finance-public', { title: `${association.name} 会計報告`, association, year, fiscalYears: await availableFinanceYears(groupId, startMonth), startMonth, endMonth: startMonth === 1 ? 12 : startMonth - 1, endYear: startMonth === 1 ? year : year + 1, actual, budget }); } catch (error) { return next(error); } });
-associationFinanceRouter.get('/:associationId/finance/public/entries', async (req, res, next) => { try { const { association, groupId } = req.financeContext; const query = { group: groupId }; if (req.query.cf) query.cf = req.query.cf; if (req.query.payment_type) query.payment_type = req.query.payment_type; if (req.query.item) query.$and = [{ $or: [{ expense_item: req.query.item }, { income_item: req.query.item }] }]; if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }]; if (req.query.month && req.query.year) { const month = Number(req.query.month); const fiscalYear = Number(req.query.year) + (month < Number(association.financeFiscalStartMonth || 4) ? 1 : 0); query.date = { $gte: new Date(fiscalYear, month - 1, 1), $lt: new Date(fiscalYear, month, 1) }; } else if (req.query.from || req.query.to) { query.date = {}; if (req.query.from) query.date.$gte = new Date(req.query.from); if (req.query.to) query.date.$lte = new Date(`${req.query.to}T23:59:59.999`); } const entries = await Finance.find(query).sort({ date: -1, entry_date: -1 }).lean(); const [expenseItems, incomeItems, paymentTypes] = await Promise.all([Finance.distinct('expense_item', { group: groupId, expense_item: { $nin: ['', null] } }), Finance.distinct('income_item', { group: groupId, income_item: { $nin: ['', null] } }), Finance.distinct('payment_type', { group: groupId, payment_type: { $nin: ['', null] } })]); return res.render('association-finance-public-entries', { title: `${association.name} 会計報告 入力一覧`, association, entries, filters: req.query, filterItemsByCf: { 収入: incomeItems.filter(Boolean).sort(), 支出: expenseItems.filter(Boolean).sort() }, filterPaymentTypes: paymentTypes.filter(Boolean).sort() }); } catch (error) { return next(error); } });
+associationFinanceRouter.get('/:associationId/finance/public/entries', async (req, res, next) => { try { const { association, groupId } = req.financeContext; const query = { group: groupId }; if (req.query.cf) query.cf = req.query.cf; if (req.query.payment_type) query.payment_type = req.query.payment_type; if (req.query.item) query.$and = [{ $or: [{ expense_item: req.query.item }, { income_item: req.query.item }] }]; if (classificationFilter(req.query)) (query.$and ||= []).push(classificationFilter(req.query)); if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }]; if (req.query.month && req.query.year) { const month = Number(req.query.month); const fiscalYear = Number(req.query.year) + (month < Number(association.financeFiscalStartMonth || 4) ? 1 : 0); query.date = { $gte: new Date(fiscalYear, month - 1, 1), $lt: new Date(fiscalYear, month, 1) }; } else if (req.query.from || req.query.to) { query.date = {}; if (req.query.from) query.date.$gte = new Date(req.query.from); if (req.query.to) query.date.$lte = new Date(`${req.query.to}T23:59:59.999`); } const entries = await Finance.find(query).sort({ date: -1, entry_date: -1 }).lean(); const [expenseItems, incomeItems, paymentTypes] = await Promise.all([Finance.distinct('expense_item', { group: groupId, expense_item: { $nin: ['', null] } }), Finance.distinct('income_item', { group: groupId, income_item: { $nin: ['', null] } }), Finance.distinct('payment_type', { group: groupId, payment_type: { $nin: ['', null] } })]); return res.render('association-finance-public-entries', { title: `${association.name} 会計報告 入力一覧`, association, entries, filters: req.query, filterItemsByCf: { 収入: incomeItems.filter(Boolean).sort(), 支出: expenseItems.filter(Boolean).sort() }, filterPaymentTypes: paymentTypes.filter(Boolean).sort() }); } catch (error) { return next(error); } });
 
 associationFinanceRouter.get('/:associationId/finance/annual', async (req, res, next) => {
   try {
@@ -110,14 +115,7 @@ associationFinanceRouter.get('/:associationId/finance/annual', async (req, res, 
     const start = new Date(year, startMonth - 1, 1);
     const end = new Date(year + 1, startMonth - 1, 1);
     const [entries, budgets] = await Promise.all([Finance.find({ group: groupId, date: { $gte: start, $lt: end } }).lean(), FinanceBudget.find({ group: groupId, year: String(year) }).sort({ cf: 1, display_order: 1 }).lean()]);
-    const makeRow = (name, cf, budget = 0, details = []) => ({ name, cf, budget: Number(budget) || 0, details, months: months.map((month) => entries.filter((entry) => entry.cf === cf && new Date(entry.date).getMonth() + 1 === month && (name === '収入' || name === '支出' || (entry.expense_item || entry.income_item || '未分類') === name)).reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0)) });
-    const income = makeRow('収入', '収入', budgets.filter((item) => item.cf === '収入').reduce((sum, item) => sum + Number(item.budget || 0), 0));
-    const expense = makeRow('支出', '支出', budgets.filter((item) => item.cf === '支出').reduce((sum, item) => sum + Number(item.budget || 0), 0));
-    const incomeRows = [income]; const expenseRows = [expense];
-    budgets.forEach((item) => { const name = item.expense_item || item.income_item || '未分類'; (item.cf === '支出' ? expenseRows : incomeRows).push(makeRow(name, item.cf, item.budget, item.details || [])); });
-    income.details = budgets.filter(item => item.cf === '収入' && item.details?.length).flatMap(item => [{ name: item.expense_item || item.income_item || '未分類', details: item.details }]);
-    expense.details = budgets.filter(item => item.cf === '支出' && item.details?.length).flatMap(item => [{ name: item.expense_item || item.income_item || '未分類', details: item.details }]);
-    const totalRow = { name: '収支', cf: '収支', budget: income.budget - expense.budget, months: income.months.map((value, index) => value - expense.months[index]) };
+    const { incomeRows, expenseRows, totalRow } = buildAnnualRows(entries, budgets, months);
     return res.render('association-finance-annual', { title: `${association.name} 年度集計`, association, year, fiscalYears, months, incomeRows, expenseRows, totalRow, publicMode: req.financeContext.publicAccess });
   } catch (error) { return next(error); }
 });
@@ -128,11 +126,10 @@ associationFinanceRouter.get('/:associationId/finance/annual/export', async (req
     const year = Number(req.query.year) || currentYear; const startMonth = Number(association.financeFiscalStartMonth || 4);
     const months = Array.from({ length: 12 }, (_, index) => (startMonth - 1 + index) % 12 + 1); const start = new Date(year, startMonth - 1, 1); const end = new Date(year + 1, startMonth - 1, 1);
     const [entries, budgets] = await Promise.all([Finance.find({ group: groupId, date: { $gte: start, $lt: end } }).lean(), FinanceBudget.find({ group: groupId, year: String(year) }).sort({ cf: 1, display_order: 1 }).lean()]);
-    const row = (name, cf, budget = 0) => { const values = months.map((month) => entries.filter((entry) => entry.cf === cf && new Date(entry.date).getMonth() + 1 === month && (name === '収入' || name === '支出' || (entry.expense_item || entry.income_item || '未分類') === name)).reduce((sum, entry) => sum + Number(entry.amount || 0), 0)); return [name, Number(budget) || 0, ...values, values.reduce((a, b) => a + b, 0)]; };
-    const incomeBudget = budgets.filter((item) => item.cf === '収入').reduce((sum, item) => sum + Number(item.budget || 0), 0); const expenseBudget = budgets.filter((item) => item.cf === '支出').reduce((sum, item) => sum + Number(item.budget || 0), 0);
-    const incomeSummary = row('収入', '収入', incomeBudget); const expenseSummary = row('支出', '支出', expenseBudget); const balanceSummary = ['収支', incomeSummary[1] - expenseSummary[1], ...incomeSummary.slice(2).map((value, index) => value - expenseSummary[index + 2])];
-    const rows = [incomeSummary, ...budgets.filter((item) => item.cf === '収入').map((item) => row(item.income_item || '未分類', '収入', item.budget)), balanceSummary, Array(15).fill(''), expenseSummary, ...budgets.filter((item) => item.cf === '支出').map((item) => row(item.expense_item || '未分類', '支出', item.budget))];
-    const incomeRowCount = budgets.filter(item => item.cf === '収入').length + 1;
+    const { incomeRows, expenseRows, totalRow } = buildAnnualRows(entries, budgets, months);
+    const values = row => [row.name, row.budget, ...row.months, row.months.reduce((sum, amount) => sum + amount, 0)];
+    const rows = [...incomeRows.map(values), values(totalRow), Array(15).fill(''), ...expenseRows.map(values)];
+    const incomeRowCount = incomeRows.length;
     const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet('年度集計'); sheet.addRow(['項目', '予算', ...months.map((month) => `${month}月`), '累計', '累計差']); rows.forEach((values, index) => { const total = values[values.length - 1]; const diff = index < incomeRowCount ? total - values[1] : values[1] - total; sheet.addRow([...values, diff]); }); sheet.getCell('P1').note = '累計差の算出方法：収入＝累計 − 予算 ／ 支出＝予算 − 累計'; sheet.columns.forEach((column, index) => { column.width = index === 0 ? 22 : 13; }); sheet.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalDpi: 300, verticalDpi: 300 }; sheet.pageMargins = { left: 0.25, right: 0.25, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 }; sheet.views = [{ state: 'frozen', ySplit: 1 }]; sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E4E38' } }; sheet.getRow(1).alignment = { horizontal: 'center', vertical: 'middle' }; sheet.eachRow((row, rowNumber) => { if (rowNumber > 1) { const name = row.getCell(1).value; const subtotal = name === '収入' || name === '支出'; row.font = { bold: subtotal, color: { argb: 'FF17231F' } }; row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: subtotal ? 'FFC7E3D4' : (rowNumber % 2 === 0 ? 'FFE5F2EB' : 'FFFFFFFF') } }; row.alignment = { vertical: 'middle' }; row.eachCell((cell, columnNumber) => { cell.border = { top: { style: 'thin', color: { argb: 'FFCBD9D1' } }, bottom: { style: 'thin', color: { argb: 'FFCBD9D1' } }, left: { style: 'thin', color: { argb: 'FFCBD9D1' } }, right: { style: 'thin', color: { argb: 'FFCBD9D1' } } }; if (columnNumber > 1) { cell.alignment = { horizontal: 'right', vertical: 'middle' }; cell.numFmt = '#,##0'; } }); } }); sheet.getColumn(2).numFmt = '#,##0';
     const balanceRow = sheet.getRows(1, sheet.rowCount).find((currentRow) => currentRow.getCell(1).value === '収支');
     if (balanceRow) { balanceRow.font = { bold: true, color: { argb: 'FF17231F' } }; balanceRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8DCAE' } }; }); }
@@ -166,7 +163,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/export', async (re
     if (req.query.cf) query.cf = req.query.cf;
     if (req.query.payment_type) query.payment_type = req.query.payment_type;
     if (req.query.item) query.$and = [{ $or: [{ expense_item: req.query.item }, { income_item: req.query.item }] }];
-    if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }];
+    if (classificationFilter(req.query)) (query.$and ||= []).push(classificationFilter(req.query)); if (req.query.keyword) query.$or = [{ content: new RegExp(req.query.keyword, 'i') }, { memo: new RegExp(req.query.keyword, 'i') }, { expense_item: new RegExp(req.query.keyword, 'i') }, { income_item: new RegExp(req.query.keyword, 'i') }];
     if (req.query.from || req.query.to) query.date = {};
     if (req.query.from) query.date.$gte = new Date(req.query.from);
     if (req.query.to) query.date.$lte = new Date(`${req.query.to}T23:59:59.999`);
@@ -295,11 +292,11 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
 associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken, async (req, res, next) => {
   try {
     const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 });
-    const expenseDepartment = await expenseDepartmentForEntry(req, date, cf);
+    const classification = await classificationForEntry(req, date, cf);
     const inputterName = req.user.displayname || req.user.username || '';
     const tagName = cf === '支出' ? String(req.body.tagText || '').trim() : '';
     const selectedTags = tagName ? [{ name: tagName }] : [];
-    await Finance.create({ ...expenseDepartment, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
+    await Finance.create({ ...classification, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
     req.session.notice = '入出金を登録しました。';
     return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance`);
   } catch (error) { return next(error); }
@@ -310,8 +307,8 @@ associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update',
     const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 }); const inputterName = req.user.displayname || req.user.username || '';
     const tagName = cf === '支出' ? String(req.body.tagText || '').trim() : '';
     const selectedTags = tagName ? [{ name: tagName }] : [];
-    const expenseDepartment = await expenseDepartmentForEntry(req, date, cf);
-    const changes = { ...expenseDepartment, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName };
+    const classification = await classificationForEntry(req, date, cf);
+    const changes = { ...classification, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName };
     const update = cf === '支出' ? { $set: { ...changes, payment_type: paymentType } } : { $set: changes, $unset: { payment_type: 1 } };
     await Finance.updateOne({ _id: req.params.entryId, group: groupId }, update);
     req.session.notice = '入出金を更新しました。';
