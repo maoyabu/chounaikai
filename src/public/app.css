@@ -166,7 +166,7 @@
 .good-place-gallery-photo{display:flex;align-self:stretch;flex:none;width:clamp(120px,24vw,200px);color:inherit;text-decoration:none;border-top-left-radius:15px;overflow:hidden}
 .linked-gallery-accordion:not([open]) .good-place-gallery-photo{border-bottom-left-radius:15px}
 .linked-gallery-toggle{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:60px;min-height:60px}
-.linked-gallery-chevron{font-size:1.5rem;line-height:1}
+.linked-gallery-chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;line-height:1}
 .linked-gallery-accordion[open] .linked-gallery-chevron{transform:rotate(180deg)}
 .linked-gallery-accordion:not([open])>summary{border-bottom:0;border-radius:15px}
 .good-place-gallery-photo:focus-visible,.good-place-gallery-title:focus-visible{outline:3px solid #1d4ed8;outline-offset:-4px}
