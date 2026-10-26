@@ -42,6 +42,7 @@ managementRouter.post('/:associationId/manage/notifications', requirePermission(
 const validId = (value) => mongoose.isValidObjectId(value);
 const meta = (req) => ({ requestId: req.get('x-request-id'), ip: req.ip });
 const redirectManagement = (res, associationId) => res.redirect(`/associations/${associationId}/manage`);
+const redirectBasicSettings = (res, associationId) => res.redirect(`/associations/${associationId}/manage/basic`);
 const redirectRecordList = (req, res, fiscalYear, kind) => {
   const page = req.body.returnTo === kind ? kind : req.body.returnTo === 'annual' ? 'annual' : '';
   return res.redirect(`/associations/${req.params.associationId}/manage${page ? `/${page}?year=${fiscalYear}` : ''}`);
@@ -305,7 +306,7 @@ managementRouter.post('/:associationId/manage/name', requirePermission('associat
     if (req.file) association.symbolImage = await uploadPublicPhoto(req.file, association._id, 'symbol');
     await association.save();
     await audit({ association: association._id, actor: req.user._id, action: 'association.name.updated', targetType: 'NeighborhoodAssociation', targetId: association._id, before, after: { name }, req });
-    req.session.notice = '町内会名を更新しました。'; return redirectManagement(res, association._id);
+    req.session.notice = '町内会名を更新しました。'; return redirectBasicSettings(res, association._id);
   } catch (error) { return next(error); }
 });
 
@@ -314,7 +315,7 @@ managementRouter.post('/:associationId/manage/symbol', requirePermission('associ
     const association = await NeighborhoodAssociation.findById(req.params.associationId);
     if (!association) throw fail('町内会を確認できません。', 404);
     if (req.file) association.symbolImage = await uploadPublicPhoto(req.file, association._id, 'symbol');
-    await association.save(); req.session.notice = 'シンボル画像を更新しました。'; return res.redirect(`/associations/${association._id}/manage`);
+    await association.save(); req.session.notice = 'シンボル画像を更新しました。'; return redirectBasicSettings(res, association._id);
   } catch (error) { return next(error); }
 });
 
@@ -339,7 +340,7 @@ managementRouter.post('/:associationId/manage/district-groups/:districtId/groups
     const last = await DistrictGroup.findOne({ association: req.params.associationId, parentDistrict: district._id }).sort({ sortOrder: -1 });
     const item = await DistrictGroup.create({ association: district.association, parentDistrict: district._id, name: `${district.name}${childName}`, sortOrder: (last?.sortOrder ?? -1) + 1 });
     await audit({ association: district.association, actor: req.user._id, action: 'organization.district-groups.child.created', targetType: 'DistrictGroup', targetId: item._id, after: { district: district._id, name: item.name }, req });
-    req.session.notice = '班を作成しました。'; return redirectManagement(res, req.params.associationId);
+    req.session.notice = '班を作成しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 
@@ -351,7 +352,7 @@ managementRouter.post('/:associationId/manage/district-groups/:districtId/groups
     if (!item || !district || !childName) throw fail('班を確認できません。', 404);
     const before = { name: item.name }; item.name = `${district.name}${childName}`; await item.save();
     await audit({ association: district.association, actor: req.user._id, action: 'organization.district-groups.child.updated', targetType: 'DistrictGroup', targetId: item._id, before, after: { name: item.name }, req });
-    req.session.notice = '班名を更新しました。'; return redirectManagement(res, req.params.associationId);
+    req.session.notice = '班名を更新しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 
@@ -360,7 +361,7 @@ managementRouter.post('/:associationId/manage/district-groups/:districtId/groups
     const item = await DistrictGroup.findOne({ _id: req.params.itemId, association: req.params.associationId, parentDistrict: req.params.districtId });
     if (!item) throw fail('班を確認できません。', 404);
     for (const RefModel of [RoleAssignment, AssociationMembership, Household, AnnualLeaderAssignment]) if (await RefModel.exists({ association: req.params.associationId, districtGroup: item._id })) throw fail('使用中の班は削除できません。', 409);
-    await item.deleteOne(); req.session.notice = '班を削除しました。'; return redirectManagement(res, req.params.associationId);
+    await item.deleteOne(); req.session.notice = '班を削除しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 
@@ -413,7 +414,7 @@ for (const config of organizationRoutes) {
       const item = await config.Model.create({ association: req.params.associationId, name, sortOrder: (last?.sortOrder ?? -1) + 1 });
       await audit({ association: req.params.associationId, actor: req.user._id, action: `organization.${config.path}.created`, targetType: config.Model.modelName, targetId: item._id, after: { name }, req });
       req.session.notice = `${config.label}を作成しました。`;
-      return redirectManagement(res, req.params.associationId);
+      return redirectBasicSettings(res, req.params.associationId);
     } catch (error) { return next(error); }
   });
   managementRouter.post(`/:associationId/manage/${config.path}/:itemId/update`, requirePermission('organization.manage'), verifyCsrfToken, async (req, res, next) => {
@@ -431,7 +432,7 @@ for (const config of organizationRoutes) {
         }));
       }
       await audit({ association: req.params.associationId, actor: req.user._id, action: `organization.${config.path}.updated`, targetType: config.Model.modelName, targetId: item._id, before, after: { name }, req });
-      req.session.notice = `${config.label}を更新しました。`; return redirectManagement(res, req.params.associationId);
+      req.session.notice = `${config.label}を更新しました。`; return redirectBasicSettings(res, req.params.associationId);
     } catch (error) { return next(error); }
   });
   managementRouter.post(`/:associationId/manage/${config.path}/:itemId/delete`, requirePermission('organization.manage'), verifyCsrfToken, async (req, res, next) => {
@@ -441,7 +442,7 @@ for (const config of organizationRoutes) {
       for (const RefModel of config.refs()) if (await RefModel.exists({ association: req.params.associationId, [config.path === 'departments' ? 'department' : config.path === 'district-groups' && RefModel === AnnualLeaderAssignment ? 'districtGroup' : config.path === 'district-groups' ? 'districtGroup' : '_id']: item._id })) throw fail(`使用中の${config.label}は削除できません。`, 409);
       await config.Model.deleteOne({ _id: item._id });
       await audit({ association: req.params.associationId, actor: req.user._id, action: `organization.${config.path}.deleted`, targetType: config.Model.modelName, targetId: item._id, before: { name: item.name }, req });
-      req.session.notice = `${config.label}を削除しました。`; return redirectManagement(res, req.params.associationId);
+      req.session.notice = `${config.label}を削除しました。`; return redirectBasicSettings(res, req.params.associationId);
     } catch (error) { return next(error); }
   });
 }
@@ -455,7 +456,7 @@ managementRouter.post('/:associationId/manage/roles', requirePermission('role.ma
     const last = await RoleDefinition.findOne({ association: req.params.associationId }).sort({ sortOrder: -1 });
     const role = await RoleDefinition.create({ association: req.params.associationId, name, sortOrder: (last?.sortOrder ?? -1) + 1, permissions: requested.filter((item) => allowedPermissions.includes(item)) });
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'role.created', targetType: 'RoleDefinition', targetId: role._id, after: { name, permissions: role.permissions }, req });
-    req.session.notice = '役職を作成しました。'; return redirectManagement(res, req.params.associationId);
+    req.session.notice = '役職を作成しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 
@@ -467,11 +468,11 @@ managementRouter.post('/:associationId/manage/roles/:roleId/update', requirePerm
     const requested = Array.isArray(req.body.permissions) ? req.body.permissions : [req.body.permissions].filter(Boolean);
     if (role.name === '町内会管理者') {
       req.session.notice = '町内会管理者の権限はシステムで保護されています。';
-      return redirectManagement(res, req.params.associationId);
+      return redirectBasicSettings(res, req.params.associationId);
     }
     const before = { name: role.name, permissions: role.permissions }; role.name = name; role.permissions = requested.filter((item) => allowedPermissions.includes(item)); await role.save();
     await audit({ association: req.params.associationId, actor: req.user._id, action: 'role.updated', targetType: 'RoleDefinition', targetId: role._id, before, after: { name, permissions: role.permissions }, req });
-    req.session.notice = '役職を更新しました。'; return redirectManagement(res, req.params.associationId);
+    req.session.notice = '役職を更新しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 
@@ -481,7 +482,7 @@ managementRouter.post('/:associationId/manage/roles/:roleId/delete', requirePerm
     if (!role) throw fail('役職を確認できません。', 404);
     if (role.name === '町内会管理者' || await RoleAssignment.exists({ association: req.params.associationId, role: role._id }) || await AnnualOfficer.exists({ association: req.params.associationId, role: role._id })) throw fail('管理者役職または使用中の役職は削除できません。', 409);
     await role.deleteOne(); await audit({ association: req.params.associationId, actor: req.user._id, action: 'role.deleted', targetType: 'RoleDefinition', targetId: role._id, before: { name: role.name }, req });
-    req.session.notice = '役職を削除しました。'; return redirectManagement(res, req.params.associationId);
+    req.session.notice = '役職を削除しました。'; return redirectBasicSettings(res, req.params.associationId);
   } catch (error) { return next(error); }
 });
 

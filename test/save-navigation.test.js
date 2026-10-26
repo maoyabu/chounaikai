@@ -12,7 +12,7 @@ import { NotificationSettings } from '../src/models/notificationSettings.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import { Department, Household, HouseholdMember } from '../src/models/organization.js';
 import { AnnualOfficer } from '../src/models/annualOfficer.js';
-import { RoleDefinition } from '../src/models/role.js';
+import { RoleAssignment, RoleDefinition } from '../src/models/role.js';
 import { DriveConnection } from '../src/models/driveConnection.js';
 import { AssociationGroup, AssociationGroupMembership } from '../src/models/associationGroup.js';
 import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
@@ -48,15 +48,35 @@ test('failed notification save never reports completion or navigates back', asyn
   const { res, req, error } = await invoke(managementRouter, '/:associationId/manage/notifications');
   assert.equal(error.message, 'save failed'); assert.equal(res.location, undefined); assert.equal(req.session.notice, undefined);
 });
-test('basic information and organization updates return to management only after saving', async t => {
+test('basic information and organization updates return to basic settings only after saving', async t => {
   const record = { _id: id, name: '旧名称', save: async () => {} };
   t.mock.method(NeighborhoodAssociation, 'findById', async () => record); stubAudit(t);
   const result = await invoke(managementRouter, '/:associationId/manage/name', { body: { name: '新名称' } });
-  assert.equal(result.error, undefined); assert.equal(record.name, '新名称'); assert.equal(result.res.location, `/associations/${id}/manage`);
+  assert.equal(result.error, undefined); assert.equal(record.name, '新名称'); assert.equal(result.res.location, `/associations/${id}/manage/basic`);
   t.mock.method(Department, 'findOne', async () => record);
   const department = await invoke(managementRouter, '/:associationId/manage/departments/:itemId/update', { params: { itemId: id }, body: { name: '総務部' } });
-  assert.equal(department.error, undefined); assert.equal(department.res.location, `/associations/${id}/manage`);
+  assert.equal(department.error, undefined); assert.equal(department.res.location, `/associations/${id}/manage/basic`);
 });
+for (const [type, Model, key] of [['roles', RoleDefinition, 'roleId'], ['departments', Department, 'itemId']]) {
+  test(`${type} create, update and delete stay in basic settings`, async t => {
+    let saves = 0, deletes = 0, creates = 0;
+    const record = { _id: id, name: '設定項目', permissions: [], save: async () => { saves++; }, deleteOne: async () => { deletes++; } };
+    t.mock.method(Model, 'findOne', () => chain(record));
+    t.mock.method(Model, 'create', async () => { creates++; return record; });
+    t.mock.method(Model, 'deleteOne', async () => { deletes++; });
+    t.mock.method(RoleAssignment, 'exists', async () => false);
+    t.mock.method(AnnualOfficer, 'exists', async () => false);
+    stubAudit(t);
+    for (const suffix of ['', `/:${key}/update`, `/:${key}/delete`]) {
+      const result = await invoke(managementRouter, `/:associationId/manage/${type}${suffix}`, { params: { [key]: id }, body: { name: '設定項目' } });
+      assert.equal(result.error, undefined);
+      assert.equal(result.res.location, `/associations/${id}/manage/basic`);
+      assert.ok(result.req.session.notice);
+    }
+    assert.equal(creates, 1); assert.equal(saves, 1); assert.equal(deletes, 1);
+  });
+}
+
 for (const [kind, routerPath, Model, recordKey] of [
   ['officers', '/:associationId/manage/annual/officers/:officerId/update', AnnualOfficer, 'officerId'],
   ['leaders', '/:associationId/manage/annual/leaders/:leaderId/update', AnnualLeaderAssignment, 'leaderId']
