@@ -1,3 +1,5 @@
+import { AnnualDepartmentPlan } from '../src/models/annualDepartmentPlan.js';
+import { Notification } from '../src/models/notification.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { managementRouter } from '../src/routes/management.js';
@@ -10,7 +12,7 @@ import { disclosureRouter } from '../src/routes/disclosure.js';
 import { siteSecurityRouter } from '../src/routes/siteSecurity.js';
 import { NotificationSettings } from '../src/models/notificationSettings.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
-import { Department, Household, HouseholdMember } from '../src/models/organization.js';
+import { Department, DistrictGroup, Household, HouseholdMember } from '../src/models/organization.js';
 import { AnnualOfficer } from '../src/models/annualOfficer.js';
 import { RoleAssignment, RoleDefinition } from '../src/models/role.js';
 import { DriveConnection } from '../src/models/driveConnection.js';
@@ -87,7 +89,7 @@ for (const [kind, routerPath, Model, recordKey] of [
     for (const returnTo of [kind, 'annual', 'https://external.invalid/']) {
       const result = await invoke(managementRouter, routerPath, { params: { [recordKey]: id }, body: { returnTo, departmentId: id } });
       assert.equal(result.error, undefined);
-      assert.equal(result.res.location, `/associations/${id}/manage${returnTo === kind || returnTo === 'annual' ? `/${returnTo}?year=2026` : ''}`);
+      assert.equal(result.res.location, `/associations/${id}/manage/${returnTo === kind ? kind : 'annual'}?year=2026`);
     }
   });
 }
@@ -157,14 +159,46 @@ test('Drive settings save and disconnect finish on management without rendering 
   const disconnect = await invoke(documentsRouter, '/:associationId/documents/disconnect');
   assert.equal(disconnect.error, undefined); assert.equal(disconnect.res.location, `/associations/${id}/manage`);
 });
-test('public page edit and group PR edit finish on their management page', async t => {
+test('public page edit returns to its settings and group PR edit returns to group management', async t => {
   const association = { _id: id, publicPhotos: [], save: async () => {} };
   t.mock.method(NeighborhoodAssociation, 'findOne', async () => association);
   const result = await invoke(associationEventsRouter, '/:associationId/public/edit', { body: { introduction: '紹介文' } });
-  assert.equal(result.error, undefined); assert.equal(result.res.location, `/associations/${id}/manage`);
+  assert.equal(result.error, undefined); assert.equal(result.res.location, `/associations/${id}/public/edit`);
   t.mock.method(AssociationGroup, 'findOne', async () => ({ _id: id, association: id, publicPhotos: [], save: async () => {} }));
   t.mock.method(AssociationGroupMembership, 'findOne', async () => ({ role: 'manager' }));
   t.mock.method(AssociationGroup, 'exists', async () => ({ _id: id }));
   const group = await invoke(associationGroupsRouter, '/:associationId/groups/:groupId/manage/pr', { params: { groupId: id }, body: { name: 'グループ', publicDescription: '紹介文' } });
   assert.equal(group.error, undefined); assert.equal(group.res.location, `/associations/${id}/groups/${id}/manage`);
+});
+
+test('annual officer and leader creation return to the selected settings year', async t => {
+  t.mock.method(DistrictGroup, 'findOne', () => chain({ _id: id, name: '地区' }));
+  t.mock.method(Department, 'findOne', async () => ({ _id: id }));
+  t.mock.method(AnnualOfficer, 'create', async () => ({ _id: id }));
+  t.mock.method(AnnualLeaderAssignment, 'exists', async () => false);
+  t.mock.method(AnnualLeaderAssignment, 'create', async () => ({ _id: id }));
+  stubAudit(t);
+  for (const path of ['annual/officers/create', 'leaders/create']) {
+    const result = await invoke(managementRouter, `/:associationId/manage/${path}`, { body: { fiscalYear: '2027', name: '担当者', nameKana: 'たんとうしゃ', departmentId: id, districtGroupId: id } });
+    assert.equal(result.error, undefined);
+    assert.equal(result.res.location, `/associations/${id}/manage/annual?year=2027`);
+    assert.ok(result.req.session.notice);
+  }
+});
+test('annual copy opens the destination year and deletes keep the record year', async t => {
+  stubAudit(t);
+  for (const Model of [AnnualOfficer, AnnualLeaderAssignment, AnnualDepartmentPlan]) {
+    t.mock.method(Model, 'find', () => chain([]));
+    t.mock.method(Model, 'countDocuments', async () => 0);
+  }
+  const copied = await invoke(managementRouter, '/:associationId/manage/annual/officers/copy', { body: { fromYear: '2026', toYear: '2027' } });
+  assert.equal(copied.error, undefined);
+  assert.equal(copied.res.location, `/associations/${id}/manage/annual?year=2027`);
+  t.mock.method(Notification, 'deleteMany', async () => ({}));
+  for (const [Model, path, key] of [[AnnualOfficer, 'annual/officers/:officerId/delete', 'officerId'], [AnnualLeaderAssignment, 'leaders/:assignmentId/delete', 'assignmentId']]) {
+    t.mock.method(Model, 'findOneAndDelete', async () => ({ _id: id, fiscalYear: 2028 }));
+    const result = await invoke(managementRouter, `/:associationId/manage/${path}`, { params: { [key]: id } });
+    assert.equal(result.error, undefined);
+    assert.equal(result.res.location, `/associations/${id}/manage/annual?year=2028`);
+  }
 });
