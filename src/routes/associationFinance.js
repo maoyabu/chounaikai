@@ -194,7 +194,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/new', async (req, 
   const paymentMethods = association.financePaymentMethods?.length
     ? association.financePaymentMethods.filter((item) => item.active !== false).sort((a, b) => (a.order || 0) - (b.order || 0))
     : (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1, active: true }));
-  return res.render('association-finance-entry', { title: '会計を入力', association, entry: null, year: Number(req.query.year || year), budgets, paymentMethods });
+  return res.render(req.query.modal === '1' ? 'partials/finance-entry-content' : 'association-finance-entry', { title: '会計を入力', association, entry: null, year: Number(req.query.year || year), budgets, paymentMethods });
 });
 
 associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', async (req, res, next) => {
@@ -207,7 +207,7 @@ associationFinanceRouter.get('/:associationId/finance/entries/:entryId/edit', as
       ? association.financePaymentMethods.filter((item) => item.active !== false)
       : (association.financePaymentTypes || []).map((name, index) => ({ name, order: index + 1 }));
     const entryYear = fiscalYear(entry.date, association.financeFiscalStartMonth || 4);
-    return res.render('association-finance-entry', { title: '会計を編集', association, year: entryYear, budgets, paymentMethods, entry });
+    return res.render(req.query.modal === '1' ? 'partials/finance-entry-content' : 'association-finance-entry', { title: '会計を編集', association, year: entryYear, budgets, paymentMethods, entry });
   } catch (error) { return next(error); }
 });
 
@@ -298,8 +298,12 @@ associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken
     const selectedTags = tagName ? [{ name: tagName }] : [];
     await Finance.create({ ...classification, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
     req.session.notice = '入出金を登録しました。';
+    if (req.get?.('accept') === 'application/json') return res.json({ ok: true, continue: Boolean(req.body.continue) });
     return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance`);
-  } catch (error) { return next(error); }
+  } catch (error) {
+    if (req.get?.('accept') === 'application/json') return res.status(error.status || 500).json({ message: error.status ? error.message : '保存できませんでした。入力内容を確認して再度お試しください。' });
+    return next(error);
+  }
 });
 
 associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update', verifyCsrfToken, async (req, res, next) => {
@@ -312,8 +316,12 @@ associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update',
     const update = cf === '支出' ? { $set: { ...changes, payment_type: paymentType } } : { $set: changes, $unset: { payment_type: 1 } };
     await Finance.updateOne({ _id: req.params.entryId, group: groupId }, update);
     req.session.notice = '入出金を更新しました。';
+    if (req.get?.('accept') === 'application/json') return res.json({ ok: true });
     return res.redirect(`/associations/${association._id}/finance/entries`);
-  } catch (error) { return next(error); }
+  } catch (error) {
+    if (req.get?.('accept') === 'application/json') return res.status(error.status || 500).json({ message: error.status ? error.message : '保存できませんでした。入力内容を確認して再度お試しください。' });
+    return next(error);
+  }
 });
 
 associationFinanceRouter.post('/:associationId/finance/entries/:entryId/delete', verifyCsrfToken, async (req, res, next) => {

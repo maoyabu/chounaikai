@@ -15,11 +15,11 @@ const budgets = [
   { year: '2026', cf: '収入', income_category: '会費収入', income_item: '会費' },
   { year: '2026', cf: '収入', income_category: 'その他', income_item: '寄付金' }
 ];
-const invoke = async (body, editing = false) => {
+const invoke = async (body, editing = false, json = false) => {
   const path = editing ? '/:associationId/finance/entries/:entryId/update' : '/:associationId/finance/entries';
   const handler = associationFinanceRouter.stack.find(layer => layer.route?.path === path && layer.route.methods.post).route.stack.at(-1).handle;
-  const req = { body: { date: '2026-04-01', cf: '支出', payment_type: '現金', amount: '100', ...body }, params: { entryId: id }, user: { _id: id }, session: {}, financeContext: { association: { _id: id }, groupId: id } };
-  const res = { redirect(url) { this.location = url; } };
+  const req = { get: () => json ? 'application/json' : '', body: { date: '2026-04-01', cf: '支出', payment_type: '現金', amount: '100', ...body }, params: { entryId: id }, user: { _id: id }, session: {}, financeContext: { association: { _id: id }, groupId: id } };
+  const res = { status(code) { this.statusCode = code; return this; }, json(data) { this.data = data; }, redirect(url) { this.location = url; } };
   let error;
   await handler(req, res, failure => { error = failure; });
   return { res, error };
@@ -73,10 +73,11 @@ test('entry form selects department before items, resets tags and filters by fis
   const ids = Object.fromEntries(['finance-entry-group-label', 'finance-entry-department-field', 'finance-entry-item-label', 'finance-entry-tags-field', 'finance-entry-tag-input', 'finance-entry-tag-options', 'finance-entry-tags', 'finance-entry-fiscal-year'].map(name => [name, new Element()]));
   const form = new Element(); form.querySelector = selector => fields[selector.match(/name="([^"]+)"/)[1]];
   const document = { querySelector: () => form, getElementById: id => ids[id], createElement: () => new Element() };
-  const template = await readFile(new URL('../src/views/association-finance-entry.ejs', import.meta.url), 'utf8');
+  form.dataset.year = '2026'; form.dataset.fiscalStartMonth = '4';
   const data = budgets.map(row => ({ year: row.year, cf: row.cf, name: row.expense_item || row.income_item, department: (row.cf === '収入' ? row.income_category : row.expense_department) || '未設定', details: row.details || [] }));
-  const script = template.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/<%-[\s\S]*?%>/, JSON.stringify(data)).replace(/<%= Number\(association.financeFiscalStartMonth\) \|\| 4 %>/, '4').replace(/<%= year %>/, '2026');
-  vm.runInNewContext(script, { document });
+  const root = { querySelector: selector => selector === '[data-finance-budgets]' ? { textContent: JSON.stringify(data) } : selector === '.finance-entry-form' ? form : ids[selector.slice(1)] };
+  const script = (await readFile(new URL('../src/public/finance-entry.js', import.meta.url), 'utf8')).split("document.querySelectorAll('[data-finance-entry-content]')")[0];
+  vm.runInNewContext(script + '\ninitializeFinanceEntry(root);', { document, root });
   assert.equal(fields.item.disabled, true);
   assert.deepEqual(fields.expense_department.children.map(option => option.value), ['', '総務部', '防災部']);
   fields.expense_department.change('総務部');
@@ -107,4 +108,23 @@ test('entry form selects department before items, resets tags and filters by fis
   fields.expense_department.change('その他');
   assert.equal(fields.item.value, '');
   assert.deepEqual(fields.item.children.map(option => option.value), ['', '寄付金']);
+});
+
+test('modal saves return JSON, keep continue mode, and report invalid selections without redirecting', async t => {
+  t.mock.method(FinanceBudget, 'find', filter => ({ lean: async () => budgets.filter(row => row.cf === filter.cf && row.year === filter.year) }));
+  let creates = 0;
+  t.mock.method(Finance, 'create', async () => { creates++; });
+  t.mock.method(Finance, 'updateOne', async () => ({}));
+  for (const editing of [false, true]) {
+    const result = await invoke({ expense_department: '総務部', item: '通信費', continue: '1' }, editing, true);
+    assert.equal(result.error, undefined);
+    assert.equal(result.res.data.ok, true);
+    assert.equal(result.res.location, undefined);
+    if (!editing) assert.equal(result.res.data.continue, true);
+    const invalid = await invoke({ expense_department: '防災部', item: '通信費' }, editing, true);
+    assert.equal(invalid.res.statusCode, 400);
+    assert.ok(invalid.res.data.message.includes('支出予算項目'));
+    assert.equal(invalid.res.location, undefined);
+  }
+  assert.equal(creates, 1);
 });
