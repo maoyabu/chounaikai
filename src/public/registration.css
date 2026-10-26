@@ -1634,6 +1634,10 @@ h1, h2, h3, h4, h5, h6,
 .officer-function-green strong { color: var(--green-dark); }
 .officer-function-green .list-arrow { color: var(--green); }
 .officer-function-green:hover, .officer-function-green:focus-visible { background: var(--green-pale); }
+.officer-functions-section .officer-function-calendar { border-left: 4px solid #c99122; }
+.officer-function-calendar strong { color: #875b13; }
+.officer-function-calendar .list-arrow { color: #c99122; }
+.officer-function-calendar:hover, .officer-function-calendar:focus-visible { background: #fff8df; }
 
 .officer-menu-layout .question-home-link .officer-menu-title { display: flex; align-items: flex-start; gap: .6rem; }
 .officer-menu-title > span { min-width: 0; }
