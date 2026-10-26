@@ -168,7 +168,7 @@
 .linked-gallery-accordion>summary::-webkit-details-marker{display:none}
 .good-place-gallery.linked-gallery-accordion>.good-place-gallery-link{padding:0;gap:0;flex-wrap:nowrap}
 .good-place-gallery-title{flex:1;min-width:0;padding:20px;color:inherit;text-decoration:none;border-radius:15px 0 0 0}
-.good-place-gallery-title:has(.good-place-gallery-latest){padding-block:8px}
+.good-place-gallery-title:has(.good-place-gallery-latest){padding-block:2px}
 .linked-gallery-toggle{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:60px;min-height:60px}
 .linked-gallery-chevron{font-size:1.5rem;line-height:1}
 .linked-gallery-accordion[open] .linked-gallery-chevron{transform:rotate(180deg)}
@@ -184,6 +184,6 @@
 .good-place-gallery-title,.directory-gallery-title{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .directory-gallery-title{flex:1;min-width:0}
 .good-place-gallery-latest{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;line-height:1.5;font-weight:400}
-.good-place-gallery-latest img{display:block;width:80px;height:60px;object-fit:cover;border-radius:5px;flex:none}
+.good-place-gallery-latest img{display:block;width:96px;height:72px;object-fit:cover;border-radius:5px;flex:none}
 .good-place-gallery-latest time{display:inline-block}
 @media(max-width:600px){.good-place-gallery-title,.directory-gallery-title{gap:8px}.good-place-gallery-latest{font-size:.7rem}}
