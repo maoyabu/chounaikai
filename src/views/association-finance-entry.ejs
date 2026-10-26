@@ -8,6 +8,7 @@
     <label>使用日<input type="date" name="date" value="<%= entry?.date ? new Date(entry.date).toISOString().slice(0,10) : '' %>" required></label>
     <div class="finance-entry-category-inline">
       <label>収支区分<select name="cf" id="finance-entry-cf"><option value="支出" <%= entry?.cf === '支出' ? 'selected' : '' %>>支出</option><option value="収入" <%= entry?.cf === '収入' ? 'selected' : '' %>>収入</option></select></label>
+      <label id="finance-entry-department-field">部<select name="expense_department" id="finance-entry-department" data-selected="<%= entry?.expense_department_name || entry?.expense_department || '' %>"></select></label>
       <label><span id="finance-entry-item-label"><%= entry?.cf === '収入' ? '収入区分' : '支出区分' %></span><select name="item" id="finance-entry-item" data-selected="<%= selectedItem %>" required></select></label>
     </div>
     <div id="finance-entry-tags-field" class="finance-entry-tag-field" <%= entry?.cf === '収入' ? 'hidden' : '' %>>
@@ -32,11 +33,14 @@
 </main>
 <script>
 (() => {
-  const budgets = <%- JSON.stringify(budgets.map(row => ({ year: String(row.year), cf: row.cf, name: row.expense_item || row.income_item || '', details: row.details || [] })).filter(row => row.name)) %>;
+  const budgets = <%- JSON.stringify(budgets.map(row => ({ year: String(row.year), cf: row.cf, name: row.expense_item || row.income_item || '', department: row.expense_department_name || row.expense_department || '未設定', details: row.details || [] })).filter(row => row.name)) %>;
   const form = document.querySelector('.finance-entry-form');
   const date = form.querySelector('[name="date"]');
   const cf = form.querySelector('[name="cf"]');
   const item = form.querySelector('[name="item"]');
+  const department = form.querySelector('[name="expense_department"]');
+  const departmentField = document.getElementById('finance-entry-department-field');
+  let initialDepartment = department.dataset.selected;
   const itemLabel = document.getElementById('finance-entry-item-label');
   const tagField = document.getElementById('finance-entry-tags-field');
   const tagText = document.getElementById('finance-entry-tag-input');
@@ -70,14 +74,38 @@
     }));
   };
   tagText.addEventListener('input', () => tagButtons.querySelectorAll('.finance-entry-tag').forEach(button => button.classList.toggle('is-selected', button.textContent === tagText.value)));
+  const renderItems = (selected = '') => {
+    const expense = cf.value === '支出';
+    const available = budgets.filter(row => row.cf === cf.value && row.year === selectedYear() && (!expense || row.department === department.value));
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = expense && !department.value ? '先に部を選択してください' : available.length ? '項目を選択してください' : 'この年度の予算項目がありません';
+    item.replaceChildren(placeholder, ...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; option.dataset.details = JSON.stringify(row.details || []); return option; }));
+    item.disabled = expense && !department.value;
+    if (available.some(row => row.name === selected)) item.value = selected;
+    renderTags();
+  };
   const refresh = () => {
     yearLabel.textContent = selectedYear();
-    itemLabel.textContent = cf.value === '収入' ? '収入区分' : '支出区分';
-    const available = budgets.filter(row => row.cf === cf.value && row.year === selectedYear());
-    item.replaceChildren(...available.map(row => { const option = document.createElement('option'); option.value = row.name; option.textContent = row.name; option.dataset.details = JSON.stringify(row.details || []); return option; }));
-    if (available.some(row => row.name === initialItem)) item.value = initialItem;
-    initialItem = '';
     const expense = cf.value === '支出';
+    itemLabel.textContent = expense ? '支出項目' : '収入区分';
+    const available = budgets.filter(row => row.cf === cf.value && row.year === selectedYear());
+    const departments = [...new Set(available.map(row => row.department))];
+    const previousDepartment = department.value;
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = departments.length ? '部を選択してください' : 'この年度の支出予算がありません';
+    department.replaceChildren(placeholder, ...departments.map(name => { const option = document.createElement('option'); option.value = name; option.textContent = name; return option; }));
+    // 部が未記録の既存データは、項目から一意に判別できる場合だけ復元する。
+    const matchingDepartments = [...new Set(available.filter(row => row.name === initialItem).map(row => row.department))];
+    const selectedDepartment = initialDepartment || (initialItem && matchingDepartments.length === 1 ? matchingDepartments[0] : previousDepartment);
+    if (departments.includes(selectedDepartment)) department.value = selectedDepartment;
+    departmentField.hidden = !expense;
+    department.disabled = !expense;
+    department.required = expense;
+    renderItems(initialItem);
+    initialItem = '';
+    initialDepartment = '';
     tagField.hidden = !expense;
     tagField.style.display = expense ? 'block' : 'none';
     tagText.disabled = !expense;
@@ -90,6 +118,7 @@
   const clearTags = () => { tagText.value = ''; };
   cf.addEventListener('change', () => { clearTags(); refresh(); });
   date.addEventListener('change', () => { clearTags(); refresh(); });
+  department.addEventListener('change', () => { clearTags(); renderItems(); });
   item.addEventListener('change', () => { clearTags(); renderTags(); });
   const normalizeAmount = () => amount.value.normalize('NFKC').replace(/[ ,，]/g, '');
   amount.addEventListener('blur', () => { const value = normalizeAmount(); if (/^\d+$/.test(value)) amount.value = Number(value).toLocaleString('ja-JP'); });

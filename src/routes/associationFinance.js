@@ -25,6 +25,16 @@ const fiscalYear = (date, startMonth = 4) => {
   return value.getMonth() + 1 >= Number(startMonth) ? value.getFullYear() : value.getFullYear() - 1;
 };
 
+async function expenseDepartmentForEntry(req, date, cf) {
+  if (cf !== '支出') return { expense_department: '', expense_department_name: '' };
+  const { association, groupId } = req.financeContext;
+  const department = String(req.body.expense_department || '').trim();
+  const budgets = await FinanceBudget.find({ group: groupId, year: String(fiscalYear(date, association.financeFiscalStartMonth || 4)), cf: '支出' }).lean();
+  const budget = budgets.find(row => (row.expense_department_name || row.expense_department || '未設定') === department && row.expense_item === req.body.item);
+  if (!department || !budget) throw Object.assign(new Error('部と、その部の支出予算項目を選択してください。'), { status: 400 });
+  return { expense_department: budget.expense_department || '', expense_department_name: budget.expense_department_name || budget.expense_department || '' };
+}
+
 async function availableFinanceYears(groupId, startMonth) {
   const [budgetYears, dates] = await Promise.all([FinanceBudget.distinct('year', { group: groupId }), Finance.find({ group: groupId }).select('date').lean()]);
   const years = new Set(budgetYears.map(Number).filter(Number.isFinite));
@@ -285,10 +295,11 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
 associationFinanceRouter.post('/:associationId/finance/entries', verifyCsrfToken, async (req, res, next) => {
   try {
     const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 });
+    const expenseDepartment = await expenseDepartmentForEntry(req, date, cf);
     const inputterName = req.user.displayname || req.user.username || '';
     const tagName = cf === '支出' ? String(req.body.tagText || '').trim() : '';
     const selectedTags = tagName ? [{ name: tagName }] : [];
-    await Finance.create({ date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
+    await Finance.create({ ...expenseDepartment, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, payment_type: cf === '支出' ? paymentType : undefined, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, user: req.user._id, inputterName, usedBy: String(req.body.usedBy || '').trim() || inputterName, group: groupId });
     req.session.notice = '入出金を登録しました。';
     return res.redirect(req.body.continue ? `/associations/${association._id}/finance/entries/new` : `/associations/${association._id}/finance`);
   } catch (error) { return next(error); }
@@ -299,7 +310,8 @@ associationFinanceRouter.post('/:associationId/finance/entries/:entryId/update',
     const { association, groupId } = req.financeContext; const date = new Date(req.body.date); const cf = req.body.cf === '収入' ? '収入' : '支出'; const paymentType = String(req.body.payment_type || '').trim(); const amount = Number(String(req.body.amount || '').replace(/,/g, '')); if (!Number.isFinite(amount) || amount < 0) throw Object.assign(new Error('金額を正しく入力してください。'), { status: 400 }); if (cf === '支出' && !paymentType) throw Object.assign(new Error('支払い種別を選択してください。'), { status: 400 }); const inputterName = req.user.displayname || req.user.username || '';
     const tagName = cf === '支出' ? String(req.body.tagText || '').trim() : '';
     const selectedTags = tagName ? [{ name: tagName }] : [];
-    const changes = { date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName };
+    const expenseDepartment = await expenseDepartmentForEntry(req, date, cf);
+    const changes = { ...expenseDepartment, date, month: date.getMonth() + 1, day: date.getDate(), cf, income_item: cf === '収入' ? req.body.item : undefined, expense_item: cf === '支出' ? req.body.item : undefined, content: req.body.content, amount, tags: selectedTags, receiptNo: req.body.receiptNo, memo: req.body.memo, usedBy: String(req.body.usedBy || '').trim() || inputterName };
     const update = cf === '支出' ? { $set: { ...changes, payment_type: paymentType } } : { $set: changes, $unset: { payment_type: 1 } };
     await Finance.updateOne({ _id: req.params.entryId, group: groupId }, update);
     req.session.notice = '入出金を更新しました。';

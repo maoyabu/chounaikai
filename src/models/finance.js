@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const financeSchema = new mongoose.Schema({
   date: { type: Date, required: true }, month: Number, day: Number,
   cf: { type: String, required: true }, income_item: String, expense_item: String,
+  expense_department: String, expense_department_name: String,
   content: String, sub_tag: String, amount: { type: Number, required: true },
   payment_type: { type: String }, receiptNo: String, memo: String,
   corrected: { storeName: String, amount: String, date: String },
