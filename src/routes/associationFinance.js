@@ -221,7 +221,7 @@ associationFinanceRouter.post('/:associationId/finance/settings', verifyCsrfToke
     const paymentMethods = names.filter(Boolean).map((name, index) => ({ name: String(name).trim(), order: index + 1, active: active.includes(String(index)) }));
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $set: { financePublic: req.body.financePublic === 'on' || req.body.financePublic === 'true' || req.body.financePublic === '1', financeFiscalStartMonth: Number(req.body.fiscalStartMonth) || association.financeFiscalStartMonth || 4, financePaymentTypes: paymentMethods.map((item) => item.name), financePaymentMethods: paymentMethods } });
     req.session.notice = '会計設定を保存しました。';
-    return res.redirect(`/associations/${association._id}/finance`);
+    return res.redirect(`/associations/${association._id}/finance/settings`);
   } catch (error) { return next(error); }
 });
 
@@ -247,7 +247,7 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets/copy', v
       }))
     })));
     req.session.notice = '予算項目をコピーしました。';
-    return res.json({ redirect: `/associations/${association._id}/finance?year=${encodeURIComponent(targetYear)}` });
+    return res.json({ redirect: `/associations/${association._id}/finance/settings?year=${encodeURIComponent(targetYear)}` });
   } catch (error) { return next(error); }
 });
 
@@ -278,7 +278,7 @@ associationFinanceRouter.post('/:associationId/finance/settings/budgets', verify
     await FinanceBudget.deleteMany({ group: groupId, year: targetYear, cf: { $in: submittedTypes } });
     if (items.length) await FinanceBudget.insertMany(items);
     req.session.notice = '予算項目を保存しました。';
-    return res.redirect(`/associations/${association._id}/finance?year=${encodeURIComponent(String(req.body.year || year))}`);
+    return res.redirect(`/associations/${association._id}/finance/settings?year=${encodeURIComponent(String(req.body.year || year))}&tab=${encodeURIComponent(req.body.budgetTab === '支出' ? '支出' : '収入')}`);
   } catch (error) { return next(error); }
 });
 

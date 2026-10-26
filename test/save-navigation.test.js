@@ -91,21 +91,21 @@ for (const [kind, routerPath, Model, recordKey] of [
     }
   });
 }
-test('finance settings save and return to the finance top', async t => {
+test('finance settings save and return to finance settings', async t => {
   let writes = 0; t.mock.method(NeighborhoodAssociation, 'updateOne', async () => { writes++; });
   const result = await invoke(associationFinanceRouter, '/:associationId/finance/settings', { extra: { financeContext: { association: { _id: id } } }, body: { paymentName: ['現金'], paymentActive: ['0'] } });
-  assert.equal(result.error, undefined); assert.equal(writes, 1); assert.equal(result.res.location, `/associations/${id}/finance`); assert.ok(result.req.session.notice);
+  assert.equal(result.error, undefined); assert.equal(writes, 1); assert.equal(result.res.location, `/associations/${id}/finance/settings`); assert.ok(result.req.session.notice);
 });
-test('budget save and AJAX copy return to finance top with the chosen year', async t => {
+test('budget save and AJAX copy return to finance settings with the chosen year', async t => {
   t.mock.method(FinanceBudget, 'deleteMany', async () => {});
   t.mock.method(FinanceBudget, 'insertMany', async () => {});
   const extra = { financeContext: { association: { _id: id }, groupId: id, year: 2026 } };
   const budget = await invoke(associationFinanceRouter, '/:associationId/finance/settings/budgets', { extra, body: { year: '2027', itemName: ['会費'], itemCf: ['収入'], itemBudget: ['1000'] } });
-  assert.equal(budget.error, undefined); assert.equal(budget.res.location, `/associations/${id}/finance?year=2027`);
+  assert.equal(budget.error, undefined); assert.equal(budget.res.location, `/associations/${id}/finance/settings?year=2027&tab=${encodeURIComponent('収入')}`);
   t.mock.method(FinanceBudget, 'find', () => chain([{ year: '2026', cf: '収入' }]));
   t.mock.method(FinanceBudget, 'exists', async () => false);
   const copy = await invoke(associationFinanceRouter, '/:associationId/finance/settings/budgets/copy', { extra, body: { sourceYear: '2026', targetYear: '2027' } });
-  assert.equal(copy.error, undefined); assert.equal(copy.res.data.redirect, `/associations/${id}/finance?year=2027`);
+  assert.equal(copy.error, undefined); assert.equal(copy.res.data.redirect, `/associations/${id}/finance/settings?year=2027`);
 });
 test('profile update finishes on home; invalid input retains the edit form', async t => {
   t.mock.method(User, 'exists', async () => false); t.mock.method(User, 'updateOne', async () => {});
