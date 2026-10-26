@@ -162,13 +162,14 @@
 .linked-gallery-accordion>summary{list-style:none;cursor:pointer}
 .linked-gallery-accordion>summary::-webkit-details-marker{display:none}
 .good-place-gallery.linked-gallery-accordion>.good-place-gallery-link{padding:0;gap:0;flex-wrap:nowrap}
-.good-place-gallery-title{flex:1;min-width:0;padding:20px;color:inherit;text-decoration:none;border-radius:15px 0 0 0}
-.good-place-gallery-title:has(.good-place-gallery-latest){padding-block:2px}
+.good-place-gallery-title{flex:1;min-width:0;padding:16px 20px 16px 0;color:inherit;text-decoration:none}
+.good-place-gallery-photo{display:flex;align-self:stretch;flex:none;width:clamp(120px,24vw,200px);color:inherit;text-decoration:none;border-top-left-radius:15px;overflow:hidden}
+.linked-gallery-accordion:not([open]) .good-place-gallery-photo{border-bottom-left-radius:15px}
 .linked-gallery-toggle{display:flex;align-items:center;justify-content:center;align-self:stretch;min-width:60px;min-height:60px}
 .linked-gallery-chevron{font-size:1.5rem;line-height:1}
 .linked-gallery-accordion[open] .linked-gallery-chevron{transform:rotate(180deg)}
 .linked-gallery-accordion:not([open])>summary{border-bottom:0;border-radius:15px}
-.good-place-gallery-title:focus-visible{outline:3px solid #1d4ed8;outline-offset:-4px}
+.good-place-gallery-photo:focus-visible,.good-place-gallery-title:focus-visible{outline:3px solid #1d4ed8;outline-offset:-4px}
 .gallery-toggle-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
 .good-place-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}
@@ -178,7 +179,8 @@
 
 .good-place-gallery-title,.directory-gallery-title{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .directory-gallery-title{flex:1;min-width:0}
-.good-place-gallery-latest{display:inline-flex;align-items:center;gap:8px;font-size:.75rem;line-height:1.5;font-weight:400}
-.good-place-gallery-latest img{display:block;width:96px;height:72px;object-fit:cover;border-radius:5px;flex:none}
+.good-place-gallery-latest{position:relative;display:block;width:100%;min-height:100px;font-size:.75rem;line-height:1.5;font-weight:400}
+.good-place-gallery-latest img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.good-place-gallery-latest>span{position:absolute;right:0;bottom:0;max-width:100%;box-sizing:border-box;padding:3px 6px;background:rgb(0 0 0 / 65%);color:#fff;text-align:right}
 .good-place-gallery-latest time{display:inline-block}
-@media(max-width:600px){.good-place-gallery-title,.directory-gallery-title{gap:8px}.good-place-gallery-latest{font-size:.7rem}}
+@media(max-width:600px){.good-place-gallery-title,.directory-gallery-title{gap:8px}.good-place-gallery-title{padding-right:12px}.linked-gallery-toggle{min-width:40px}.good-place-gallery-latest{font-size:.7rem}}
