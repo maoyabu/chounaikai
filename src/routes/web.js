@@ -34,7 +34,7 @@ import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { approveAssociation, hideAssociation, permanentlyDeleteAssociation, requestAssociation, restoreAssociation } from '../services/associationService.js';
 import { registerUser } from '../services/userService.js';
 import { assertMailConfigured, resendVerification, sendVerificationEmail, verifyEmailToken } from '../services/emailVerificationService.js';
-import { acceptProfileImage, uploadProfileImage } from '../services/profileImageService.js';
+import { acceptProfileImage, persistProfileImage } from '../services/profileImageService.js';
 import { requestPasswordReset, isPasswordResetValid, resetPassword } from '../services/passwordResetService.js';
 import { recordPrimaryAuth } from '../middleware/mfa.js';
 import { changePassword } from '../services/passwordChangeService.js';
@@ -549,24 +549,22 @@ webRouter.post('/profile', requireLogin, acceptProfileImage, verifyCsrfToken, as
   try {
     const duplicate = await User.exists({ _id: { $ne: req.user._id }, email: values.email });
     if (duplicate) return renderError('このメールアドレスは既に使用されています。', 409);
-    const avatar = await uploadProfileImage(req.file, req.user._id);
     const update = {
       displayname: values.displayname, email: values.email,
       birth_date: parsedBirthDate,
       sex: values.sex || 'unspecified', update_date: new Date()
     };
-    if (avatar) update.avatar = avatar;
-    await User.updateOne({ _id: req.user._id }, { $set: update });
+    const savedUpdate = await persistProfileImage({ file: req.file, userId: req.user._id, associationId: req.body.avatarAssociation, update });
     const representativeHouseholds = await HouseholdMember.find({ user: req.user._id, isRepresentative: true }).distinct('household');
     await Promise.all([
       HouseholdMember.updateMany({ user: req.user._id }, { $set: { name: values.displayname, email: values.email, ...(parsedBirthDate ? { birthDate: parsedBirthDate } : {}), ...(values.sex ? { gender: values.sex } : {}) } }),
       Household.updateMany({ _id: { $in: representativeHouseholds }, representative: req.user._id }, { $set: { displayName: `${values.displayname}世帯` } })
     ]);
-    Object.assign(req.user, update);
+    Object.assign(req.user, savedUpdate);
     req.session.notice = 'プロフィールを更新しました。';
     return res.redirect('/dashboard');
   } catch (error) {
-    if (error?.status === 503) return renderError(error.message, 503);
+    if ([400, 403, 409, 503].includes(error?.status)) return renderError(error.message, error.status);
     if (error?.code === 11000) return renderError('このメールアドレスは既に使用されています。', 409);
     return next(error);
   }

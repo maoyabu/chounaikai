@@ -93,3 +93,5 @@ main.page-shell > .page-heading + .settings-entry-grid { margin-top: 0; }
   padding: 0;
   margin: .2rem 0 0;
 }
+
+.profile-image-fields { flex: 1; min-width: 0; display: grid; gap: 1rem; }

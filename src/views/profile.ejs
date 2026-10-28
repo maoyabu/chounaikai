@@ -21,7 +21,10 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="profile-image-editor">
       <% if (values.avatar) { %><img id="avatar-preview" class="profile-avatar profile-avatar-large" src="<%= values.avatar %>" alt="現在のプロフィール画像"><% } else { %><span id="avatar-placeholder" class="profile-avatar profile-avatar-large profile-avatar-placeholder" aria-hidden="true"><%= (values.displayname || values.username || '人').charAt(0) %></span><img id="avatar-preview" class="profile-avatar profile-avatar-large" alt="選択したプロフィール画像" hidden><% } %>
-      <label class="profile-image-input">プロフィール画像<input id="avatar-input" type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"><small>JPEG・PNG・WebP・GIF・HEIC、15MB以下</small></label>
+      <div class="profile-image-fields"><label class="profile-image-input">プロフィール画像<input id="avatar-input" type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"><small>JPEG・PNG・WebP・GIF・HEIC、15MB以下</small></label>
+      <% const photoAssociations = typeof dangerMemberships !== 'undefined' ? dangerMemberships : []; %>
+      <label>写真の保存先の町内会<select name="avatarAssociation"><% photoAssociations.forEach(item => { %><option value="<%= item.association._id %>"><%= item.association.name %></option><% }) %></select><small>新しい写真は選択した町内会のGoogle Driveの「プロフィール写真」フォルダへ保存します。町内会管理者によるDrive連携が必要です。</small></label>
+      <% if (!photoAssociations.length) { %><p class="help-text">写真のアップロードには町内会への参加とGoogle Drive連携が必要です。写真以外のプロフィールは更新できます。</p><% } %></div>
     </div>
     <label>ユーザー名<input value="<%= values.username || '' %>" disabled><small>共通サービスで使用する識別名のため、ここでは変更できません。</small></label>
     <label>氏名 <span class="required">必須</span><input name="displayname" value="<%= values.displayname || '' %>" maxlength="100" required></label>

@@ -11,16 +11,17 @@ export const attachmentContext = async association => {
 export const validateMessageFiles = files => {
   if (files.length > 3 || files.some(file => !file.size || file.size > 15 * 1024 * 1024)) throw driveError('添付ファイルは3個まで、1個15MB以下で選択してください。');
 };
-export const saveMessageAttachments = async (files, { client, root }) => {
+export const saveMessageAttachments = async (files, { client, root, folderName = MESSAGE_FOLDER_NAME }) => {
+  if (![MESSAGE_FOLDER_NAME, 'プロフィール写真'].includes(folderName)) throw driveError('保存先フォルダを確認してください。');
   validateMessageFiles(files);
   const rootItem = await assertDriveItem(client, root, root, { folder: true });
   if (!rootItem.capabilities?.canAddChildren) throw driveError('町内会のGoogle Driveフォルダに保存する権限がありません。', 403);
-  const params = new URLSearchParams({ q: `'${driveId(root)}' in parents and trashed = false and mimeType = '${FOLDER_MIME}' and name = '${MESSAGE_FOLDER_NAME}'`, fields: 'files(id)', pageSize: '100', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' });
+  const params = new URLSearchParams({ q: `'${driveId(root)}' in parents and trashed = false and mimeType = '${FOLDER_MIME}' and name = '${folderName}'`, fields: 'files(id)', pageSize: '100', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' });
   const listing = await (await client.request(`drive/v3/files?${params}`)).json();
   let folder = listing.files?.[0];
-  if (!folder) folder = await (await client.request('drive/v3/files?fields=id&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: MESSAGE_FOLDER_NAME, mimeType: FOLDER_MIME, parents: [root] }) })).json();
+  if (!folder) folder = await (await client.request('drive/v3/files?fields=id&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: FOLDER_MIME, parents: [root] }) })).json();
   const folderItem = await assertDriveItem(client, root, folder.id, { folder: true });
-  if (!folderItem.capabilities?.canAddChildren) throw driveError('メッセージ添付フォルダに保存する権限がありません。', 403);
+  if (!folderItem.capabilities?.canAddChildren) throw driveError(`${folderName}に保存する権限がありません。`, 403);
   const attachments = [];
   try {
     for (const file of files) {

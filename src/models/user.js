@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
   entry_date: Date,
   update_date: Date,
   avatar: String,
+  avatarDriveImage: {
+    type: new mongoose.Schema({ association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation' }, fileId: String, originalName: String, mimeType: String, bytes: Number }, { _id: false }),
+    select: false
+  },
   blood: String,
   rh: String,
   sex: String,

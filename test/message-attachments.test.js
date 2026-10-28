@@ -44,3 +44,11 @@ test('rejects folders outside the association root', async () => {
   await assert.rejects(saveMessageAttachments([file], ctx), { status: 403 });
   assert.equal(ctx.calls.some(call => call.endpoint.startsWith('upload/')), false);
 });
+
+test('profile photos create their dedicated folder without changing the message folder', async () => {
+  const ctx = fixture();
+  await saveMessageAttachments([file], { ...ctx, folderName: 'プロフィール写真' });
+  const create = ctx.calls.find(call => call.options.method === 'POST' && !call.endpoint.startsWith('upload/'));
+  assert.equal(JSON.parse(create.options.body).name, 'プロフィール写真');
+  assert.ok(ctx.calls[0].endpoint.includes(encodeURIComponent('プロフィール写真')));
+});
