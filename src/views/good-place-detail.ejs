@@ -10,6 +10,16 @@
 <form action="<%= base %>/like" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="liked" value="<%= reactions.liked ? '0' : '1' %>"><button type="submit" aria-label="ライク♡ <%= reactions.likeCount %>" aria-pressed="<%= reactions.liked %>"><span aria-hidden="true"><%= reactions.liked ? '♥' : '♡' %></span><small><%= reactions.likeCount %></small></button></form>
 <button type="button" data-open-comments aria-label="コメント <%= reactions.commentCount || 0 %>件" aria-haspopup="dialog"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 3 2-7A8.5 8.5 0 1 1 21 11.5Z"/></svg><small><%= reactions.commentCount || 0 %></small></button>
 </div><% } %>
+<% const photoComments = typeof reactions !== 'undefined' && reactions ? reactions.comments.filter(comment => !comment.hiddenAt) : []; %>
+<% if (photoComments.length) { %>
+<aside class="good-place-photo-comments" data-photo-comments aria-label="住人のコメント">
+<% photoComments.forEach((comment, index) => { %>
+<div data-photo-comment <%= index ? 'hidden' : '' %>><strong><%= comment.user?.displayname || '退会した住人' %></strong><p><%= comment.body %></p></div>
+<% }) %>
+<% if (photoComments.length > 1) { %><small data-photo-comment-position>1 / <%= photoComments.length %></small><% } %>
+</aside>
+<script src="/assets/good-place-photo-comments.js?v=<%= assetVersion %>" defer></script>
+<% } %>
 <% const query = report.locationSource === 'address' ? report.address : `${report.latitude},${report.longitude}`; %>
 <a class="good-place-location-link" href="https://www.google.com/maps/search/?api=1&amp;query=<%= encodeURIComponent(query) %>" target="_blank" rel="noopener noreferrer" aria-label="撮影場所のGoogleマップを別ウィンドウで開く"><iframe title="投稿場所" src="https://www.google.com/maps?q=<%= encodeURIComponent(query) %>&amp;output=embed" loading="lazy" tabindex="-1"></iframe><span>大きな地図で開く<% if (report.locationSource === 'address') { %>（大まかな場所）<% } %></span></a>
 </div>
