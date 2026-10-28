@@ -55,6 +55,11 @@ goodPlacesRouter.get('/associations/:associationId/good-places', async (req, res
     } else {
       reports = await goodPlaceAuthorQuery(GoodPlace.find({ association: req.params.associationId }), showGoodPlaceAuthors).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
     }
+    const selectedId = String(req.query.selected || '');
+    if (mongoose.isValidObjectId(selectedId) && !reports.slice(0, 50).some(report => String(report._id) === selectedId)) {
+      const selectedReport = await goodPlaceAuthorQuery(GoodPlace.findOne({ _id: selectedId, association: req.params.associationId }), showGoodPlaceAuthors).lean();
+      if (selectedReport) reports.unshift(selectedReport);
+    }
     const historyReports = reports.slice(0, 50).map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors));
     const visibleReports = showGoodPlaceAuthors ? await loadGoodPlaceHistoryReactions(req.params.associationId, historyReports) : historyReports;
     res.render('good-place-history', { sort, title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: visibleReports, hasNext: reports.length > 50, page });

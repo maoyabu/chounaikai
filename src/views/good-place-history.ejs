@@ -3,4 +3,8 @@
 <section class="content-card good-place-section good-place-history-page"><div class="good-place-history-heading"><h1>わがまちのいいところ</h1></div><div class="good-place-history-body">
 <%- include('partials/good-place-history-content', { reports, association, showGoodPlaceAuthors: typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors }) %>
 <nav aria-label="履歴のページ"><% if (page > 1) { %><a href="?page=<%= page - 1 %>&amp;sort=<%= typeof sort !== 'undefined' ? sort : 'newest' %>">← 前の50件</a><% } %> <% if (hasNext) { %><a href="?page=<%= page + 1 %>&amp;sort=<%= typeof sort !== 'undefined' ? sort : 'newest' %>">次の50件 →</a><% } %></nav>
-</div></section></main><script src="/assets/danger-history.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>
+</div></section>
+<dialog id="good-place-detail-modal" class="good-place-detail-modal" aria-label="投稿の詳細">
+<div class="good-place-modal-heading"><strong>投稿の詳細</strong><button type="button" data-close-good-place-detail aria-label="詳細を閉じる">×</button></div>
+<iframe title="投稿の詳細" data-good-place-detail-frame></iframe>
+</dialog></main><script src="/assets/good-place-history.js?v=<%= assetVersion %>" defer></script><script src="/assets/danger-history.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

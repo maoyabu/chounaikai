@@ -3,7 +3,7 @@
   <div class="directory-photo-heading"><h2>わがまちのいいところ</h2><select data-photo-interval aria-label="写真の切り替え間隔"><% [3, 5, 10, 15, 30].forEach(seconds => { %><option value="<%= seconds %>" <%= seconds === 5 ? 'selected' : '' %>><%= seconds %>秒</option><% }) %></select></div>
   <div class="directory-photo-viewport"><div class="directory-photo-track">
     <% goodPlaces.forEach((report, index) => { %>
-    <a class="directory-photo-card" href="/associations/<%= report.association._id %>/good-places/<%= report._id %>" <%= index >= 3 ? 'hidden' : '' %>>
+    <a class="directory-photo-card" href="/associations/<%= report.association._id %>/good-places?selected=<%= report._id %>" <%= index >= 3 ? 'hidden' : '' %>>
       <img src="/associations/<%= report.association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>" loading="lazy">
       <span class="directory-photo-likes" aria-label="ライク <%= report.likeCount || 0 %>件"><span aria-hidden="true">♥</span> <%= report.likeCount || 0 %></span>
       <div class="directory-photo-caption"><strong><%= report.title %></strong><small><%= report.association.name %></small></div>

@@ -84,7 +84,7 @@ test('directory rotation prefers distinct associations and eventually features e
 });
 test('directory cards link to their own association and hide author identities',async()=>{
   const html=await ejs.renderFile('src/views/partials/directory-good-place-gallery.ejs',{goodPlaces:[{_id:'photo',association:{_id:'town',name:'町内会名'},title:'風景',likeCount:12,createdAt:new Date(),author:{displayname:'非公開氏名'}}]});
-  assert.match(html,/href="\/associations\/town\/good-places\/photo"/);
+  assert.match(html,/href="\/associations\/town\/good-places\?selected=photo"/);
   assert.match(html,/町内会名/);
   assert.match(html,/aria-label="ライク 12件"/);
   assert.match(html,/directory-photo-caption/);

@@ -1,3 +1,11 @@
+if (window.top === window.self) {
+  const detailPath = window.location.pathname.match(/^(\/associations\/[a-f\d]{24}\/good-places)\/([a-f\d]{24})\/?$/i);
+  if (detailPath) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('selected', detailPath[2]);
+    window.location.replace(`${detailPath[1]}?${params}${window.location.hash}`);
+  }
+}
 const commentsDialog = document.getElementById('good-place-reactions');
 if (commentsDialog) {
   document.querySelector('[data-open-comments]').addEventListener('click', () => commentsDialog.showModal());

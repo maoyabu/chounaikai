@@ -1,4 +1,5 @@
 document.querySelectorAll('[data-danger-focus]').forEach(button => button.addEventListener('click', () => {
+  if (button.hasAttribute?.('data-good-place-detail')) return;
   const frame = document.getElementById('danger-history-frame');
   if (!frame) return;
   frame.src = `https://www.google.com/maps?q=${encodeURIComponent(button.dataset.dangerQuery)}&output=embed`;
