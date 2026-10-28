@@ -10,6 +10,7 @@ import { dangerAccess, validateDangerReport } from '../services/dangerReportServ
 import { loadGoodPlaceAssociation, createGoodPlaceWithPhoto, queueGoodPlaceNotifications, deleteGoodPlace } from '../services/goodPlaceService.js';
 import { loadQuestionBoxAccess } from '../services/questionBoxService.js';
 import { streamFile } from './messageAttachments.js';
+import { loadEditableGoodPlace, updateGoodPlace } from '../services/goodPlaceEditService.js';
 
 export const goodPlacesRouter = express.Router();
 goodPlacesRouter.get('/good-places/new', requireLogin, (req, res) => {
@@ -75,7 +76,20 @@ goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(
     const owner = showGoodPlaceAuthors && String(report.author?._id || report.author) === String(req.user._id);
     const commentPage = Math.max(1, Math.min(100000, Number.parseInt(req.query?.commentPage, 10) || 1));
     const reactions = showGoodPlaceAuthors ? await loadGoodPlaceReactions({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id, owner, page: commentPage }) : null;
-    res.render('good-place-detail', { reactions, title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, showGoodPlaceAuthors });
+    res.render('good-place-detail', { reactions, title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, canEdit: owner, showGoodPlaceAuthors });
+  } catch (error) { next(error); }
+});
+goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/edit', requireLogin, async (req, res, next) => {
+  try { await loadEditableGoodPlace({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id }); next(); }
+  catch (error) { next(error); }
+}, (req, res, next) => upload(req, res, error => {
+  if (error) return next(Object.assign(new Error('写真は10MB以下で1枚選択してください。'), { status: 400 }));
+  next();
+}), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const { photoCleanupPending } = await updateGoodPlace({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id, body: req.body, file: req.file });
+    req.session.notice = photoCleanupPending ? '投稿を修正しました。Google Driveの古い写真は削除できませんでした。' : '投稿を修正しました。';
+    res.redirect(`/associations/${req.params.associationId}/good-places/${req.params.reportId}`);
   } catch (error) { next(error); }
 });
 goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/delete', requireLogin, verifyCsrfToken, async (req, res, next) => {

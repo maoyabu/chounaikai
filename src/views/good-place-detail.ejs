@@ -15,6 +15,17 @@
 </div>
 <p class="good-place-detail-meta"><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></p>
 <p class="danger-body"><%= report.body %></p>
+<% if (typeof canEdit !== 'undefined' && canEdit) { %>
+<details class="content-card"><summary>投稿を修正する</summary>
+<form class="form-stack" action="/associations/<%= association._id %>/good-places/<%= report._id %>/edit" method="post" enctype="multipart/form-data">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<label>タイトル<input name="title" maxlength="120" value="<%= report.title %>" required></label>
+<label>内容<textarea name="body" maxlength="3000" rows="5" required><%= report.body %></textarea></label>
+<label>写真の差し替え（JPEG・PNG・WebP／10MB以下）<input type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label>
+<p class="help-text">写真を選択しない場合は現在の写真を使用します。撮影場所は変更されません。</p>
+<button class="button button-primary" type="submit">修正を保存する</button>
+</form></details>
+<% } %>
 
 <%- include('partials/good-place-reactions', { reactions: typeof reactions !== 'undefined' ? reactions : null, report, association }) %>
 </section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" tabindex="-1" aria-label="投稿写真の拡大表示"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>
