@@ -1,3 +1,4 @@
+import { optionalAssociationFeatures, parseAssociationFeatures } from '../services/associationFeatureService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission } from '../middleware/auth.js';
@@ -126,7 +127,21 @@ managementRouter.get('/:associationId/manage/basic', requirePermission('associat
       DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     const districtGroups = districts.map((district) => ({ ...district, groups: childGroups.filter((group) => String(group.parentDistrict) === String(district._id)) }));
-    return res.render('association-basic-settings', { title: `${association.name} 基本設定`, association, roles, departments, districtGroups });
+    return res.render('association-basic-settings', { title: `${association.name} 基本設定`, association, roles, departments, districtGroups, optionalAssociationFeatures });
+  } catch (error) { return next(error); }
+});
+
+managementRouter.post('/:associationId/manage/features', requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
+  try {
+    const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } });
+    if (!association) throw fail('町内会を確認できません。', 404);
+    const before = association.optionalFeatures?.toObject?.() || association.optionalFeatures || {};
+    const after = parseAssociationFeatures(req.body);
+    association.optionalFeatures = after;
+    await association.save();
+    await audit({ association: association._id, actor: req.user._id, action: 'association.features.updated', targetType: 'NeighborhoodAssociation', targetId: association._id, before, after, req });
+    req.session.notice = '利用する機能を保存しました。';
+    return redirectBasicSettings(res, association._id);
   } catch (error) { return next(error); }
 });
 
@@ -265,7 +280,7 @@ managementRouter.get('/:associationId/manage/order', requirePermission('associat
       Department.find({ association: association._id }).sort({ sortOrder: 1, name: 1 }).lean(),
       DistrictGroup.find({ association: association._id, parentDistrict: { $exists: false } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
-    return res.render('association-order-settings', { title: '並び順設定', association, roles, departments, districtGroups });
+    return res.render('association-order-settings', { title: '並び順設定', association, roles, departments, districtGroups, optionalAssociationFeatures });
   } catch (error) { return next(error); }
 });
 

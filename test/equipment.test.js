@@ -124,7 +124,7 @@ test('Excel export retains paper check columns, frozen headings, print settings 
   assert.equal(sheet.getCell('A4').value, '倉庫'); assert.equal(sheet.getCell('E4').value, 12); assert.equal(sheet.getCell('F4').value, 8); assert.equal(sheet.getCell('H4').value, '田中');
   assert.equal(sheet.views[0].ySplit, 3); assert.equal(sheet.pageSetup.orientation, 'landscape'); assert.equal(sheet.pageSetup.fitToWidth, 1);
 });
-const common = { title: '設備・備品管理', assetVersion: 'test', showNotificationPrompt: false, currentUser: { _id: user, username: '田中' }, currentPath: '', notice: null, csrfToken: 'token', association: { _id: association, name: '中央町内会' }, canAnswer: true, base: `/associations/${association}/equipment` };
+const common = { title: '設備・備品管理', assetVersion: 'test', showNotificationPrompt: false, currentUser: { _id: user, username: '田中' }, currentPath: '', notice: null, csrfToken: 'token', association: { _id: association, name: '中央町内会', optionalFeatures: { equipment: true } }, canAnswer: true, base: `/associations/${association}/equipment` };
 const item = { _id: equipmentId, ...equipmentValues(baseInput), lendable: true, productImageUrl: 'https://example.test/water.png', productUrl: 'https://example.test/water', shortage: 8 };
 test('equipment screens render cards, edit fields, place checks, purchase history and loan calendar', async () => {
   const groups = equipmentGroups([item]);

@@ -1,3 +1,4 @@
+import { associationFeatureEnabled } from '../services/associationFeatureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
 import { GoodPlaceLike } from '../models/goodPlaceReaction.js';
 import { dangerReportHomeWindow } from '../lib/dangerReportWindow.js';
@@ -88,7 +89,7 @@ webRouter.use(async (req, res, next) => {
     res.locals.notice = req.session.notice || null;
     res.locals.errorMessage = req.session.errorMessage || null;
     res.locals.currentPath = req.path;
-    res.locals.dangerMemberships = req.user ? (await AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean()).filter(item => item.association) : [];
+    res.locals.dangerMemberships = req.user ? (await AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name optionalFeatures' }).lean()).filter(item => item.association) : [];
     res.locals.currentRoleTags = [];
     res.locals.currentManagerAssociations = [];
     res.locals.currentLeaderAssociations = [];
@@ -106,16 +107,16 @@ webRouter.use(async (req, res, next) => {
           startsAt: { $lte: now },
           $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }]
         }).populate({ path: 'role', match: { active: true }, select: 'name permissions' })
-          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
+          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name optionalFeatures' }).lean(),
         AnnualLeaderAssignment.find({ representative: req.user._id, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
           .populate('districtGroup', 'name')
           .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' })
           .sort({ fiscalYear: 1 }).lean(),
         AnnualOfficer.find({ user: req.user._id, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
           .populate('role', 'name').populate('department', 'name')
-          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
+          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name optionalFeatures' }).lean(),
         AssociationMembership.findOne({ user: req.user._id, status: 'active' })
-          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean(),
+          .populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name optionalFeatures' }).lean(),
         AssociationGroupMembership.find({ user: req.user._id, role: 'manager', status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name association' }).lean()
       ]);
       res.locals.currentGroupManagers = groupManagerMemberships.filter(item => item.group).map(item => ({ _id: item.group._id, name: item.group.name, association: item.group.association }));
@@ -137,7 +138,7 @@ webRouter.use(async (req, res, next) => {
       res.locals.currentManagerAssociations = [...new Map(
         assignments
           .filter((item) => item.association && item.role?.permissions?.includes('association.manage'))
-          .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
+          .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name, optionalFeatures: item.association.optionalFeatures }])
       ).values()];
       if (res.locals.currentManagerAssociations.length) {
         const counts = await Promise.all(res.locals.currentManagerAssociations.map(async (item) => [String(item._id), await JoinApplication.countDocuments({ association: item._id, status: 'pending' })]));
@@ -153,7 +154,7 @@ webRouter.use(async (req, res, next) => {
         const activeIds = new Set(activeAnswerMemberships.map((item) => String(item.association)));
         const activeAssociations = answerAssociations.filter((item) => activeIds.has(String(item._id)));
         const pendingQuestions = activeAssociations.length ? await QuestionThread.find({ association: { $in: activeAssociations.map((item) => item._id) }, status: 'unanswered' }).select('association').lean() : [];
-        const pendingLoans = await pendingEquipmentLoans(activeAssociations.map(item => item._id));
+        const pendingLoans = await pendingEquipmentLoans(activeAssociations.filter(item => associationFeatureEnabled(item, 'equipment')).map(item => item._id));
         res.locals.currentOfficerQuestionBoxes = activeAssociations.map((item) => ({ _id: item._id, name: item.name,
           pendingLoanCount: pendingLoans.filter(loan => String(loan.association) === String(item._id)).length,
           unansweredCount: pendingQuestions.filter((thread) => String(thread.association) === String(item._id)).length }));
@@ -161,7 +162,7 @@ webRouter.use(async (req, res, next) => {
       res.locals.currentLeaderAssociations = [...new Map(
         leaderAssignments
           .filter((item) => item.association)
-          .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name }])
+          .map((item) => [String(item.association._id), { _id: item.association._id, name: item.association.name, optionalFeatures: item.association.optionalFeatures }])
       ).values()];
       if (res.locals.currentLeaderAssociations.length) {
         const counts = await Promise.all(res.locals.currentLeaderAssociations.map(async (item) => [String(item._id), await countPendingLeaderApplications(item._id, req.user._id)]));
@@ -172,6 +173,12 @@ webRouter.use(async (req, res, next) => {
       }
       res.locals.currentHasAssociationMembership = Boolean(activeMembership);
       res.locals.currentMenuAssociationName = activeMembership?.association?.name || res.locals.currentOfficerQuestionBoxes[0]?.name || res.locals.currentLeaderAssociations[0]?.name || res.locals.currentManagerAssociations[0]?.name || null;
+    }
+    const groupAssociationIds = res.locals.currentGroupManagers.map(group => group.association);
+    if (groupAssociationIds.length) {
+      const enabledGroups = await NeighborhoodAssociation.find({ _id: { $in: groupAssociationIds }, 'optionalFeatures.groups': true }).select('_id').lean();
+      const enabledIds = new Set(enabledGroups.map(item => String(item._id)));
+      res.locals.currentGroupManagers = res.locals.currentGroupManagers.filter(group => enabledIds.has(String(group.association)));
     }
     delete req.session.notice;
     delete req.session.errorMessage;
@@ -197,7 +204,7 @@ webRouter.get('/associations', async (req, res, next) => {
     }
     const [associations, locationAssociations] = await Promise.all([
       NeighborhoodAssociation.find(filter).sort('name').lean(),
-      NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false } }).select('address.prefecture address.city').lean(),
+      NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false } }).select('address.prefecture address.city optionalFeatures').lean(),
     ]);
     const locations = {};
     locationAssociations.forEach((association) => {
@@ -209,7 +216,7 @@ webRouter.get('/associations', async (req, res, next) => {
     });
     const prefectures = Object.keys(locations).sort((a, b) => a.localeCompare(b, 'ja'));
     const citiesByPrefecture = Object.fromEntries(prefectures.map((name) => [name, [...locations[name]].sort((a, b) => a.localeCompare(b, 'ja'))]));
-    const directoryGoodPlaces = await GoodPlace.find({ association: { $in: locationAssociations.map(item => item._id) } }).select('-author').populate('association', 'name').sort({ createdAt: -1, _id: -1 }).lean();
+    const directoryGoodPlaces = await GoodPlace.find({ association: { $in: locationAssociations.filter(item => associationFeatureEnabled(item, 'goodPlaces')).map(item => item._id) } }).select('-author').populate('association', 'name').sort({ createdAt: -1, _id: -1 }).lean();
     if (directoryGoodPlaces.length) {
       const counts = await GoodPlaceLike.aggregate([
         { $match: { association: { $in: locationAssociations.map(item => item._id) }, report: { $in: directoryGoodPlaces.map(item => item._id) } } },
@@ -617,7 +624,7 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const districtMessageBoxes = visibleMemberships.filter(item => item.districtGroup).map(item => ({ association: item.association, districtGroup: item.districtGroup,
       unreadCount: unreadAnnouncements.filter(receipt => String(receipt.association) === String(item.association._id) && receipt.announcement?.channel === 'district' && String(receipt.announcement.districtGroup) === String(item.districtGroup._id)).length }));
     const groupMemberships = await AssociationGroupMembership.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, user: req.user._id, status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name association' }).lean();
-    const groupMessageBoxes = groupMemberships.filter(item => item.group).map(item => ({ group: item.group, unreadCount: unreadAnnouncements.filter(receipt => receipt.announcement?.channel === 'association_group' && String(receipt.announcement.associationGroup) === String(item.group._id)).length }));
+    const groupMessageBoxes = groupMemberships.filter(item => item.group && visibleMemberships.some(membership => String(membership.association._id) === String(item.group.association) && associationFeatureEnabled(membership.association, 'groups'))).map(item => ({ group: item.group, unreadCount: unreadAnnouncements.filter(receipt => receipt.announcement?.channel === 'association_group' && String(receipt.announcement.associationGroup) === String(item.group._id)).length }));
     const leaderAssociationIds = new Set(leaderAssignments.map((item) => String(item.association)));
     visibleMemberships.forEach((membership) => {
       const associationId = String(membership.association._id), memberTags = [];
@@ -643,13 +650,13 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     }
     const privateEquipmentSettings = await EquipmentSettings.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, loanPublic: false }).select('association').lean();
     const privateEquipmentIds = new Set(privateEquipmentSettings.map(setting => String(setting.association)));
-    const equipmentMemberships = visibleMemberships.filter(item => !privateEquipmentIds.has(String(item.association._id)));
-    const financeReports = visibleMemberships.filter((item) => item.association.financePublic).map((item) => ({ association: item.association }));
+    const equipmentMemberships = visibleMemberships.filter(item => associationFeatureEnabled(item.association, 'equipment') && !privateEquipmentIds.has(String(item.association._id)));
+    const financeReports = visibleMemberships.filter((item) => item.association.financePublic && associationFeatureEnabled(item.association, 'finance')).map((item) => ({ association: item.association }));
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
     notifications.unshift(...pins.notifications);
     const dangerReports = await DangerReport.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, createdAt: dangerReportHomeWindow() }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).limit(6).lean();
-    const goodPlaceGalleries = await Promise.all(visibleMemberships.map(async membership => ({
+    const goodPlaceGalleries = await Promise.all(visibleMemberships.filter(item => associationFeatureEnabled(item.association, 'goodPlaces')).map(async membership => ({
       association: membership.association,
       goodPlaces: await GoodPlace.find({ association: membership.association._id }).select('-author').sort({ createdAt: -1, _id: -1 }).lean()
     })));

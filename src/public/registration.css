@@ -1804,3 +1804,6 @@ h1, h2, h3, h4, h5, h6,
 
 .event-start-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .event-start-row .event-start-fields label[data-event-end-time] { grid-column: 3; }
+
+#features .association-feature-option { display: flex; align-items: flex-start; gap: .75rem; line-height: 1.6; }
+#features .association-feature-option input[type="checkbox"] { flex: 0 0 auto; width: 1.2rem; height: 1.2rem; padding: 0; margin: .2rem 0 0; accent-color: var(--green); }

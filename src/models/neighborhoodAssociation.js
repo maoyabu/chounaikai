@@ -28,6 +28,13 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   },
   introduction: { type: String, default: '' },
   publicPhotos: { type: [{ url: String, publicId: String }], default: [] },
+  optionalFeatures: {
+    goodPlaces: { type: Boolean, default: false },
+    events: { type: Boolean, default: false },
+    groups: { type: Boolean, default: false },
+    equipment: { type: Boolean, default: false },
+    finance: { type: Boolean, default: false }
+  },
   eventCategories: { type: [String], default: [] },
   socialLinks: { instagram: String, x: String, youtube: String },
   symbolImage: { url: String, publicId: String },
