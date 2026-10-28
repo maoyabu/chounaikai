@@ -14,7 +14,7 @@
     "security:check": "node src/cli/checkSecurityConfig.js"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": "22.x"
   },
   "dependencies": {
     "cloudinary": "^2.11.0",
