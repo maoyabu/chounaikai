@@ -4,11 +4,16 @@
 <a class="back-link" href="/associations/<%= association._id %>/good-places">← わがまちのいいところ</a>
 <section class="content-card good-place-section">
 <div class="good-place-detail-heading"><div><p class="eyebrow">わがまちのいいところ · <%= association.name %></p><h1><%= report.title %></h1></div><%- include('partials/good-place-delete', { canDelete: typeof canDelete !== 'undefined' && canDelete, association, report }) %></div>
+<% const photoComments = typeof reactions !== 'undefined' && reactions ? reactions.comments.filter(comment => !comment.hiddenAt) : []; %>
+<div class="good-place-display-options" role="group" aria-label="写真上の表示設定">
+<% if (photoComments.length) { %><label><input type="checkbox" data-good-place-display="comments" aria-controls="good-place-photo-comments" checked>コメントを表示</label><% } %>
+<label><input type="checkbox" data-good-place-display="map" aria-controls="good-place-photo-map" checked>地図を表示</label>
+</div>
+<script src="/assets/good-place-display.js?v=<%= assetVersion %>" defer></script>
 <div class="good-place-detail-photo"><button type="button" class="good-place-detail-photo-open" data-open-detail-photo aria-label="写真を拡大表示" aria-haspopup="dialog"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></button>
 <div class="good-place-photo-bottom">
-<% const photoComments = typeof reactions !== 'undefined' && reactions ? reactions.comments.filter(comment => !comment.hiddenAt) : []; %>
 <% if (photoComments.length) { %>
-<aside class="good-place-photo-comments" data-photo-comments aria-label="住人のコメント">
+<aside id="good-place-photo-comments" class="good-place-photo-comments" data-photo-comments aria-label="住人のコメント">
 <% photoComments.forEach((comment, index) => { %>
 <div data-photo-comment <%= index ? 'hidden' : '' %>><p><%= comment.body %><span class="good-place-photo-comment-position">（<%= index + 1 %>/<%= photoComments.length %>）</span></p></div>
 <% }) %>
@@ -16,7 +21,7 @@
 <script src="/assets/good-place-photo-comments.js?v=<%= assetVersion %>" defer></script>
 <% } %>
 <% const query = report.locationSource === 'address' ? report.address : `${report.latitude},${report.longitude}`; %>
-<a class="good-place-location-link" href="https://www.google.com/maps/search/?api=1&amp;query=<%= encodeURIComponent(query) %>" target="_blank" rel="noopener noreferrer" aria-label="撮影場所のGoogleマップを別ウィンドウで開く"><iframe title="投稿場所" src="https://www.google.com/maps?q=<%= encodeURIComponent(query) %>&amp;output=embed" loading="lazy" tabindex="-1"></iframe><span>大きな地図で開く<% if (report.locationSource === 'address') { %>（大まかな場所）<% } %></span></a>
+<a id="good-place-photo-map" class="good-place-location-link" href="https://www.google.com/maps/search/?api=1&amp;query=<%= encodeURIComponent(query) %>" target="_blank" rel="noopener noreferrer" aria-label="撮影場所のGoogleマップを別ウィンドウで開く"><iframe title="投稿場所" src="https://www.google.com/maps?q=<%= encodeURIComponent(query) %>&amp;output=embed" loading="lazy" tabindex="-1"></iframe><span>大きな地図で開く<% if (report.locationSource === 'address') { %>（大まかな場所）<% } %></span></a>
 <% if (typeof reactions !== 'undefined' && reactions) { const base = `/associations/${association._id}/good-places/${report._id}`; %>
 <div class="good-place-photo-actions">
 <form action="<%= base %>/like" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="liked" value="<%= reactions.liked ? '0' : '1' %>"><button type="submit" aria-label="ライク♡ <%= reactions.likeCount %>" aria-pressed="<%= reactions.liked %>"><span aria-hidden="true"><%= reactions.liked ? '♥' : '♡' %></span><small><%= reactions.likeCount %></small></button></form>

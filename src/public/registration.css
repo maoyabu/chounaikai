@@ -1819,3 +1819,8 @@ h1, h2, h3, h4, h5, h6,
 .good-place-photo-bottom .good-place-photo-actions button{flex:1;flex-direction:row;justify-content:center;gap:6px;min-height:0;padding:2px}
 .good-place-photo-bottom .good-place-photo-actions svg{flex-shrink:0}
 @media(max-width:480px){.good-place-photo-bottom{left:8px;right:8px;bottom:8px;gap:6px}.good-place-photo-bottom .good-place-photo-comments{padding:6px;font-size:11px}.good-place-photo-bottom>.good-place-photo-actions{padding:4px}.good-place-photo-bottom .good-place-photo-actions button{gap:4px}.good-place-photo-bottom .good-place-photo-actions button>span{font-size:26px}.good-place-photo-bottom .good-place-photo-actions svg{width:24px;height:24px}}
+
+.good-place-display-options{display:flex;flex-wrap:wrap;gap:16px;margin:12px 0;font-size:14px}
+.good-place-display-options label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.good-place-display-options input[type=checkbox]{width:16px;height:16px;margin:0}
+.good-place-photo-bottom>[hidden]{display:none!important}

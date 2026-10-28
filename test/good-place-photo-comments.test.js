@@ -24,7 +24,7 @@ test('photo overlay excludes moderated comments, escapes text, and starts with o
     association: { _id: 'town', name: '町内会' }, report: { _id: 'post', title: '桜', body: '風景', createdAt: new Date(), locationSource: 'address', address: '公園' },
     reactions: { comments: [{ body: '<script>bad</script>', user: { displayname: '住人' }, createdAt: new Date() }, { body: '次のコメント', createdAt: new Date() }, { body: '非表示コメント', hiddenAt: new Date(), createdAt: new Date() }], owner: true, likeCount: 0, page: 1 }
   });
-  const overlay = html.match(/<aside class="good-place-photo-comments"[\s\S]*?<\/aside>/)[0];
+  const overlay = html.match(/<aside[^>]*class="good-place-photo-comments"[\s\S]*?<\/aside>/)[0];
   assert.match(overlay, /&lt;script&gt;/); assert.doesNotMatch(overlay, /非表示コメント/);
   assert.equal((overlay.match(/data-photo-comment hidden/g) || []).length, 1);
   assert.match(overlay, /（1\/2）/);
