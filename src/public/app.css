@@ -178,8 +178,8 @@
 .good-place-history-toolbar p{margin:0}
 .good-place-history-sort{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .good-place-history-sort select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
-.good-place-history-page .danger-history-item.is-selected{background:#e5f3e8;border-radius:10px}
-.good-place-history-page .danger-history-photo[aria-pressed=true]{border-color:var(--green);box-shadow:0 0 0 3px #e5f3e8}
+.good-place-history-page .danger-history-item.is-selected{background:#eff6ff;border-radius:10px}
+.good-place-history-page .danger-history-photo[aria-pressed=true]{border-color:#93c5fd;box-shadow:0 0 0 3px #eff6ff}
 .good-place-detail-modal{width:min(960px,94vw);max-width:94vw;padding:0;border:0;border-radius:16px;overflow:hidden}
 .good-place-detail-modal::backdrop{background:rgb(0 0 0 / 45%)}
 .good-place-modal-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#e5f3e8}

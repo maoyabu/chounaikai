@@ -1808,7 +1808,14 @@ h1, h2, h3, h4, h5, h6,
 #features .association-feature-option { display: flex; align-items: flex-start; gap: .75rem; line-height: 1.6; }
 #features .association-feature-option input[type="checkbox"] { flex: 0 0 auto; width: 1.2rem; height: 1.2rem; padding: 0; margin: .2rem 0 0; accent-color: var(--green); }
 
-.good-place-photo-comments{position:absolute;left:calc(clamp(90px,22vw,150px) + 24px);right:90px;bottom:12px;max-height:110px;overflow:auto;padding:10px 12px;border-radius:10px;background:rgb(255 255 255 / 92%);color:var(--text);font-size:13px;box-shadow:0 2px 8px #0003;overflow-wrap:anywhere}
-.good-place-photo-comments p{margin:4px 0;white-space:pre-wrap}
+.good-place-photo-bottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:stretch;gap:10px;height:clamp(80px,16vw,110px)}
+.good-place-photo-bottom .good-place-photo-comments{flex:1;min-width:0;overflow:auto;padding:8px 10px;border-radius:10px;background:rgb(255 255 255 / 92%);font-size:13px;box-shadow:0 2px 8px #0003;overflow-wrap:anywhere}
+.good-place-photo-comments p{margin:0;white-space:pre-wrap}
 .good-place-photo-comments [data-photo-comment][hidden]{display:none}
-@media(max-width:480px){.good-place-photo-comments{left:calc(clamp(90px,22vw,150px) + 16px);right:62px;bottom:8px;max-height:100px;padding:6px;font-size:11px}}
+.good-place-photo-comment-position{white-space:nowrap}
+.good-place-photo-bottom>.good-place-location-link{flex:0 0 clamp(90px,22vw,150px);width:auto;height:auto;max-width:none;margin-left:auto;background:#fff;box-shadow:0 2px 8px #0003}
+.good-place-photo-bottom>.good-place-photo-actions{position:static;flex:0 0 auto;display:grid;grid-template-rows:1fr 1fr;gap:0;padding:4px 8px;box-sizing:border-box}
+.good-place-photo-bottom .good-place-photo-actions form{display:flex;margin:0}
+.good-place-photo-bottom .good-place-photo-actions button{flex:1;flex-direction:row;justify-content:center;gap:6px;min-height:0;padding:2px}
+.good-place-photo-bottom .good-place-photo-actions svg{flex-shrink:0}
+@media(max-width:480px){.good-place-photo-bottom{left:8px;right:8px;bottom:8px;gap:6px}.good-place-photo-bottom .good-place-photo-comments{padding:6px;font-size:11px}.good-place-photo-bottom>.good-place-photo-actions{padding:4px}.good-place-photo-bottom .good-place-photo-actions button{gap:4px}.good-place-photo-bottom .good-place-photo-actions button>span{font-size:26px}.good-place-photo-bottom .good-place-photo-actions svg{width:24px;height:24px}}

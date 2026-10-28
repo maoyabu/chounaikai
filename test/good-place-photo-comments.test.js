@@ -27,6 +27,7 @@ test('photo overlay excludes moderated comments, escapes text, and starts with o
   const overlay = html.match(/<aside class="good-place-photo-comments"[\s\S]*?<\/aside>/)[0];
   assert.match(overlay, /&lt;script&gt;/); assert.doesNotMatch(overlay, /非表示コメント/);
   assert.equal((overlay.match(/data-photo-comment hidden/g) || []).length, 1);
-  assert.match(overlay, /1 \/ 2/);
+  assert.match(overlay, /（1\/2）/);
+  assert.doesNotMatch(overlay, /<strong>/);
   assert.doesNotMatch(overlay, /data-photo-comment-(pause|next)/);
 });
