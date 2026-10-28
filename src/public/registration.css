@@ -1824,3 +1824,7 @@ h1, h2, h3, h4, h5, h6,
 .good-place-display-options label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .good-place-display-options input[type=checkbox]{width:16px;height:16px;margin:0}
 .good-place-photo-bottom>[hidden]{display:none!important}
+
+.good-place-detail-meta-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin:12px 0}
+.good-place-detail-meta-row .good-place-detail-meta{margin:0}
+.good-place-detail-meta-row .good-place-display-options{margin:0 0 0 auto;justify-content:flex-end}

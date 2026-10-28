@@ -5,10 +5,6 @@
 <section class="content-card good-place-section">
 <div class="good-place-detail-heading"><div><p class="eyebrow">わがまちのいいところ · <%= association.name %></p><h1><%= report.title %></h1></div><%- include('partials/good-place-delete', { canDelete: typeof canDelete !== 'undefined' && canDelete, association, report }) %></div>
 <% const photoComments = typeof reactions !== 'undefined' && reactions ? reactions.comments.filter(comment => !comment.hiddenAt) : []; %>
-<div class="good-place-display-options" role="group" aria-label="写真上の表示設定">
-<% if (photoComments.length) { %><label><input type="checkbox" data-good-place-display="comments" aria-controls="good-place-photo-comments" checked>コメントを表示</label><% } %>
-<label><input type="checkbox" data-good-place-display="map" aria-controls="good-place-photo-map" checked>地図を表示</label>
-</div>
 <script src="/assets/good-place-display.js?v=<%= assetVersion %>" defer></script>
 <div class="good-place-detail-photo"><button type="button" class="good-place-detail-photo-open" data-open-detail-photo aria-label="写真を拡大表示" aria-haspopup="dialog"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></button>
 <div class="good-place-photo-bottom">
@@ -29,7 +25,11 @@
 </div><% } %>
 </div>
 </div>
-<p class="good-place-detail-meta"><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></p>
+<div class="good-place-detail-meta-row"><p class="good-place-detail-meta"><time datetime="<%= report.createdAt.toISOString() %>"><%= report.createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></time><% if (typeof showGoodPlaceAuthors !== 'undefined' && showGoodPlaceAuthors) { %> · <%= report.author?.displayname || '退会した住人' %><% } %></p><div class="good-place-display-options" role="group" aria-label="写真上の表示設定">
+<% if (photoComments.length) { %><label><input type="checkbox" data-good-place-display="comments" aria-controls="good-place-photo-comments" checked>コメントを表示</label><% } %>
+<label><input type="checkbox" data-good-place-display="map" aria-controls="good-place-photo-map" checked>地図を表示</label>
+</div>
+</div>
 <p class="danger-body"><%= report.body %></p>
 <% if (typeof canEdit !== 'undefined' && canEdit) { %>
 <details class="content-card"><summary>投稿を修正する</summary>
@@ -44,4 +44,4 @@
 <% } %>
 
 <%- include('partials/good-place-reactions', { reactions: typeof reactions !== 'undefined' ? reactions : null, report, association }) %>
-</section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" tabindex="-1" aria-label="投稿写真の拡大表示"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>
+</section><dialog id="good-place-detail-photo-dialog" class="good-place-photo-dialog" tabindex="-1" aria-label="投稿写真の拡大表示"><img src="/associations/<%= association._id %>/good-places/<%= report._id %>/photo" alt="<%= report.title %>"></dialog></main><script src="/assets/good-place-detail.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot', { hideDangerCompose: true }) %>
