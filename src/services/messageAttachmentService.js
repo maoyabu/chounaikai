@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { DriveConnection } from '../models/driveConnection.js';
 import { driveClient, assertDriveItem, driveId, FOLDER_MIME, driveError } from './driveService.js';
 
+export const PICTURE_FOLDER_NAME = 'pict';
 export const MESSAGE_FOLDER_NAME = 'メッセージ添付フォルダ';
 export const attachmentContext = async association => {
   const connection = await DriveConnection.findOne({ association }).select('+clientSecret +refreshToken');
@@ -12,8 +13,18 @@ export const validateMessageFiles = files => {
   if (files.length > 3 || files.some(file => !file.size || file.size > 15 * 1024 * 1024)) throw driveError('添付ファイルは3個まで、1個15MB以下で選択してください。');
 };
 export const saveMessageAttachments = async (files, { client, root, folderName = MESSAGE_FOLDER_NAME }) => {
-  if (![MESSAGE_FOLDER_NAME, 'プロフィール写真'].includes(folderName)) throw driveError('保存先フォルダを確認してください。');
+  if (![MESSAGE_FOLDER_NAME, PICTURE_FOLDER_NAME].includes(folderName)) throw driveError('保存先フォルダを確認してください。');
   validateMessageFiles(files);
+  if (folderName === MESSAGE_FOLDER_NAME && files.some(file => file.mimetype.startsWith('image/'))) {
+    const saved = [];
+    try {
+      for (const file of files) saved.push(...await saveMessageAttachments([file], { client, root, folderName: file.mimetype.startsWith('image/') ? PICTURE_FOLDER_NAME : MESSAGE_FOLDER_NAME }));
+      return saved;
+    } catch (error) {
+      await removeMessageAttachments(saved, client);
+      throw error;
+    }
+  }
   const rootItem = await assertDriveItem(client, root, root, { folder: true });
   if (!rootItem.capabilities?.canAddChildren) throw driveError('町内会のGoogle Driveフォルダに保存する権限がありません。', 403);
   const params = new URLSearchParams({ q: `'${driveId(root)}' in parents and trashed = false and mimeType = '${FOLDER_MIME}' and name = '${folderName}'`, fields: 'files(id)', pageSize: '100', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' });

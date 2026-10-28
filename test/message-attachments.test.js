@@ -47,8 +47,22 @@ test('rejects folders outside the association root', async () => {
 
 test('profile photos create their dedicated folder without changing the message folder', async () => {
   const ctx = fixture();
-  await saveMessageAttachments([file], { ...ctx, folderName: 'プロフィール写真' });
+  await saveMessageAttachments([file], { ...ctx, folderName: 'pict' });
   const create = ctx.calls.find(call => call.options.method === 'POST' && !call.endpoint.startsWith('upload/'));
-  assert.equal(JSON.parse(create.options.body).name, 'プロフィール写真');
-  assert.ok(ctx.calls[0].endpoint.includes(encodeURIComponent('プロフィール写真')));
+  assert.equal(JSON.parse(create.options.body).name, 'pict');
+  assert.ok(ctx.calls[0].endpoint.includes(encodeURIComponent('pict')));
+});
+
+test('mixed attachments store images in pict and documents in the message folder in order', async () => {
+  const ctx = fixture();
+  await saveMessageAttachments([file, { ...file, originalname: 'photo.jpg', mimetype: 'image/jpeg' }], ctx);
+  const folders = ctx.calls.filter(call => call.options.method === 'POST' && !call.endpoint.startsWith('upload/')).map(call => JSON.parse(call.options.body));
+  assert.deepEqual(folders.map(folder => folder.name), [MESSAGE_FOLDER_NAME, 'pict']);
+  assert.ok(folders.every(folder => folder.parents[0] === 'root'));
+});
+
+test('mixed attachment upload failure removes files already saved in another folder', async () => {
+  const ctx = fixture({ failSecond: true });
+  await assert.rejects(saveMessageAttachments([file, { ...file, mimetype: 'image/jpeg' }], ctx), /upload failed/);
+  assert.ok(ctx.calls.some(call => call.options.method === 'DELETE' && call.endpoint.includes('/file1?')));
 });

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { User } from '../models/user.js';
-import { attachmentContext, saveMessageAttachments, removeMessageAttachments } from './messageAttachmentService.js';
+import { attachmentContext, saveMessageAttachments, removeMessageAttachments, PICTURE_FOLDER_NAME } from './messageAttachmentService.js';
 import multer from 'multer';
 
 const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']);
@@ -26,7 +26,7 @@ export const acceptProfileImage = (req, res, next) => upload(req, res, (error) =
   return next(error);
 });
 
-export const PROFILE_PHOTO_FOLDER = 'プロフィール写真';
+export const PROFILE_PHOTO_FOLDER = PICTURE_FOLDER_NAME;
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const defaults = { AssociationMembership, NeighborhoodAssociation, User, attachmentContext, saveMessageAttachments, removeMessageAttachments };
 
