@@ -24,6 +24,17 @@
       openDetail(link.dataset.goodPlaceDetail, link.closest('[data-danger-report]'));
     });
   });
+  items.forEach(item => {
+    item.addEventListener('click', event => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
+      openDetail(item.dataset.goodPlaceRowUrl, item);
+    });
+    item.addEventListener('keydown', event => {
+      if (event.target !== item || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      openDetail(item.dataset.goodPlaceRowUrl, item);
+    });
+  });
   dialog.querySelector('[data-close-good-place-detail]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
   frame.addEventListener('load', () => {

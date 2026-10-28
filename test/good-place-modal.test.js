@@ -9,7 +9,7 @@ test('photo and title open detail, select their row and update the map; closing 
   const dialog = { ...element(), open: false, showModal() { this.open = true; }, close() { this.open = false; }, querySelector: selector => selector.includes('frame') ? frame : close };
   const photo = { ...element(), dataset: { goodPlaceDetail: '/associations/town/good-places/post', dangerQuery: '町の公園' }, setAttribute(key, value) { this[key] = value; }, querySelector: () => ({ alt: '公園' }) };
   const title = { ...element(), dataset: { goodPlaceDetail: photo.dataset.goodPlaceDetail } };
-  const row = { classList: { toggle(name, value) { row.selected = value; } }, contains: node => node === photo, querySelector: () => photo };
+  const row = { ...element(), dataset: { goodPlaceRowUrl: photo.dataset.goodPlaceDetail }, classList: { toggle(name, value) { row.selected = value; } }, contains: node => node === photo, querySelector: () => photo };
   photo.closest = title.closest = () => row;
   const document = { getElementById: id => ({ 'good-place-detail-modal': dialog, 'danger-history-frame': map, 'danger-map-status': status })[id], querySelectorAll: selector => ({ '[data-danger-report]': [row], '[data-danger-focus]': [photo], '[data-good-place-detail]': [photo, title] })[selector] };
   vm.runInNewContext(script, { document, location: { search: '', pathname: '/associations/town/good-places' }, URLSearchParams });
@@ -23,4 +23,10 @@ test('photo and title open detail, select their row and update the map; closing 
     close.handlers.click(); assert.equal(dialog.open, false); assert.equal(row.selected, true);
   }
   title.handlers.click({ ctrlKey: true }); assert.equal(dialog.open, false);
+  row.handlers.click({}); assert.equal(dialog.open, true);
+  assert.equal(frame.src, photo.dataset.goodPlaceDetail);
+  close.handlers.click();
+  row.handlers.click({ defaultPrevented: true }); assert.equal(dialog.open, false);
+  row.handlers.keydown({ target: row, key: 'Enter', preventDefault() {} });
+  assert.equal(dialog.open, true);
 });
