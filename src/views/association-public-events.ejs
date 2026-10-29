@@ -1,5 +1,5 @@
 <%- include('partials/head') %>
-<% if (currentUser) { %><%- include('partials/header') %><% } %>
+<% if (currentUser) { %><%- include('partials/header') %><% } else { %><%- include('partials/guide-bar') %><% } %>
 <main class="page-shell association-public-page">
   <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
   <a class="back-link" href="<%= currentUser ? "/dashboard" : "/associations" %>">← <%= currentUser ? "ホームへ戻る" : "町内会一覧へ戻る" %></a>

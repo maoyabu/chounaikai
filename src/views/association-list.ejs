@@ -1,5 +1,6 @@
 <%- include('partials/head') %>
-<% if (currentUser) { %><%- include('partials/header') %><% } %>
+<% if (currentUser) { %><%- include('partials/header') %><% } else { %><%- include('partials/guide-bar') %><% } %>
+<% const joinedAssociationIds = new Set((typeof dangerMemberships !== 'undefined' ? dangerMemberships : []).map(item => String(item.association._id))); %>
 <main class="page-shell association-list-shell">
   <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
   <div class="association-list-layout">
@@ -14,7 +15,7 @@
   <section class="content-card management-card association-list-directory">
     <% if (associations.length) { %>
       <div class="management-list"><% associations.forEach((association) => { %>
-        <div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small><a href="/associations/<%= association._id %>/public">町内会のことを詳しく知る →</a></span><span class="association-list-actions"><% if (!currentUser) { %><a class="button button-quiet button-small association-login-button" href="/associations/<%= association._id %>/register/start?login=1">この町内会にログイン</a><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会で会員登録</a><% } else { %><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会に参加</a><% } %></span></div>
+        <div><span><strong><%= association.name %></strong><small><%= association.serviceArea || '対象地域未設定' %></small><a href="/associations/<%= association._id %>/public">町内会のことを詳しく知る →</a></span><span class="association-list-actions"><% if (!currentUser) { %><a class="button button-quiet button-small association-login-button" href="/associations/<%= association._id %>/register/start?login=1">この町内会にログイン</a><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会で会員登録</a><% } else if (joinedAssociationIds.has(String(association._id))) { %><a class="button button-primary button-small" href="/dashboard">この町内会にアクセス</a><% } else if (!joinedAssociationIds.size) { %><a class="button button-primary button-small" href="/associations/<%= association._id %>/register/start">この町内会に参加</a><% } %></span></div>
       <% }) %></div>
     <% } else { %><p>公開中の町内会はまだありません。</p><% } %>
   </section>

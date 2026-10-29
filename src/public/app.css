@@ -195,3 +195,9 @@
 .good-place-gallery-latest>span{position:absolute;right:0;bottom:0;max-width:100%;box-sizing:border-box;padding:3px 6px;background:rgb(0 0 0 / 65%);color:#fff;text-align:right}
 .good-place-gallery-latest time{display:inline-block}
 @media(max-width:600px){.good-place-gallery-title,.directory-gallery-title{gap:8px}.good-place-gallery-title{padding-left:8px}.linked-gallery-toggle{min-width:40px}.good-place-gallery-latest{font-size:.6rem}}
+
+/* Guide access shared by full pages; modal partials do not include it. */
+.header-actions{display:flex;align-items:center;gap:clamp(.5rem,2vw,1.25rem);min-width:0}.header-guide-link{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;min-height:44px;padding:.4rem .6rem;border-radius:.5rem;background:#1e4f91;color:#fff;font-weight:800;text-decoration:none;white-space:nowrap}.header-guide-link:hover{background:#173d70}.header-guide-link:focus-visible{outline:2px solid #1e4f91;outline-offset:2px}.guide-bar{display:flex;justify-content:flex-end;padding:.25rem clamp(1rem,4vw,3.5rem);background:var(--surface);border-bottom:1px solid var(--line)}
+@media(max-width:480px){.site-header{padding-inline:.75rem;gap:.5rem}.site-header .brand{gap:.4rem;letter-spacing:0;font-size:.85rem}.header-actions{gap:.25rem}.header-actions .header-account{gap:.25rem}.header-guide-link{font-size:.85rem;padding-inline:.35rem}}
+
+.menu-item.menu-guide-link{background:#eaf2fc;color:#1e4f91;font-weight:800}.menu-item.menu-guide-link:hover{background:#d8e7fa;color:#173d70}.menu-item.menu-guide-link:focus-visible{outline:2px solid #1e4f91;outline-offset:2px}
