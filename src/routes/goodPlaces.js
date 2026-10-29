@@ -16,7 +16,7 @@ export const goodPlacesRouter = express.Router();
 goodPlacesRouter.get('/good-places/new', requireLogin, (req, res) => {
   const memberships = (res.locals.dangerMemberships || []).filter(item => item.association.optionalFeatures?.goodPlaces === true);
   if (!memberships.length) return res.status(403).render('error', { title: '投稿できません', message: '参加中の町内会からいいところを投稿できます。' });
-  res.render('good-place-new', { title: 'わがまちのいいところ投稿', memberships });
+  return res.redirect(`/associations/${memberships[0].association._id}/good-places`);
 });
 goodPlacesRouter.use('/associations/:associationId/good-places', async (req, res, next) => {
   try {

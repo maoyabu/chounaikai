@@ -1,5 +1,5 @@
 <% if (memberships.length) { %>
-<dialog id="good-place-compose" data-photo-post-dialog="good-place" data-post-path="good-places" data-auto-open="true" class="officer-dialog"><div class="dialog-heading"><h2>わがまちのいいところを投稿</h2><button type="button" id="good-place-close" aria-label="閉じる">×</button></div>
+<dialog id="good-place-compose" data-photo-post-dialog="good-place" data-post-path="good-places" class="officer-dialog"><div class="dialog-heading"><h2>わがまちのいいところを投稿</h2><button type="button" id="good-place-close" aria-label="閉じる">×</button></div>
 <form id="good-place-form" class="form-stack"><label>共有する町内会<select name="association" required><% memberships.forEach(item => { %><option value="<%= item.association._id %>"><%= item.association.name %></option><% }) %></select></label>
 <label>現場の写真（撮影・アルバムから選択／10MB以下）<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label><img id="good-place-preview" alt="投稿する写真の確認" hidden>
 <p id="good-place-location" role="status">写真の撮影場所を使用し、含まれていない場合は現在地を取得します。</p><button type="button" id="good-place-locate">現在地を取得・再取得</button>

@@ -71,11 +71,15 @@ test('gallery precedes the calendar and shows large photo, title and small autho
   assert.match(html,/<small>[\s\S]*住人/);assert.match(html,new RegExp(`/good-places/${reportId}/photo`));
 });
 test('posting, detail and map/history pages render without paid Google API',async()=>{
-  const post=await ejs.renderFile('src/views/good-place-new.ejs',{...globals,memberships:[{association}]});
+  const post=await ejs.renderFile('src/views/good-place-history.ejs',{...globals,currentUser:{displayname:'会員'},currentPath:`/associations/${associationId}/good-places`,csrfToken:'test',dangerMemberships:[{association:{...association,optionalFeatures:{goodPlaces:true}}}],association,reports:[],page:1,hasNext:false});
+  assert.match(post,/<h1>わがまちのいいところ<\/h1><button[^>]+id="good-place-open"/);
+  assert.doesNotMatch(post,/data-auto-open="true"/);
+  assert.match(post,new RegExp(`href="/associations/${associationId}/good-places"`));
   assert.match(post,/data-post-path="good-places"/);assert.match(post,/一般公開/);assert.doesNotMatch(post,/capture=/);
   const detail=await ejs.renderFile('src/views/good-place-detail.ejs',{...globals,association,report,canDelete:false});
   assert.match(detail,/春の景色/);assert.match(detail,/good-places">← わがまち/);assert.doesNotMatch(detail,/maps.googleapis|削除する/);
   const history=await ejs.renderFile('src/views/good-place-history.ejs',{...globals,association,reports:[report],page:1,hasNext:false});
+  assert.doesNotMatch(history,/id="good-place-open"|id="good-place-compose"/);
   assert.match(history,/data-danger-focus/);assert.match(history,/町内の公園/);assert.doesNotMatch(history,/maps.googleapis|\/dangers/);
 });
 
@@ -92,4 +96,11 @@ test('deletion returns to the PR page after successful authorized removal',async
   const handler=route('/associations/:associationId/good-places/:reportId/delete').stack.at(-1).handle;
   await handler(req,{redirect:url=>{destination=url;}},error=>{throw error;});
   assert.equal(destination,`/associations/${associationId}/public`);assert.match(req.session.notice,/削除しました/);
+});
+
+
+test('retired posting page redirects to the association history',()=>{
+  let destination;
+  route('/good-places/new').stack.at(-1).handle({}, {locals:{dangerMemberships:[{association:{...association,optionalFeatures:{goodPlaces:true}}}]},redirect:url=>{destination=url;}});
+  assert.equal(destination,`/associations/${associationId}/good-places`);
 });

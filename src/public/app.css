@@ -203,3 +203,5 @@
 .menu-item.menu-guide-link{background:#eaf2fc;color:#1e4f91;font-weight:800}.menu-item.menu-guide-link:hover{background:#d8e7fa;color:#173d70}.menu-item.menu-guide-link:focus-visible{outline:2px solid #1e4f91;outline-offset:2px}
 
 .menu-item.menu-logout-button{background:#fff0ee;color:var(--danger)}.menu-item.menu-logout-button:hover{background:#fbe0dc;color:var(--danger)}.menu-item.menu-logout-button:focus-visible{outline:2px solid var(--danger);outline-offset:2px}
+
+.good-place-history-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}.good-place-history-heading #good-place-open{margin-left:auto}
