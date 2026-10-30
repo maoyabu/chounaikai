@@ -1,6 +1,8 @@
 import { profileImagesRouter } from './routes/profileImages.js';
 import { createLineLoginService, lineLoginConfig } from './services/lineLoginService.js';
 import { createLineLoginRouter, enforceLineSession } from './routes/lineLogin.js';
+import { createPasskeyService, passkeyConfig } from './services/passkeyService.js';
+import { createPasskeyRouter, enforcePasskeySession } from './routes/passkeys.js';
 import { requireEnabledAssociationFeature } from './middleware/associationFeatures.js';
 import { goodPlacesRouter } from './routes/goodPlaces.js';
 import { dangerReportsRouter } from './routes/dangerReports.js';
@@ -48,7 +50,7 @@ import { notificationsRouter } from './routes/notifications.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService, lineLoginService }) => {
+export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService, lineLoginService, passkeyService }) => {
   const app = express();
   app.disable('x-powered-by');
   app.set('env', nodeEnv);
@@ -56,6 +58,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.locals.siteSecurityService = siteSecurityService || createSiteSecurityService();
   const lineService = lineLoginService || createLineLoginService({ config: lineLoginConfig({ publicBaseUrl, nodeEnv }) });
   app.locals.lineLoginEnabled = lineService.enabled;
+  const passkeys = passkeyService || createPasskeyService({ config: passkeyConfig({ publicBaseUrl, nodeEnv }) });
+  app.locals.passkeyEnabled = passkeys.enabled;
   app.locals.mfaService = applySiteMfaPolicy(mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) }), app.locals.siteSecurityService);
   // Change the asset URL whenever the server starts (or when a release version
   // is provided) so browsers do not keep using stale CSS/JS assets.
@@ -72,6 +76,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.set('view engine', 'ejs');
   app.set('views', path.join(dirname, 'views'));
   app.use('/assets', express.static(path.join(dirname, 'public'), { maxAge: nodeEnv === 'production' ? '1d' : 0 }));
+  app.get('/assets/vendor/simplewebauthn.min.js', (_req, res) => res.sendFile(path.join(dirname, '../node_modules/@simplewebauthn/browser/dist/bundle/index.umd.min.js')));
   app.get('/health', (_req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ ok: mongoose.connection.readyState === 1 }));
   // Public legal pages remain available without a session or MFA verification.
   app.use('/', legalRouter);
@@ -98,6 +103,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use(passport.initialize());
   app.use(passport.session());
   app.use(enforceLineSession(lineService));
+  app.use(enforcePasskeySession(passkeys));
   app.use((req, res, next) => {
     res.locals.currentUser = req.user || null;
     res.locals.showNotificationPrompt = Boolean(req.user && req.session.notificationPromptPending);
@@ -110,6 +116,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/mfa', mfaRouter);
   app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/notifications', notificationsRouter);
+  app.use('/api/passkeys', createPasskeyRouter(passkeys));
   app.use(requireEnabledAssociationFeature);
   app.use('/', profileImagesRouter);
   app.use(async (req, res, next) => {

@@ -17,6 +17,8 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "cloudinary": "^2.11.0",
     "connect-mongo": "^5.1.0",
     "dotenv": "^17.2.3",

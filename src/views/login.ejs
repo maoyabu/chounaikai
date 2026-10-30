@@ -30,6 +30,10 @@
       </form>
       <p class="help-text">初めて利用する場合は、ID・パスワードでログインし、プロフィールの「LINEログイン設定」で連携してください。</p>
       <% } %>
+      <% if (typeof passkeyEnabled !== 'undefined' && passkeyEnabled) { %>
+      <button id="passkey-login" class="button button-quiet button-wide" type="button">パスキーでログイン</button>
+      <p id="passkey-login-message" class="help-text" role="status">登録済みのパスキーが必要です。</p>
+      <% } %>
       <p class="help-text">会計システムまたはメニューシステムと同じアカウントをご利用ください。管理者の方は、ログイン後に認証アプリでの確認が必要です。</p>
       <div class="login-divider"><span>または</span></div>
       <a class="button button-quiet button-wide" href="/associations">町内会一覧から新規会員登録</a>
@@ -44,4 +48,5 @@
     </div>
   </section>
 </main>
+<% if (typeof passkeyEnabled !== 'undefined' && passkeyEnabled) { %><script src="/assets/vendor/simplewebauthn.min.js?v=<%= assetVersion %>"></script><script src="/assets/passkeys.js?v=<%= assetVersion %>"></script><% } %>
 <%- include('partials/foot') %>

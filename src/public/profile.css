@@ -103,3 +103,4 @@ main.page-shell > .page-heading + .settings-entry-grid { margin-top: 0; }
 }
 
 .profile-image-fields { flex: 1; min-width: 0; display: grid; gap: 1rem; }
+.passkey-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid #e1e9e4}.passkey-row span{overflow-wrap:anywhere}

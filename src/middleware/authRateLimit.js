@@ -20,6 +20,8 @@ export const authRatePolicy = req => {
   // Match case-insensitive and optional trailing slashes, like Express routes.
   const path = req.path.toLowerCase().replace(/\/+$/, '') || '/';
   if (req.method === 'POST') {
+    if (['/api/passkeys/profile/register/options', '/api/passkeys/profile/remove'].includes(path)) return 'password';
+    if (path.startsWith('/api/passkeys/')) return 'mfa';
     if (['/profile/line/link', '/profile/line/unlink'].includes(path)) return 'password';
     if (path === '/auth/line') return 'token';
     if (path === '/admin/security/mfa') return 'mfa';
