@@ -1865,3 +1865,25 @@ h1, h2, h3, h4, h5, h6,
   .bulletin-benefit-card ul, .bulletin-outcome-card ul { padding: 2.5mm 2.5mm 3mm 6mm; line-height: 1.6; }
   .bulletin-outcomes { margin-top: 5mm; padding-top: 4mm; }
 }
+
+.benefit-color-teal { --benefit-color: #237069; --benefit-tint: #edf8f5; --benefit-border: #9bcac3; }
+.benefit-color-navy { --benefit-color: #385b87; --benefit-tint: #eff4fb; --benefit-border: #afc3df; }
+.benefit-color-purple { --benefit-color: #73538e; --benefit-tint: #f7f1fb; --benefit-border: #cbb5dc; }
+.benefit-color-rose { --benefit-color: #a34667; --benefit-tint: #fff1f5; --benefit-border: #e3b0c1; }
+.benefit-color-slate { --benefit-color: #526570; --benefit-tint: #f1f5f7; --benefit-border: #b7c6ce; }
+.join-benefit-content { padding: 1rem; margin: 0; line-height: 1.8; }
+.benefit-management-list { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.benefit-management-list .benefit-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0; }
+.benefit-row-title { overflow-wrap: anywhere; min-width: 0; }
+.benefit-row-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+.benefit-row-actions .button { padding: .5rem .7rem; }
+.benefit-edit-dialog { width: min(720px, calc(100% - 2rem)); max-height: 90dvh; overflow-y: auto; border: 1px solid #c9dccc; border-radius: 16px; padding: 1.5rem; color: #263b31; }
+.benefit-edit-dialog::backdrop { background: rgb(19 37 29 / 50%); }
+.benefit-edit-dialog fieldset { border: 1px solid #d9e3dd; border-radius: 10px; padding: 1rem; }
+.benefit-color-options, .benefit-icon-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: .6rem; }
+.benefit-edit-dialog .benefit-color-option, .benefit-edit-dialog .benefit-icon-option { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; padding: .6rem; border: 2px solid #dce5df; border-radius: 9px; cursor: pointer; font-size: .9rem; }
+.benefit-edit-dialog input[type=radio] { width: 1rem; height: 1rem; margin: 0; }
+.benefit-color-option:has(input:checked), .benefit-icon-option:has(input:checked) { border-color: #386724; background: #f3f8ed; }
+.benefit-color-option:focus-within, .benefit-icon-option:focus-within { outline: 2px solid #086b9b; outline-offset: 2px; }
+.benefit-color-swatch { width: 1.2rem; height: 1.2rem; border-radius: 50%; flex-shrink: 0; }
+@media (max-width: 600px) { .benefit-management-list .benefit-row { align-items: flex-start; flex-direction: column; } .benefit-row-actions { flex-wrap: wrap; } }

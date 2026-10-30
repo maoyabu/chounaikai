@@ -76,6 +76,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.set('view engine', 'ejs');
   app.set('views', path.join(dirname, 'views'));
   app.use('/assets', express.static(path.join(dirname, 'public'), { maxAge: nodeEnv === 'production' ? '1d' : 0 }));
+  app.get('/assets/vendor/html2pdf.bundle.min.js', (_req, res) => res.sendFile(path.join(dirname, '../node_modules/html2pdf.js/dist/html2pdf.bundle.min.js')));
   app.get('/assets/vendor/simplewebauthn.min.js', (_req, res) => res.sendFile(path.join(dirname, '../node_modules/@simplewebauthn/browser/dist/bundle/index.umd.min.js')));
   app.get('/health', (_req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ ok: mongoose.connection.readyState === 1 }));
   // Public legal pages remain available without a session or MFA verification.

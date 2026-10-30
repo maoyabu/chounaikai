@@ -2,9 +2,13 @@
 <link rel="stylesheet" href="/assets/join.css?v=<%= assetVersion %>">
 <div class="join-screen-only"><% if (currentUser) { %><%- include('partials/header') %><% } else { %><%- include('partials/guide-bar') %><% } %></div>
 <main class="page-shell join-page">
-<div class="join-screen-only form-actions"><a href="/associations/<%= association._id %>/public">町内会PRページへ</a><button class="button button-quiet" type="button" onclick="window.print()">PDF保存・印刷</button><span>印刷画面で「PDFに保存」を選択できます。</span></div>
-<section class="content-card"><p class="eyebrow">町内会・まちの伝言板への加入のご案内</p><h1><%= association.name %></h1><p class="body-copy"><%= association.introduction || '地域の情報を共有し、みんなで暮らしやすいまちをつくりましょう。' %></p><% if (association.serviceArea) { %><p>対象地域：<%= association.serviceArea %></p><% } %>
+<div class="join-screen-only join-page-navigation"><% if (currentUser) { %><a class="back-link" href="/associations/<%= association._id %>/join/manage">← 加入申し込みページ管理へ戻る</a><% } %><a href="/associations/<%= association._id %>/public">町内会PRページへ</a></div>
+<section class="content-card"><div class="join-card-heading"><p class="eyebrow">町内会・まちの伝言板への加入のご案内</p><button class="button button-quiet join-screen-only" type="button" id="join-export-open">PDF保存・印刷</button></div><h1><%= association.name %></h1><p class="body-copy"><%= association.introduction || '地域の情報を共有し、みんなで暮らしやすいまちをつくりましょう。' %></p><% if (association.serviceArea) { %><p>対象地域：<%= association.serviceArea %></p><% } %>
 <a class="button button-primary join-screen-only" href="/associations/<%= association._id %>/register/start">町内会に参加する（会員登録）</a>
 <div class="join-print-only join-qr"><img src="<%= qrCode %>" alt="加入案内ページのQRコード" width="160" height="160"><div><strong>町内会に参加する</strong><p>QRコードから加入案内を開き、会員登録へお進みください。</p><small><%= joinUrl %></small></div></div></section>
 <%- include('partials/join-benefits') %>
-</main><%- include('partials/foot') %>
+</main>
+<dialog id="join-export-dialog" class="join-export-dialog join-screen-only" aria-labelledby="join-export-title"><h2 id="join-export-title">加入案内を出力</h2><p>PDFファイルのダウンロード、または印刷を選んでください。</p><div class="form-actions"><button type="button" class="button button-primary" id="join-download">PDFをダウンロード</button><button type="button" class="button button-quiet" id="join-print">印刷する</button><button type="button" class="button button-quiet" id="join-export-close">閉じる</button></div><p id="join-export-status" role="status" aria-live="polite"></p></dialog>
+<script src="/assets/vendor/html2pdf.bundle.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/assets/join-export.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

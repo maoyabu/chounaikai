@@ -13,3 +13,26 @@
   .join-page h3 { font-size: 12pt; }
   .join-page p, .join-page li { font-size: 10pt; }
 }
+
+.join-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.join-card-heading .button { flex-shrink: 0; }
+.join-export-dialog { width: min(560px, calc(100% - 2rem)); border: 1px solid #c9dccc; border-radius: 16px; padding: 1.5rem; }
+.join-export-dialog::backdrop { background: rgb(19 37 29 / 50%); }
+.join-pdf-container { position: absolute; left: -10000px; top: 0; width: 186mm; background: #fff; }
+.join-pdf { width: 186mm; max-width: none; margin: 0; padding: 0; background: #fff; }
+.join-pdf .join-print-only { display: flex; }
+.join-pdf .content-card { box-shadow: none; margin: 0 0 5mm; padding: 4mm; }
+.join-pdf .bulletin-benefit-grid, .join-pdf .bulletin-outcome-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
+.join-pdf h1 { font-size: 23pt; }
+.join-pdf h2 { font-size: 16pt; }
+.join-pdf h3, .join-pdf .bulletin-benefit-card h3 { font-size: 12pt; }
+.join-pdf p, .join-pdf li { font-size: 10pt; }
+.join-pdf .bulletin-benefit-card h3 { padding: 2.5mm; gap: 2mm; }
+.join-pdf .join-benefit-icon-wrap { width: 7mm; height: 7mm; }
+.join-pdf .join-benefit-icon { width: 5mm; height: 5mm; }
+.join-pdf .bulletin-benefit-card ul, .join-pdf .bulletin-outcome-card ul { padding: 2.5mm 2.5mm 3mm 6mm; line-height: 1.6; }
+.join-pdf .bulletin-outcomes { margin-top: 5mm; padding-top: 4mm; }
+@media (max-width: 600px) { .join-card-heading { flex-wrap: wrap; } }
+
+.join-page-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1rem; margin-bottom: 1rem; }
+.join-page-navigation > a:last-child { margin-left: auto; }

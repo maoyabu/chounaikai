@@ -1,5 +1,5 @@
 <section class="content-card join-benefits"><h2>町内会に参加するメリット</h2>
-<% if (association.joinBenefits?.length) { %><div class="join-benefit-grid"><% association.joinBenefits.forEach(benefit => { %><article><h3><%= benefit.title %></h3><p class="body-copy"><%= benefit.content %></p></article><% }) %></div><% } else { %><p>参加するメリットのご案内は準備中です。</p><% } %></section>
+<% if (association.joinBenefits?.length) { %><div class="join-benefit-grid bulletin-benefit-grid"><% association.joinBenefits.forEach(benefit => { %><article class="bulletin-benefit-card benefit-color-<%= benefit.color || 'green' %>"><h3><span class="join-benefit-icon-wrap"><%- include('join-benefit-icon', { icon: benefit.icon || 'town' }) %></span><span><%= benefit.title %></span></h3><p class="body-copy join-benefit-content"><%= benefit.content %></p></article><% }) %></div><% } else { %><p>参加するメリットのご案内は準備中です。</p><% } %></section>
 <section class="content-card join-benefits"><h2>まちの伝言板を利用するメリット</h2><div class="join-benefit-grid bulletin-benefit-grid">
 <% const benefits = [
 ['災害時に住民を守る', ['災害発生時の避難経路、避難所の状況をタイムリーに共有','安否状況、要支援の共有と支援活動','ハザードマップをいつでも確認できる','防災時の備品管理や賞味期限管理','町内の危険情報を共有し修繕']],

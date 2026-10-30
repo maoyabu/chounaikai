@@ -27,6 +27,7 @@
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "helmet": "^8.3.0",
+    "html2pdf.js": "^0.14.0",
     "ipaddr.js": "^2.5.0",
     "mongoose": "^8.13.0",
     "multer": "^2.3.0",

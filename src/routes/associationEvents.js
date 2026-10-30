@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { joinBenefitValues } from '../services/joinBenefitsService.js';
+import { benefitColors, benefitIcons, joinBenefitValues } from '../services/joinBenefitsService.js';
 import { persistEventImage, deleteEventImage } from '../services/eventAttachmentService.js';
 import express from 'express';
 import { notifyEvent } from '../services/notificationRecipients.js';
@@ -37,7 +37,7 @@ associationEventsRouter.get('/:associationId/join', async (req, res, next) => {
 associationEventsRouter.get('/:associationId/join/manage', requireLogin, async (req, res, next) => {
   try {
     const association = await officerAccess(req);
-    return res.render('association-join-manage', { title: '加入申し込みページ管理', association });
+    return res.render('association-join-manage', { title: '加入申し込みページ管理', association, benefitColors, benefitIcons });
   } catch (error) { return next(error); }
 });
 

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { benefitColors, benefitIcons } from '../public/join-benefit-options.js';
 
 const neighborhoodAssociationSchema = new mongoose.Schema({
   // The legacy group is created only after approval. Sparse uniqueness lets
@@ -27,7 +28,7 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
     phone: String
   },
   introduction: { type: String, default: '' },
-  joinBenefits: { type: [{ title: { type: String, required: true, maxlength: 100 }, content: { type: String, required: true, maxlength: 2000 } }], default: [] },
+  joinBenefits: { type: [{ title: { type: String, required: true, maxlength: 100 }, content: { type: String, required: true, maxlength: 2000 }, color: { type: String, enum: benefitColors.map(([value]) => value), default: 'green' }, icon: { type: String, enum: benefitIcons.map(([value]) => value), default: 'town' } }], default: [], validate: { validator: values => values.length <= 10, message: 'メリットは10件以内で登録してください。' } },
   publicPhotos: { type: [{ url: String, publicId: String }], default: [] },
   optionalFeatures: {
     goodPlaces: { type: Boolean, default: false },
