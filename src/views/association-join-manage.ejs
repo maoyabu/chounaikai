@@ -1,0 +1,7 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell"><a href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a><h1>加入申し込みページ管理</h1>
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+<p>町内会に参加するメリットを30件まで登録できます。空欄の行は保存されません。削除・編集後は保存してください。</p>
+<p><a class="button button-quiet" href="/associations/<%= association._id %>/join">加入案内ページを見る・PDF保存</a></p>
+<form method="post" class="form-stack"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><div id="benefit-rows"><% (association.joinBenefits?.length ? association.joinBenefits : [{ title: '', content: '' }]).forEach(benefit => { %><fieldset class="content-card benefit-row"><legend>参加するメリット</legend><label>メリットタイトル<input name="benefitTitle" value="<%= benefit.title %>" maxlength="100"></label><label>メリット内容<textarea name="benefitContent" rows="4" maxlength="2000"><%= benefit.content %></textarea></label><button type="button" class="button button-quiet remove-benefit">このメリットを削除</button></fieldset><% }) %></div><div class="form-actions"><button type="button" id="add-benefit" class="button button-quiet">メリットを追加</button><button class="button button-primary" type="submit">保存する</button></div><p id="benefit-limit" role="status"></p></form></main>
+<script src="/assets/join-manage.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

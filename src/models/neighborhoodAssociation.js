@@ -27,6 +27,7 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
     phone: String
   },
   introduction: { type: String, default: '' },
+  joinBenefits: { type: [{ title: { type: String, required: true, maxlength: 100 }, content: { type: String, required: true, maxlength: 2000 } }], default: [] },
   publicPhotos: { type: [{ url: String, publicId: String }], default: [] },
   optionalFeatures: {
     goodPlaces: { type: Boolean, default: false },

@@ -1828,3 +1828,40 @@ h1, h2, h3, h4, h5, h6,
 .good-place-detail-meta-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin:12px 0}
 .good-place-detail-meta-row .good-place-detail-meta{margin:0}
 .good-place-detail-meta-row .good-place-display-options{margin:0 0 0 auto;justify-content:flex-end}
+
+.join-benefit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
+.join-benefit-grid article { border: 1px solid #c9dccc; border-radius: 12px; padding: 1rem; overflow-wrap: anywhere; }
+.join-benefit-grid h3 { margin-top: 0; color: #28613c; }
+.join-benefit-grid li + li { margin-top: .5rem; }
+.join-benefit-grid .body-copy { white-space: pre-wrap; }
+
+/* 伝言板の機能と、活動にもたらす効果を分けて案内する。 */
+.benefit-color-red { --benefit-color: #b83b2b; --benefit-tint: #fff3ef; --benefit-border: #e6a99e; }
+.benefit-color-green { --benefit-color: #386724; --benefit-tint: #f3f8ed; --benefit-border: #b1cb99; }
+.benefit-color-blue { --benefit-color: #086b9b; --benefit-tint: #eef8fd; --benefit-border: #9dcbdf; }
+.benefit-color-orange { --benefit-color: #995000; --benefit-tint: #fff7e9; --benefit-border: #e8c286; }
+.benefit-color-brown { --benefit-color: #81500c; --benefit-tint: #faf5ec; --benefit-border: #d9c19c; }
+.bulletin-benefit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.join-benefit-grid .bulletin-benefit-card { padding: 0; border: 1px solid var(--benefit-border); border-top: 4px solid var(--benefit-color); overflow: hidden; background: #fff; }
+.join-benefit-grid .bulletin-benefit-card h3 { display: flex; align-items: center; gap: .65rem; margin: 0; padding: 1rem; color: var(--benefit-color); background: var(--benefit-tint); font-size: 1.05rem; line-height: 1.5; }
+.join-benefit-icon { display: block; width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.join-benefit-icon-wrap { display: grid; place-items: center; flex-shrink: 0; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: white; }
+.bulletin-benefit-card ul, .bulletin-outcome-card ul { margin: 0; padding: 1rem 1.1rem 1.2rem 2.25rem; line-height: 1.8; }
+.bulletin-benefit-card li::marker, .bulletin-outcome-card li::marker { color: var(--benefit-color); }
+.bulletin-outcomes { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #dce4e8; }
+.bulletin-outcomes-label { margin: 0 0 1rem; font-weight: 700; color: #43525e; }
+.bulletin-outcome-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.bulletin-outcome-card { border: 1px solid var(--benefit-border); border-radius: 10px; overflow: hidden; background: var(--benefit-tint); overflow-wrap: anywhere; }
+.bulletin-outcome-card h3 { display: flex; align-items: center; justify-content: center; gap: .6rem; margin: 0; padding: .8rem; color: white; background: var(--benefit-color); font-size: 1.05rem; }
+.bulletin-outcome-card li + li { margin-top: .5rem; }
+@media (max-width: 900px) { .bulletin-benefit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .bulletin-benefit-grid, .bulletin-outcome-grid { grid-template-columns: 1fr; } }
+@media print {
+  .bulletin-benefit-grid, .bulletin-outcome-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
+  .bulletin-benefit-card, .bulletin-outcome-card { print-color-adjust: exact; -webkit-print-color-adjust: exact; break-inside: avoid; }
+  .join-benefit-grid .bulletin-benefit-card h3 { padding: 2.5mm; gap: 2mm; }
+  .join-benefit-icon-wrap { width: 7mm; height: 7mm; }
+  .join-benefit-icon { width: 5mm; height: 5mm; }
+  .bulletin-benefit-card ul, .bulletin-outcome-card ul { padding: 2.5mm 2.5mm 3mm 6mm; line-height: 1.6; }
+  .bulletin-outcomes { margin-top: 5mm; padding-top: 4mm; }
+}

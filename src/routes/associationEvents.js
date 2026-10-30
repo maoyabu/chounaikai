@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+import { joinBenefitValues } from '../services/joinBenefitsService.js';
 import { persistEventImage, deleteEventImage } from '../services/eventAttachmentService.js';
 import express from 'express';
 import { notifyEvent } from '../services/notificationRecipients.js';
@@ -18,6 +20,36 @@ const officerAccess = async req => {
   if (!access.canAnswer && !req.user.isAdmin) throw Object.assign(new Error('役員だけが行事を管理できます。'), { status: 403 });
   return access.association;
 };
+
+associationEventsRouter.get('/:associationId/join', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.associationId)) throw notFound();
+    const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
+    if (!association) throw notFound();
+    const base = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const joinUrl = new URL(`/associations/${association._id}/join`, base).href;
+    const qrCode = await QRCode.toDataURL(joinUrl, { width: 240, margin: 4, errorCorrectionLevel: 'M' });
+    res.set('Cache-Control', 'no-store');
+    return res.render('association-join', { title: `${association.name} 加入のご案内`, association, joinUrl, qrCode });
+  } catch (error) { return next(error); }
+});
+
+associationEventsRouter.get('/:associationId/join/manage', requireLogin, async (req, res, next) => {
+  try {
+    const association = await officerAccess(req);
+    return res.render('association-join-manage', { title: '加入申し込みページ管理', association });
+  } catch (error) { return next(error); }
+});
+
+associationEventsRouter.post('/:associationId/join/manage', requireLogin, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const association = await officerAccess(req);
+    const joinBenefits = joinBenefitValues(req.body);
+    await NeighborhoodAssociation.updateOne({ _id: association._id, status: 'active', deletedAt: { $exists: false } }, { $set: { joinBenefits } }, { runValidators: true });
+    req.session.notice = '加入申し込みページを保存しました。';
+    return res.redirect(`/associations/${association._id}/join/manage`);
+  } catch (error) { return next(error); }
+});
 
 associationEventsRouter.get('/:associationId/public', async (req, res, next) => {
   try {

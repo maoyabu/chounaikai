@@ -1,0 +1,15 @@
+.join-print-only { display: none; }
+.join-qr { align-items: center; gap: 1rem; }
+.join-qr small { overflow-wrap: anywhere; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  .join-screen-only, body > footer { display: none !important; }
+  .join-print-only { display: flex !important; }
+  .join-page { max-width: none; margin: 0; padding: 0; }
+  .join-page .content-card { box-shadow: none; margin: 0 0 5mm; padding: 4mm; }
+  .join-benefits article, .join-qr { break-inside: avoid; }
+  .join-page h1 { font-size: 23pt; }
+  .join-page h2 { font-size: 16pt; }
+  .join-page h3 { font-size: 12pt; }
+  .join-page p, .join-page li { font-size: 10pt; }
+}
