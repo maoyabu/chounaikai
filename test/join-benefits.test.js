@@ -39,6 +39,7 @@ test('public cards display selected style and management renders modal choices',
   assert.equal((management.match(/name="color"/g) || []).length, 10);
   assert.equal((management.match(/name="icon"/g) || []).length, 8);
   assert.ok(management.includes('<dialog'));
-  assert.ok(management.includes('data-action="up"'));
+  assert.ok(management.includes('class="benefit-drag-handle"'));
+  assert.ok(!management.includes('data-action="up"'));
   assert.ok(management.includes('name="benefitColor" value="rose"'));
 });

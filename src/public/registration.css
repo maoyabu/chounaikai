@@ -1887,3 +1887,20 @@ h1, h2, h3, h4, h5, h6,
 .benefit-color-option:focus-within, .benefit-icon-option:focus-within { outline: 2px solid #086b9b; outline-offset: 2px; }
 .benefit-color-swatch { width: 1.2rem; height: 1.2rem; border-radius: 50%; flex-shrink: 0; }
 @media (max-width: 600px) { .benefit-management-list .benefit-row { align-items: flex-start; flex-direction: column; } .benefit-row-actions { flex-wrap: wrap; } }
+
+.benefit-management-list .benefit-row { padding-block: .75rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.benefit-drag-handle { display: grid; place-items: center; width: 44px; min-height: 44px; border: 1px solid #c9dccc; border-radius: 8px; background: #f3f8ed; color: #386724; font-size: 1.7rem; line-height: 1; cursor: grab; touch-action: none; user-select: none; }
+.benefit-drag-handle:focus-visible { outline: 2px solid #086b9b; outline-offset: 3px; }
+.benefit-row.is-dragging { border-color: #386724; box-shadow: 0 4px 16px rgb(38 79 49 / 20%); background: #f3f8ed; }
+.benefit-row.is-dragging .benefit-drag-handle { cursor: grabbing; }
+@media (max-width: 600px) { .benefit-management-list .benefit-row { gap: .6rem; } .benefit-row-actions { grid-column: 2; } }
+
+.benefit-row-summary { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; min-width: 0; }
+.benefit-row-icon { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; color: var(--benefit-color); background: var(--benefit-tint); border: 1px solid var(--benefit-border); border-radius: 10px; }
+.benefit-row-summary .benefit-row-title { flex: 1; min-width: min(100%, 120px); }
+.benefit-row-color { display: inline-flex; align-items: center; gap: .4rem; color: var(--benefit-color); font-size: .85rem; white-space: nowrap; }
+.benefit-row-color .benefit-color-swatch { background: var(--benefit-color); }
+
+.benefit-row-actions .benefit-delete-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: #b83b2b; background: #fff3ef; border-color: #e6a99e; }
+.benefit-row-actions .benefit-delete-button:hover { color: #942b1e; background: #ffe5df; border-color: #b83b2b; }
+.benefit-delete-button svg { pointer-events: none; }
