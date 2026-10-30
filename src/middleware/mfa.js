@@ -21,7 +21,7 @@ export const recordPrimaryAuth = async (req, user, returnTo) => {
 };
 export const completeMfa = async (req, credential) => {
   const preserved = {};
-  for (const name of ['mfaPrimary', 'mfaReturnTo', 'registrationChoice', 'householdInvitationId', 'notificationPromptPending']) {
+  for (const name of ['mfaPrimary', 'mfaReturnTo', 'registrationChoice', 'householdInvitationId', 'notificationPromptPending', 'lineLogin']) {
     if (req.session[name] !== undefined) preserved[name] = req.session[name];
   }
   await new Promise((resolve, reject) => req.logIn(req.user, error => error ? reject(error) : resolve()));

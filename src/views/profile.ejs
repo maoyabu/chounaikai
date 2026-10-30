@@ -10,13 +10,16 @@
     <button type="button" role="tab" id="profile-tab-account" aria-controls="profile-panel-account" data-profile-tab="account">本人情報</button>
     <button type="button" role="tab" id="profile-tab-household" aria-controls="profile-panel-household" data-profile-tab="household">世帯情報</button>
   </div>
-  <p><a href="/profile/disclosure">個人情報の公開設定</a></p>
-  <p><a href="/profile/withdrawals">町内会の退会申請・家族の退会承認</a></p>
   <section id="profile-panel-account" role="tabpanel" aria-labelledby="profile-tab-account" data-profile-panel="account">
-  <section class="form-card notification-settings" aria-labelledby="notification-settings-title">
-    <div class="section-heading"><div><h2 id="notification-settings-title">通知設定</h2><p class="help-text">参加申請や町内会からの重要なお知らせをブラウザで受け取ります。</p></div><label class="notification-toggle"><span class="sr-only">ブラウザ通知</span><input type="checkbox" id="notification-toggle-input"><span aria-hidden="true"></span></label></div>
-    <p id="notification-settings-status" class="help-text" role="status">通知の状態を確認しています。</p>
-  </section>
+  <nav class="profile-tabs profile-account-tabs" aria-label="本人情報の設定">
+    <div class="profile-account-switches" role="tablist" aria-label="本人情報の表示切り替え">
+    <button type="button" role="tab" id="account-tab-basic" aria-controls="account-panel-basic" aria-selected="true" data-account-tab="basic">基本設定</button>
+    <button type="button" role="tab" id="account-tab-login" aria-controls="account-panel-login" aria-selected="false" data-account-tab="login">ログイン・通知</button>
+    <button type="button" role="tab" id="account-tab-disclosure" aria-controls="account-panel-disclosure" aria-selected="false" data-account-tab="disclosure">個人情報の公開</button>
+    <button type="button" role="tab" id="account-tab-withdrawals" aria-controls="account-panel-withdrawals" aria-selected="false" data-account-tab="withdrawals">退会申請</button>
+    </div>
+  </nav>
+  <section id="account-panel-basic" role="tabpanel" aria-labelledby="account-tab-basic" data-account-panel="basic">
   <form class="form-card form-stack" action="/profile" method="post" enctype="multipart/form-data">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="profile-image-editor">
@@ -33,16 +36,39 @@
     <label>性別<select name="sex"><option value="unspecified" <%= !values.sex || values.sex === 'unspecified' ? 'selected' : '' %>>回答しない</option><option value="male" <%= values.sex === 'male' ? 'selected' : '' %>>男性</option><option value="female" <%= values.sex === 'female' ? 'selected' : '' %>>女性</option><option value="other" <%= values.sex === 'other' ? 'selected' : '' %>>その他</option></select></label>
     <div class="form-actions"><a class="button button-quiet" href="/dashboard">キャンセル</a><button class="button button-primary" type="submit">プロフィールを保存</button></div>
   </form>
-  <form id="password-change" class="form-card form-stack" action="/profile/password" method="post">
+  <details id="password-change" class="form-card profile-line-settings">
+    <summary>パスワードの変更</summary>
+    <form class="form-stack profile-line-settings-content" action="/profile/password" method="post">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <h2>パスワードの変更</h2>
     <p class="help-text">共通アカウントを使用する他のサービスのパスワードも変更されます。</p>
     <label>現在のパスワード<input type="password" name="currentPassword" autocomplete="current-password" required></label>
     <label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required><small>8〜128文字で入力してください。</small></label>
     <label>新しいパスワード（確認）<input type="password" name="passwordConfirmation" autocomplete="new-password" minlength="8" maxlength="128" required></label>
     <div class="form-actions"><button class="button button-primary" type="submit">パスワードを変更</button></div>
     <a href="/forgot-password">現在のパスワードを忘れた方</a>
-  </form>
+    </form>
+  </details>
+  </section>
+  <section id="account-panel-login" role="tabpanel" aria-labelledby="account-tab-login" data-account-panel="login" hidden>
+  <section class="form-card notification-settings" aria-labelledby="notification-settings-title">
+    <div class="section-heading"><div><h2 id="notification-settings-title">通知設定</h2><p class="help-text">参加申請や町内会からの重要なお知らせをブラウザで受け取ります。</p></div><label class="notification-toggle"><span class="sr-only">ブラウザ通知</span><input type="checkbox" id="notification-toggle-input"><span aria-hidden="true"></span></label></div>
+    <p id="notification-settings-status" class="help-text" role="status">通知の状態を確認しています。</p>
+  </section>
+  <% if (typeof lineLoginEnabled !== 'undefined' && lineLoginEnabled) { const linked = typeof lineLinked !== 'undefined' && Boolean(lineLinked); %>
+  <details id="line-login" class="form-card profile-line-settings">
+    <summary><span>LINEログインの連携・解除</span><span class="status-badge"><%= linked ? '連携済み' : '未連携' %></span></summary>
+    <div class="profile-line-settings-content form-stack"><%- include('partials/line-settings-content', { linked }) %></div>
+  </details>
+  <% } %>
+  </section>
+  <section id="account-panel-disclosure" role="tabpanel" aria-labelledby="account-tab-disclosure" data-account-panel="disclosure" hidden>
+    <h2>個人情報の公開設定</h2>
+    <div data-account-content="disclosure" aria-live="polite"></div>
+  </section>
+  <section id="account-panel-withdrawals" role="tabpanel" aria-labelledby="account-tab-withdrawals" data-account-panel="withdrawals" hidden>
+    <h2>退会申請</h2>
+    <div data-account-content="withdrawals" aria-live="polite"></div>
+  </section>
   </section>
   <section id="profile-panel-household" role="tabpanel" aria-labelledby="profile-tab-household" data-profile-panel="household" hidden>
     <% const profileHouseholds = typeof households !== 'undefined' ? households : []; const profileMembers = typeof membersByHousehold !== 'undefined' ? membersByHousehold : {}; const availableRegistrations = typeof availableHouseholdRegistrations !== 'undefined' ? availableHouseholdRegistrations : []; %>
@@ -136,6 +162,7 @@
   </section>
 </main>
 <style>.notification-settings .section-heading{padding:0;border:0;align-items:center}.notification-toggle{position:relative;display:inline-flex;flex:0 0 auto}.notification-toggle input{position:absolute;opacity:0}.notification-toggle span{display:block;width:3.2rem;height:1.8rem;border-radius:2rem;background:#cbd5d0;cursor:pointer;transition:.2s}.notification-toggle span::after{content:"";display:block;width:1.35rem;height:1.35rem;margin:.225rem;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0003}.notification-toggle input:checked+span{background:var(--green)}.notification-toggle input:checked+span::after{transform:translateX(1.4rem)}.notification-toggle input:focus-visible+span{outline:3px solid #9bc8ff;outline-offset:2px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+<script src="/assets/profile-account-panels.js?v=<%= assetVersion %>"></script>
 <script>
   document.getElementById('avatar-input')?.addEventListener('change', (event) => {
     const file = event.target.files?.[0];
@@ -147,14 +174,27 @@
   });
   const tabs = [...document.querySelectorAll('[data-profile-tab]')];
   const panels = [...document.querySelectorAll('[data-profile-panel]')];
+  const accountTabs = [...document.querySelectorAll('[data-account-tab]')];
+  const accountPanels = [...document.querySelectorAll('[data-account-panel]')];
+  const selectAccountTab = (name) => {
+    accountTabs.forEach(tab => { const selected = tab.dataset.accountTab === name; tab.setAttribute('aria-selected', String(selected)); });
+    accountPanels.forEach(panel => { panel.hidden = panel.dataset.accountPanel !== name; });
+    window.loadProfileAccountPanel?.(name);
+  };
   const selectProfileTab = (name, updateUrl = false) => {
     if (!tabs.some((tab) => tab.dataset.profileTab === name)) name = 'account';
     tabs.forEach((tab) => { const selected = tab.dataset.profileTab === name; tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1; });
     panels.forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== name; });
     if (updateUrl) { const url = new URL(location.href); url.searchParams.set('tab', name); history.replaceState(null, '', url); }
   };
-  tabs.forEach((tab) => tab.addEventListener('click', () => selectProfileTab(tab.dataset.profileTab, true)));
-  selectProfileTab(new URLSearchParams(location.search).get('tab') || 'account');
+  tabs.forEach((tab) => tab.addEventListener('click', () => { selectProfileTab(tab.dataset.profileTab, true); if (tab.dataset.profileTab === 'account') selectAccountTab('basic'); }));
+  accountTabs.forEach(tab => tab.addEventListener('click', () => {
+    selectAccountTab(tab.dataset.accountTab);
+    const url = new URL(location.href); url.searchParams.set('tab', tab.dataset.accountTab === 'basic' ? 'account' : tab.dataset.accountTab); url.hash = ''; history.replaceState(null, '', url);
+  }));
+  const initialProfileTab = new URLSearchParams(location.search).get('tab') || 'account';
+  selectProfileTab(['login', 'disclosure', 'withdrawals'].includes(initialProfileTab) ? 'account' : initialProfileTab);
+  selectAccountTab(['login', 'disclosure', 'withdrawals'].includes(initialProfileTab) ? initialProfileTab : location.hash === '#line-login' ? 'login' : 'basic');
   document.querySelectorAll('[data-open-member-dialog]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.openMemberDialog)?.showModal()));
   document.querySelectorAll('[data-close-member-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.household-member-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));

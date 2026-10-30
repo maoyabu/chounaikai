@@ -1,0 +1,9 @@
+<p>連携後も、現在のID・パスワードでログインできます。町内会への所属や権限は変わりません。</p>
+<p>ご本人のLINEアカウントを使用してください。LINEのトーク・友だち一覧・メールアドレスは取得しません。ログインのためのLINEユーザーIDを保存します。</p>
+<a href="/privacy-policy">プライバシーポリシー</a>
+<form action="/profile/line/<%= linked ? 'unlink' : 'link' %>" method="post" class="form-stack">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label>まちの伝言板の現在のパスワード<input name="currentPassword" type="password" autocomplete="current-password" maxlength="128" required></label>
+  <% if (linked) { %><p>解除すると、現在のログイン状態と他端末のLINE経由のログイン状態は終了します。再び利用する場合はID・パスワードでログインしてください。</p><% } else { %><p>次のLINEの確認画面で連携を許可してください。</p><% } %>
+  <button class="button button-primary" type="submit"><%= linked ? 'LINE連携を解除する' : 'LINEと連携する' %></button>
+</form>

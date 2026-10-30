@@ -36,7 +36,7 @@ disclosureRouter.get('/profile/disclosure', async (req, res, next) => {
       return { association, policy: policyValues(association.officerDisclosurePolicy), consent, effective: effectiveDisclosure(association.officerDisclosurePolicy, consent?.fiscalYear === currentFiscalYear() ? consent : null, association.officerDisclosureHistory) };
     });
     res.set('Cache-Control', 'no-store');
-    res.render('profile-disclosure', { title: '個人情報の公開設定', rows, disclosureFields, disclosureLevels });
+    res.render(req.query.embedded === '1' ? 'partials/profile-disclosure-content' : 'profile-disclosure', { title: '個人情報の公開設定', rows, disclosureFields, disclosureLevels });
   } catch (error) { next(error); }
 });
 disclosureRouter.post('/profile/disclosure/:associationId', verifyCsrfToken, async (req, res, next) => {
@@ -50,7 +50,7 @@ disclosureRouter.post('/profile/disclosure/:associationId', verifyCsrfToken, asy
       $set: { scopes, confirmedAt: at, policyRevision: association.officerDisclosureHistory?.length || 0, fiscalYear: currentFiscalYear() }, $push: { history: { actor: req.user._id, at, scopes } }
     }, { upsert: true, runValidators: true });
     req.session.notice = '公開設定を保存しました。';
-    res.redirect('/profile');
+    res.redirect('/profile?tab=disclosure');
   } catch (error) { next(error); }
 });
 disclosureRouter.get('/associations/:associationId/manage/disclosure', requirePermission('association.manage'), async (req, res, next) => {

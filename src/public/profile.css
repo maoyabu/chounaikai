@@ -12,6 +12,14 @@
 .profile-tabs button { flex: 1; min-height: 2.8rem; border: 0; border-radius: .65rem; background: transparent; color: var(--muted); font: inherit; font-weight: 800; cursor: pointer; }
 .profile-tabs button[aria-selected="true"] { background: var(--green-pale); color: var(--green-dark); }
 .profile-tabs button:focus-visible { outline: 3px solid rgba(23,107,77,.2); }
+#profile-tab-household, #account-tab-withdrawals { background: #fff; }
+#profile-tab-household[aria-selected="true"] { background: #eaf4ff; color: #245580; }
+#account-tab-withdrawals[aria-selected="true"] { background: #fff0f0; color: #963e3e; }
+.profile-account-tabs { flex-wrap: wrap; gap: .25rem; }
+.profile-account-switches { display: contents; }
+.profile-account-tabs button, .profile-account-tabs > a { flex: 1 1 120px; display: flex; align-items: center; justify-content: center; min-height: 2.8rem; padding: .5rem; border-radius: .65rem; color: var(--muted); font: inherit; font-weight: 800; text-decoration: none; text-align: center; }
+.profile-account-tabs > a:hover { background: var(--green-pale); color: var(--green-dark); }
+.profile-account-tabs > a:focus-visible { outline: 3px solid rgba(23,107,77,.2); }
 .profile-household { display: grid; gap: 1rem; margin-bottom: 2rem; scroll-margin-top: 1rem; }
 .profile-household-heading, .profile-members-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .profile-household-heading h2, .profile-members-heading h2 { margin: 0; }

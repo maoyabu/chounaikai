@@ -16,7 +16,7 @@ export const securityHeaders = nodeEnv => helmet({
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"],
       // Google Drive OAuth starts with a POST followed by a redirect to Google.
-      formAction: ["'self'", 'https://accounts.google.com'],
+      formAction: ["'self'", 'https://accounts.google.com', 'https://access.line.me'],
       upgradeInsecureRequests: nodeEnv === 'production' ? [] : null
     }
   },

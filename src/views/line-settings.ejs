@@ -1,0 +1,15 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/profile?tab=account">← プロフィールへ戻る</a>
+  <h1>LINEログイン設定</h1>
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <% if (errorMessage) { %><div class="alert alert-error" role="alert"><%= errorMessage %></div><% } %>
+  <% if (!lineEnabled) { %><p>LINEログインは現在準備中です。ID・パスワードでログインしてください。</p><% } else { %>
+  <section class="form-card form-stack">
+    <h2><%= linked ? 'LINEと連携済みです' : 'LINEは連携されていません' %></h2>
+    <%- include('partials/line-settings-content', { linked }) %>
+  </section>
+  <% } %>
+</main>
+<%- include('partials/foot') %>

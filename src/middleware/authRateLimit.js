@@ -20,6 +20,8 @@ export const authRatePolicy = req => {
   // Match case-insensitive and optional trailing slashes, like Express routes.
   const path = req.path.toLowerCase().replace(/\/+$/, '') || '/';
   if (req.method === 'POST') {
+    if (['/profile/line/link', '/profile/line/unlink'].includes(path)) return 'password';
+    if (path === '/auth/line') return 'token';
     if (path === '/admin/security/mfa') return 'mfa';
     if (/^\/(?:api\/auth\/)?mfa\/(?:setup|verify|change|settings\/(?:change|recovery))$/.test(path)) return 'mfa';
     if (['/login', '/api/auth/login'].includes(path)) return 'login';
@@ -30,7 +32,7 @@ export const authRatePolicy = req => {
     if (/^\/associations\/[^/]+\/household\/[^/]+\/members\/[^/]+\/invite$/.test(path)) return 'invitationSend';
     if (/^\/household-invitations\/[^/]+\/accept$/.test(path)) return 'token';
   }
-  if (req.method === 'GET' && ['/reset-password', '/household-invitations', '/verify-email'].includes(path)) return 'token';
+  if (req.method === 'GET' && ['/reset-password', '/household-invitations', '/verify-email', '/auth/line/callback'].includes(path)) return 'token';
   return null;
 };
 

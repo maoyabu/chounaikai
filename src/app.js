@@ -1,4 +1,6 @@
 import { profileImagesRouter } from './routes/profileImages.js';
+import { createLineLoginService, lineLoginConfig } from './services/lineLoginService.js';
+import { createLineLoginRouter, enforceLineSession } from './routes/lineLogin.js';
 import { requireEnabledAssociationFeature } from './middleware/associationFeatures.js';
 import { goodPlacesRouter } from './routes/goodPlaces.js';
 import { dangerReportsRouter } from './routes/dangerReports.js';
@@ -46,12 +48,14 @@ import { notificationsRouter } from './routes/notifications.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService }) => {
+export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService, lineLoginService }) => {
   const app = express();
   app.disable('x-powered-by');
   app.set('env', nodeEnv);
   app.use(productionErrorResponses(nodeEnv));
   app.locals.siteSecurityService = siteSecurityService || createSiteSecurityService();
+  const lineService = lineLoginService || createLineLoginService({ config: lineLoginConfig({ publicBaseUrl, nodeEnv }) });
+  app.locals.lineLoginEnabled = lineService.enabled;
   app.locals.mfaService = applySiteMfaPolicy(mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) }), app.locals.siteSecurityService);
   // Change the asset URL whenever the server starts (or when a release version
   // is provided) so browsers do not keep using stale CSS/JS assets.
@@ -93,6 +97,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   configurePassport(passport);
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use(enforceLineSession(lineService));
   app.use((req, res, next) => {
     res.locals.currentUser = req.user || null;
     res.locals.showNotificationPrompt = Boolean(req.user && req.session.notificationPromptPending);
@@ -107,7 +112,16 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/notifications', notificationsRouter);
   app.use(requireEnabledAssociationFeature);
   app.use('/', profileImagesRouter);
+  app.use(async (req, res, next) => {
+    if (req.path !== '/profile' || !req.user || !lineService.enabled) return next();
+    try {
+      res.set('Cache-Control', 'no-store');
+      res.locals.lineLinked = await lineService.status(req.user._id);
+      return next();
+    } catch (error) { return next(error); }
+  });
   app.use('/', webRouter);
+  app.use('/', createLineLoginRouter(lineService));
   app.use('/', goodPlacesRouter);
   // Disclosure views need the navigation and flash locals initialized by webRouter.
   app.use('/', disclosureRouter);

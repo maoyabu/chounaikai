@@ -24,6 +24,8 @@
 
 ## 起動
 
+LINEログインの連携・解除、Herokuの設定・実機確認は [LINE_LOGIN.md](LINE_LOGIN.md) を参照してください。設定前は従来のログインを維持します。
+
 1. `.env.example` を参考に、コミット対象外の `.env` を作成します。
 2. `npm install`
 3. `npm test`

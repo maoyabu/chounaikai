@@ -1,5 +1,6 @@
 import { AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder } from '../models/equipment.js';
 import mongoose from 'mongoose';
+import { LineIdentity, LineFlow } from '../models/lineIdentity.js';
 import { MfaCredential, MfaEvent } from '../models/mfaCredential.js';
 import { PrivacyAccessLog } from '../models/privacyAccessLog.js';
 import { SiteSecuritySettings } from '../models/siteSecuritySettings.js';
@@ -62,7 +63,7 @@ export const connectDatabase = async (mongoUri, nodeEnv = 'development', mongoOp
   await ensureHouseholdRepresentativeIndex();
   // Create MFA, privacy audit and equipment collections/indexes even when
   // production disables automatic indexes.
-  const indexedModels = [MfaCredential, MfaEvent, PrivacyAccessLog, SiteSecuritySettings, AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder];
+  const indexedModels = [LineIdentity, LineFlow, MfaCredential, MfaEvent, PrivacyAccessLog, SiteSecuritySettings, AssociationEquipment, EquipmentSettings, EquipmentInventory, EquipmentLoan, EquipmentPurchase, EquipmentReminder];
   for (const model of indexedModels) {
     await model.createCollection();
     await model.createIndexes();

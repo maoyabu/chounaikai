@@ -1,4 +1,5 @@
 import { mfaEncryptionKey } from './mfa.js';
+import { lineLoginConfig } from '../services/lineLoginService.js';
 import { personalDataKeyring } from '../security/personalDataCrypto.js';
 import { mongoProxyOptions, mongoSecurityOptions, parseTrustProxy, publicHttpsOrigin } from './security.js';
 
@@ -13,6 +14,7 @@ export const loadConfig = () => {
   const mongoUri = required('MONGODB_URI');
   const publicBaseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3003';
   if (nodeEnv === 'production') publicHttpsOrigin(publicBaseUrl);
+  lineLoginConfig({ publicBaseUrl, nodeEnv });
   const sessionSecret = required('CHOUNAIKAI_SESSION_SECRET');
   mfaEncryptionKey(process.env.MFA_ENCRYPTION_KEY, sessionSecret, nodeEnv);
   personalDataKeyring();
