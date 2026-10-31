@@ -1,3 +1,5 @@
+import { safetyRouter } from './routes/safety.js';
+import { alertLevelsRouter } from './routes/alertLevels.js';
 import { profileImagesRouter } from './routes/profileImages.js';
 import { createLineLoginService, lineLoginConfig } from './services/lineLoginService.js';
 import { createLineLoginRouter, enforceLineSession } from './routes/lineLogin.js';
@@ -143,6 +145,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/', householdInvitationsRouter);
   app.use('/', withdrawalsRouter);
   app.use('/associations', dangerReportsRouter);
+  app.use('/associations', safetyRouter);
+  app.use('/associations', alertLevelsRouter);
   app.use('/associations', questionBoxRouter);
   app.use('/associations', officerAnnouncementsRouter);
   app.use('/associations', officerNetworkRouter);

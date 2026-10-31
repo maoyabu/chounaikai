@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell safety-page">
+  <a class="back-link" href="/associations/<%= association._id %>/safety/officer/history">← 過去の安否確認一覧へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>過去の安否確認</h1><p>履歴機能追加前の安否記録です。当時の対象人数・名簿・警戒レベルの変更日時は未記録です。氏名・世帯名は現在残っている登録情報を表示しています。</p></div></section>
+  <section class="content-card"><h2>記録の残っている住民の被害状況</h2><dl class="safety-counts"><% safetyStatuses.forEach(([value,label]) => { %><div><dt><%= label %></dt><dd><%= people[value] %> 人</dd></div><% }) %></dl></section>
+  <% legacyReports.forEach(report => { %><section class="content-card"><h2><%= report.householdName %></h2><p>建物の状態：<%= buildingStatuses.find(([value]) => value === report.buildingStatus)?.[1] || '未登録' %></p><% if (report.updatedAt) { %><p>最終送信：<%= new Date(report.updatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p><% } %><dl class="safety-counts"><% report.family.forEach(member => { %><div><dt><%= member.name %></dt><dd><%= safetyStatuses.find(([value]) => value === member.status)[1] %></dd></div><% }) %></dl></section><% }) %>
+</main>
+<%- include('partials/foot') %>

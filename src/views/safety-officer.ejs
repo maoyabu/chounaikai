@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<% const historyView = typeof historyMode !== 'undefined' && historyMode; %>
+<main class="page-shell safety-page">
+  <a class="back-link" href="/associations/<%= association._id %>/<%= historyView ? 'safety/officer/history' : 'officer' %>">← <%= historyView ? '過去の安否確認一覧' : '役員メニュー' %>へ戻る</a>
+  <section class="page-heading safety-heading">
+    <p class="eyebrow"><%= association.name %></p>
+    <div class="safety-heading-row"><div class="safety-heading-title"><h1><%= historyView ? '過去の安否確認' : '安否確認' %></h1><% if (!historyView) { %><a class="button safety-toolbar-refresh" href="/associations/<%= association._id %>/safety/officer">最新の状態に更新</a><a class="button button-primary" href="/associations/<%= association._id %>/safety/officer/report">レポート出力</a><% } %></div>
+    <% if (historyView) { %><a class="button button-quiet safety-toolbar-history" href="/associations/<%= association._id %>/alert-level/history/<%= encodeURIComponent(event.eventKey) %>">警戒情報の履歴</a><% } else { %><a class="button button-quiet safety-toolbar-history" href="/associations/<%= association._id %>/safety/officer/history">過去の安否確認</a><% } %></div>
+    <p><% if (historyView) { %>登録：<%= new Date(event.startedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %> ／ 解除：<%= new Date(event.endedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %>。解除時点の安否状況です。<% } else { %><%= association.alertLevel ? '警戒レベル' + association.alertLevel + 'に対する現在の登録状況です。' : '現在、警戒レベルの登録はありません。直近の登録状況を表示しています。' %><% } %></p>
+  </section>
+  <section class="content-card"><h2>1. 全体状況</h2>
+    <div class="safety-table-scroll"><table class="safety-table"><thead><tr><th scope="col">項目</th><th scope="col">世帯数</th><th scope="col">人数</th></tr></thead><tbody>
+      <tr><th scope="row">対象総世帯数・総人数</th><td><%= summary.totalHouseholds %> 世帯</td><td><%= summary.totalPeople %> 人</td></tr>
+      <tr><th scope="row">安否確認済数</th><td><%= summary.confirmedHouseholds %> 世帯</td><td><%= summary.confirmedPeople %> 人</td></tr>
+      <tr><th scope="row">安否未確認数</th><td><%= summary.unconfirmedHouseholds %> 世帯</td><td><%= summary.unconfirmedPeople %> 人</td></tr>
+    </tbody></table></div><p class="help-text"><%= historyView ? '解除時点の世帯と家族が対象です。名簿や住所が後から変更されても、この集計は変わりません。' : '現在有効な世帯と家族が対象です。' %>世帯全員の登録が完了した世帯を「安否確認済み」と数え、一部のみ登録済みの世帯は未確認世帯に含めます。人数は1人ずつ集計します。</p>
+  </section>
+  <section class="content-card"><h2>2. 住民の被害状況</h2><dl class="safety-counts"><% safetyStatuses.forEach(([value,label]) => { %><div><dt><%= label %></dt><dd><%= summary.people[value] %> 人</dd></div><% }) %></dl></section>
+  <section class="content-card"><h2>3. 要配慮者の状況</h2><p>要配慮者の世帯数・人数：<strong><%= summary.supportHouseholds %> 世帯 ／ <%= summary.supportPeople %> 人</strong></p><p class="help-text">家族情報で「支援が必要」と登録した人を対象に集計しています。</p>
+    <details class="safety-details"><summary>詳細：要支援者のリスト（<%= summary.supportPeople %>人）</summary>
+    <% if (!summary.supportMembers.length) { %><p>要支援者の登録はありません。</p><% } else { %><div class="safety-table-scroll"><table class="safety-table"><thead><tr><th scope="col">氏名</th><th scope="col">優先度</th><th scope="col">地区・班</th><th scope="col">世帯</th><th scope="col">住所</th><th scope="col">安否情報</th></tr></thead><tbody><% summary.supportMembers.forEach(({member,household,status}) => { %><tr><td><%= member.user?.displayname || member.name %></td><td><%= member.supportPriority || '未登録' %></td><td><%= household.districtGroup?.name || '—' %></td><td><%= household.displayName %></td><td><%= household.address?.street || '—' %> <%= household.address?.building || '' %></td><td><%= status ? safetyStatuses.find(([value]) => value === status)[1] : '未確認' %></td></tr><% }) %></tbody></table></div><% } %>
+    </details>
+  </section>
+  <section class="content-card"><h2>4. 建物・ライフラインの被害状況</h2><dl class="safety-counts"><% buildingStatuses.filter(([value]) => value !== 1).forEach(([value,label]) => { %><div><dt><%= label %></dt><dd><%= summary.buildings[value] %> 世帯</dd></div><% }) %></dl>
+    <details class="safety-details"><summary>詳細：被害発生世帯のリスト（<%= summary.damagedHouseholds.length %>世帯）</summary>
+    <% if (!summary.damagedHouseholds.length) { %><p>建物・ライフラインの被害登録はありません。</p><% } else { %><div class="safety-table-scroll"><table class="safety-table"><thead><tr><th scope="col">世帯</th><th scope="col">地区・班</th><th scope="col">住所</th><th scope="col">建物の状態</th><th scope="col">最終送信</th></tr></thead><tbody><% summary.damagedHouseholds.forEach(({household,report}) => { %><tr><td><%= household.displayName %></td><td><%= household.districtGroup?.name || '—' %></td><td><%= household.address?.street || '—' %> <%= household.address?.building || '' %></td><td><%= buildingStatuses.find(([value]) => value === report.buildingStatus)[1] %></td><td><%= report.updatedAt ? new Date(report.updatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—' %></td></tr><% }) %></tbody></table></div><% } %>
+    </details>
+  </section>
+</main>
+<%- include('partials/foot') %>

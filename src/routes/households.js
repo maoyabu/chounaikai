@@ -1,3 +1,4 @@
+import { saveMemberSupport } from '../services/memberSupportService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -152,6 +153,14 @@ householdsRouter.post('/:associationId/household/:householdId/members', verifyCs
     if (!name || !nameKana || Number.isNaN(birthDate.getTime()) || !['male', 'female', 'other', 'unspecified'].includes(gender)) throw fail('家族の必須情報を入力してください。');
     await HouseholdMember.create({ association: req.params.associationId, household: household._id, name, nameKana, birthDate, gender, email: String(req.body.email || '').trim(), lineAccount: String(req.body.lineAccount || '').trim(), relationship: String(req.body.relationship || '').trim(), startsAt: new Date() });
     req.session.notice = '家族を登録しました。'; return res.redirect('/dashboard');
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/household/:householdId/members/:memberId/support', verifyCsrfToken, async (req, res, next) => {
+  try {
+    await saveMemberSupport({ ...req.params, actorId: req.user._id, values: req.body });
+    req.session.notice = '支援要否を保存しました。';
+    return res.redirect('/profile?tab=household');
   } catch (error) { return next(error); }
 });
 

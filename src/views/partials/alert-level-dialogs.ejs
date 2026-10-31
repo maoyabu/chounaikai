@@ -1,0 +1,6 @@
+<% memberships.filter(item => Number.isInteger(item.association.alertLevel) && item.association.alertLevel >= 1 && item.association.alertLevel <= 5).forEach(item => { const association = item.association; %>
+<dialog class="alert-level-overview" id="alert-guide-<%= association._id %>" aria-labelledby="alert-guide-title-<%= association._id %>">
+  <div class="dialog-heading"><div><h2 id="alert-guide-title-<%= association._id %>"><%= association.name %>：警戒レベル<%= association.alertLevel %></h2><p class="help-text">町内会役員が登録した警戒レベルです。<% if (association.alertLevelUpdatedAt) { %>更新：<%= new Date(association.alertLevelUpdatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %><% } %></p></div><button type="button" class="dialog-close" data-alert-close aria-label="閉じる">×</button></div>
+  <%- include('alert-level-guide', { guideId: 'alert-guide-' + association._id }) %>
+</dialog>
+<% }) %>

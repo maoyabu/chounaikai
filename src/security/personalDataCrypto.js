@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 export const PERSONAL_DATA_FIELDS = Object.freeze({
+  alert_events: ['safetySnapshot'],
   households: ['address.postalCode', 'address.street', 'address.building', 'phone'],
   annual_officers: ['address', 'phone', 'mobilePhone'],
   annual_leader_assignments: ['address', 'phone', 'mobilePhone']

@@ -1,0 +1,23 @@
+<div class="member-support-summary">
+  <span>支援要否：<strong><%= member.supportRequired === true ? '必要（優先度' + member.supportPriority + '）' : member.supportRequired === false ? '不要' : '未登録' %></strong></span>
+  <% if (canEdit) { %><button type="button" class="button button-quiet button-small" data-open-member-dialog="support-dialog-<%= member._id %>" aria-haspopup="dialog">支援要否を登録・変更</button><% } %>
+</div>
+<% if (canEdit) { %>
+<dialog class="household-member-dialog" id="support-dialog-<%= member._id %>" aria-labelledby="support-title-<%= member._id %>">
+  <div class="dialog-heading"><h3 id="support-title-<%= member._id %>"><%= member.user?.displayname || member.name %>さんの支援要否</h3><button type="button" class="dialog-close" data-close-member-dialog aria-label="閉じる">×</button></div>
+  <p>登録は希望者のみです。保存する支援情報は、要支援フラグと優先度（1〜3）のみです。病名や詳しい事情は登録しません。</p>
+  <form class="form-stack" data-support-form action="/associations/<%= associationId %>/household/<%= householdId %>/members/<%= member._id %>/support" method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label class="support-toggle-label"><span class="support-toggle-text"><span>支援が必要</span><small data-support-answer aria-live="polite">（現状：<%= member.supportRequired === true ? '必要' : '不要' %>）</small></span><span class="notification-toggle"><input type="checkbox" role="switch" data-support-toggle <%= member.supportRequired === true ? 'checked' : '' %> aria-label="支援が必要"><span aria-hidden="true"></span></span></label>
+    <input type="hidden" name="supportRequired" value="<%= member.supportRequired === true ? 'yes' : 'no' %>">
+    <fieldset class="support-priorities" data-support-priorities <%= member.supportRequired === true ? '' : 'hidden disabled' %>>
+      <legend>優先度の基準から1つ選択してください</legend>
+      <label class="support-priority"><span><input type="radio" name="supportPriority" value="1" required <%= member.supportPriority === 1 ? 'checked' : '' %>> 1　単独での移動が困難な高齢者・障害者</span><ul><li>要介護3〜5の認知症や身体障害のある高齢者。</li><li>車椅子利用者、重度の視覚障害者、知的・精神障害によりパニックを起こしやすい人。</li><li>移動に必ず他者の身体的介助や誘導が必要な人。</li></ul></label>
+      <label class="support-priority"><span><input type="radio" name="supportPriority" value="2" required <%= member.supportPriority === 2 ? 'checked' : '' %>> 2　一定の支援があれば移動できる人</span><ul><li>杖や歩行器を使えば歩ける高齢者（要介護1〜2程度）。</li><li>軽度の知的・精神障害者、聴覚障害者（情報の獲得に支援が必要）。</li><li>妊産婦や乳幼児を連れた保護者（荷物や移動スピードの制限があるため）。</li></ul></label>
+      <label class="support-priority"><span><input type="radio" name="supportPriority" value="3" required <%= member.supportPriority === 3 ? 'checked' : '' %>> 3　自力避難は可能だが、避難生活に配慮が必要な人</span><ul><li>日本語が理解できない外国人。</li><li>軽度の慢性疾患があり、定期的な服薬が必要な人。</li><li>避難所到着以降に、環境整備や情報提供のサポートが必要となる段階。</li></ul></label>
+    </fieldset>
+    <div class="form-actions"><button type="button" class="button button-quiet" data-close-member-dialog>キャンセル</button><button class="button button-primary">保存</button></div>
+  </form>
+  <form action="/associations/<%= associationId %>/household/<%= householdId %>/members/<%= member._id %>/support" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="supportRequired" value="unregistered"><button class="text-danger">登録を取り消す（未登録に戻す）</button></form>
+</dialog>
+<% } %>

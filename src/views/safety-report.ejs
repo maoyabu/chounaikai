@@ -1,0 +1,10 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell safety-page">
+  <a class="back-link" href="/associations/<%= report.associationId %>/safety/officer">← 安否確認へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= report.associationName %></p><h1>災害時安否状況報告書</h1><p>集計日時：<%= new Date(report.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p></div><a class="button button-primary" href="/associations/<%= report.associationId %>/safety/officer/report/<%= report.token %>/pdf?download=1">PDFをダウンロード</a></section>
+  <p class="help-text safety-report-help">作成時点の集計を反映しています。報告者氏名・役職・連絡先、報告回数、未避難者の有無・詳細、棟数・火災の箇所数と鎮火状況、行政への要請事項は、印刷後に手書きしてください。建物の登録世帯数は参考値です。新しい集計を使う場合は、安否確認ページから作成し直してください。</p>
+  <iframe class="safety-report-preview" title="災害時安否状況報告書のPDFプレビュー" src="/associations/<%= report.associationId %>/safety/officer/report/<%= report.token %>/pdf"></iframe>
+  <p class="help-text">プレビューが表示されない場合も「PDFをダウンロード」から保存できます。</p>
+</main>
+<%- include('partials/foot') %>

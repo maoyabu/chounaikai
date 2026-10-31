@@ -1,0 +1,23 @@
+<section class="alert-level-guide" data-alert-guide>
+  <h2>5段階の警戒レベルと防災気象情報</h2>
+  <p>図の各レベル、または下のボタンを押すと、情報ととるべき行動を確認できます。</p>
+  <div class="alert-chart-scroll" tabindex="0" aria-label="警戒レベル一覧図。狭い画面では横にスクロールできます。">
+    <div class="alert-chart">
+      <img src="/assets/images/alert-levels.jpg" width="1229" height="848" alt="5段階の警戒レベルと防災気象情報。レベル5は直ちに安全確保、レベル4は危険な場所から全員避難、レベル3は高齢者等避難、レベル2は避難行動の確認、レベル1は心構えを高める。">
+      <% alertLevels.forEach(item => { %><button type="button" class="alert-chart-hit" style="top:<%= item.top %>;height:<%= item.height %>" data-alert-detail="<%= guideId %>-level-<%= item.level %>" aria-label="警戒レベル<%= item.level %>：<%= item.action %>の詳細" aria-haspopup="dialog"></button><% }) %>
+    </div>
+  </div>
+  <div class="alert-level-choices" aria-label="警戒レベルの詳細を選択">
+    <% alertLevels.forEach(item => { %><button type="button" class="button alert-level-color-<%= item.level %>" data-alert-detail="<%= guideId %>-level-<%= item.level %>" aria-haspopup="dialog">警戒レベル<%= item.level %><span><%= item.name %></span></button><% }) %>
+  </div>
+  <p class="alert-guide-emphasis">警戒レベル4までに危険な場所から必ず避難！</p>
+  <p class="help-text">解説出典：<a href="https://www.jma.go.jp/jma/kishou/know/bosai/alertlevel.html" target="_blank" rel="noopener noreferrer">気象庁「防災気象情報と警戒レベルとの対応について」（別タブ）</a>。図はご提供の画像を使用しています。</p>
+  <% alertLevels.forEach(item => { %>
+  <dialog class="alert-level-detail" id="<%= guideId %>-level-<%= item.level %>" aria-labelledby="<%= guideId %>-title-<%= item.level %>">
+    <div class="dialog-heading alert-level-color-<%= item.level %>"><h2 id="<%= guideId %>-title-<%= item.level %>">警戒レベル<%= item.level %>：<%= item.name %></h2><button type="button" class="dialog-close" data-alert-close aria-label="閉じる">×</button></div>
+    <div class="alert-detail-body"><h3><%= item.action %></h3><h4>情報</h4><ul><% item.information.forEach(info => { %><li><%= info %></li><% }) %></ul><h4>とるべき行動</h4><p><%= item.description %></p><p><strong><%= item.guidance %></strong></p>
+    <% if (item.level >= 3) { %><p class="help-text">防災気象情報は警戒レベル<%= item.level %>相当の情報です。自治体が発令する避難情報と併せて確認してください。</p><% } %>
+    <p><a href="https://www.jma.go.jp/jma/kishou/know/bosai/alertlevel.html" target="_blank" rel="noopener noreferrer">気象庁の説明を確認（別タブ）</a></p><button type="button" class="button button-quiet" data-alert-close>閉じる</button></div>
+  </dialog>
+  <% }) %>
+</section>

@@ -5,6 +5,7 @@ import { PushSubscription } from '../models/pushSubscription.js';
 import { NotificationSettings, notificationCategory, defaultNotificationChannel } from '../models/notificationSettings.js';
 
 import { notificationAction } from './notificationDestination.js';
+import { dispatchAlertLevelNotifications } from './alertLevelNotificationService.js';
 
 export const notificationDestination = notification => {
   const contextualTypes = ['join_application_received', 'system_contact', 'group_message', 'group_message_reminder', 'group_event'];
@@ -99,7 +100,7 @@ export const deliverNotification = async (notification, { emailRequired = false 
     if (!claimed) return notification;
     const settings = await NotificationSettings.findOne({ association: notification.association }).lean();
     const category = notificationCategory(notification.type);
-    const channel = settings?.channels?.[category] || defaultNotificationChannel(category);
+    const channel = category === 'alert_level' ? defaultNotificationChannel(category) : settings?.channels?.[category] || defaultNotificationChannel(category);
     const user = await import('../models/user.js').then(({ User }) => User.findById(recipient).select('displayname username email').lean());
     if (!user) {
       await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email.status': 'skipped', 'delivery.push.status': 'skipped' } });
@@ -125,6 +126,8 @@ export const deliverNotification = async (notification, { emailRequired = false 
 // does not resend historical messages. Transactional inserts become visible
 // here only after commit.
 export const dispatchPendingNotifications = async () => {
+  try { await dispatchAlertLevelNotifications(); }
+  catch (error) { console.error('Alert level notification scan failed:', error.name); }
   const pending = await Notification.find({ queuedAt: { $exists: true }, deliveryClaimedAt: null }).sort({ queuedAt: 1 }).limit(50);
   for (const notification of pending) await deliverNotification(notification);
 };

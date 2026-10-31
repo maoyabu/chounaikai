@@ -1,0 +1,39 @@
+.button.safety-register-button { background: #fff3cc; color: #694900; border-color: #d9ad42; white-space: nowrap; }
+.button.safety-register-button:hover { background: #ffe8a3; }
+.button.safety-register-complete { background: #d9f1e2; color: #0e4e38; border-color: #7bb595; }
+.button.safety-register-complete:hover { background: #c3e7d1; }
+.safety-page > .content-card { margin-bottom: 1.25rem; }
+.safety-status-heading { margin-bottom: 1.25rem; }
+.safety-family-list { display: grid; gap: 1rem; }
+.safety-family-row { display: grid; gap: .9rem; min-width: 0; border: 1px solid var(--line); border-radius: .65rem; padding: 1rem; margin: 0; }
+.safety-family-row legend { font-weight: 800; padding: 0 .35rem; }
+.safety-family-row .help-text { margin: 0; }
+.form-stack .safety-member-check { display: flex; align-items: center; gap: .7rem; }
+.form-stack .safety-member-check input { width: 1.15rem; height: 1.15rem; flex-shrink: 0; }
+.safety-family-row select:disabled { background: #edf1ee; color: var(--muted); }
+.safety-table-scroll { overflow-x: auto; }
+.safety-table { border-collapse: collapse; width: 100%; text-align: left; }
+.safety-table th, .safety-table td { border-bottom: 1px solid var(--line); padding: .85rem .75rem; vertical-align: top; }
+.safety-table thead { background: var(--green-pale); }
+.safety-table th { font-weight: 800; }
+.safety-table td { overflow-wrap: anywhere; }
+.safety-counts { margin: 0; }
+.safety-counts > div { display: flex; justify-content: space-between; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--line); }
+.safety-counts dd { margin: 0; font-weight: 800; white-space: nowrap; }
+.safety-details { margin-top: 1.25rem; }
+.safety-details summary { cursor: pointer; font-weight: 800; color: var(--green-dark); }
+.safety-details[open] summary { margin-bottom: 1rem; }
+.officer-communication-column { display: grid; gap: 1.25rem; }
+@media (max-width: 600px) { .safety-details .safety-table { min-width: 680px; } }
+
+.safety-table td > small { display: block; margin-top: .35rem; color: var(--muted); }
+
+.safety-page .safety-heading { display: block; }
+.safety-heading-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin: .5rem 0 .75rem; }
+.safety-heading-title { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.safety-heading .safety-heading-title h1 { margin: 0; }
+.safety-toolbar-history { margin-left: auto; }
+.safety-toolbar-refresh { background: #e1f2e7; border-color: #b8d8c5; color: #0e4e38; }
+.safety-toolbar-refresh:hover { background: #cde8d7; }
+.safety-report-help { margin: 0 0 1.25rem; }
+.safety-report-preview { width: 100%; height: 80vh; min-height: 540px; border: 1px solid var(--line); border-radius: .75rem; background: #fff; }

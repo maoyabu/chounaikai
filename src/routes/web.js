@@ -1,3 +1,5 @@
+import { attachDashboardSafety } from '../services/safetyService.js';
+import { alertLevels } from '../public/alert-level-data.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
 import { GoodPlaceLike } from '../models/goodPlaceReaction.js';
@@ -658,7 +660,8 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
       association: membership.association,
       goodPlaces: await GoodPlace.find({ association: membership.association._id }).select('-author').sort({ createdAt: -1, _id: -1 }).lean()
     })));
-    return res.render('dashboard', { goodPlaceGalleries, dangerReports, title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
+    await attachDashboardSafety(visibleMemberships);
+    return res.render('dashboard', { alertLevels, goodPlaceGalleries, dangerReports, title: '町内会ホーム', memberships: visibleMemberships, equipmentMemberships, applications, pendingJoins, availableAssociations, notifications, unreadNotificationCount, notificationInboxOpen: req.query.notifications === 'open', residentRegistration, questionBoxes, financeReports, announcementBoxes, officerNetworkBoxes, districtMessageBoxes, groupMessageBoxes, associationEvents, eventMonths: eventWindow.months, eventWindow });
   } catch (error) {
     return next(error);
   }

@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<% const safety = historyType === 'safety'; const date = value => value ? new Date(value).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '未記録'; const person = change => change?.byName || change?.by?.displayname || change?.by?.username || '未記録'; %>
+<main class="page-shell safety-page">
+  <a class="back-link" href="/associations/<%= association._id %>/<%= safety ? 'safety/officer' : 'alert-level' %>">← <%= safety ? '現在の安否確認' : '警戒レベルの登録' %>へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1><%= safety ? '過去の安否確認一覧' : '過去の警戒情報一覧' %></h1><p>最初の登録から解除までを1件として表示します。</p></div></section>
+  <% if (!events.length) { %><section class="content-card"><p>保存された履歴はありません。</p></section><% } else { %>
+  <section class="content-card"><div class="safety-table-scroll"><table class="safety-table"><thead><tr><th scope="col">登録日時</th><th scope="col">登録者</th><th scope="col">最高レベル</th><th scope="col">解除日時</th><th scope="col">解除者</th><th scope="col">状況・詳細</th></tr></thead><tbody>
+  <% events.forEach(event => { const first = event.changes[0]; const last = [...event.changes].reverse().find(change => change.kind === 'cleared'); const ongoing = event.legacy ? association.alertLevel && (association.safetyEventKey || 'initial') === event.eventKey : !event.endedAt; %>
+    <tr><td><%= date(event.startedAt) %><% if (event.legacy) { %><small>履歴機能追加前の記録<br>最初の安否送信：<%= date(event.firstReportAt) %></small><% } %><% if (event.historyIncomplete) { %><small>途中からの記録</small><% } %></td><td><%= person(first) %></td><td><%= event.peakLevel ? 'レベル' + event.peakLevel : '未記録' %></td><td><%= ongoing ? '発令中' : date(event.endedAt) %></td><td><%= person(last) %></td><td>
+    <% if (safety) { %><a class="button button-quiet button-small" href="/associations/<%= association._id %>/safety/officer<%= ongoing ? '' : '/history/' + encodeURIComponent(event.eventKey) %>"><%= ongoing ? '現在の安否状況' : '安否確認の詳細' %></a><% } else { %><a class="button button-quiet button-small" href="/associations/<%= association._id %>/alert-level/history/<%= encodeURIComponent(event.eventKey) %>">警戒情報の詳細</a><% } %>
+    </td></tr>
+  <% }) %>
+  </tbody></table></div></section>
+  <% } %>
+</main>
+<%- include('partials/foot') %>

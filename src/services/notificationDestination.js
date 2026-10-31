@@ -8,6 +8,7 @@ export const notificationAction = (notification, context = {}) => {
   const action = (path, label = '内容を確認') => ({ actionUrl: path, actionLabel: label });
   if (!association) return action('/dashboard?notifications=open');
   switch (notification.type) {
+    case 'alert_level': return action(`${base}/safety`, '世帯の安否情報を登録');
     case 'danger_report': return action(id ? `${base}/dangers/${id}` : `${base}/dangers`);
     case 'good_place': return action(id ? `${base}/good-places/${id}` : `${base}/good-places`);
     case 'question_created': case 'question_reopened': return action(`${base}/questions/officer`, '質問を確認');

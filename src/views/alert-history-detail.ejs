@@ -1,0 +1,12 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<% const date = value => value ? new Date(value).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '未記録'; const kinds = { registered: '新規登録', changed: 'レベル変更', confirmed: '同じレベルで再登録', cleared: '解除', carried: '以前の登録から引き継ぎ' }; %>
+<main class="page-shell safety-page">
+  <a class="back-link" href="/associations/<%= association._id %>/alert-level/history">← 過去の警戒情報一覧へ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>警戒情報の履歴</h1><p>登録：<%= date(event.startedAt) %> ／ 解除：<%= event.endedAt ? date(event.endedAt) : '発令中' %></p></div><a class="button button-quiet" href="/associations/<%= association._id %>/safety/officer<%= event.endedAt ? '/history/' + encodeURIComponent(event.eventKey) : '' %>"><%= event.endedAt ? 'この警戒情報の安否確認を見る' : '現在の安否確認を見る' %></a></section>
+  <% if (event.historyIncomplete) { %><p class="help-text">履歴機能の追加前に登録された警戒情報です。以前の変更経緯は記録がないため、最後に保存されたレベルと日時から表示しています。</p><% } %>
+  <section class="content-card"><div class="safety-table-scroll"><table class="safety-table"><thead><tr><th scope="col">日時</th><th scope="col">操作</th><th scope="col">警戒レベル</th><th scope="col">登録者</th></tr></thead><tbody>
+  <% event.changes.forEach(change => { %><tr><td><%= date(change.at) %></td><td><%= kinds[change.kind] %></td><td><%= change.level ? '警戒レベル' + change.level : '解除' %></td><td><%= change.byName || change.by?.displayname || change.by?.username || '未記録' %></td></tr><% }) %>
+  </tbody></table></div></section>
+</main>
+<%- include('partials/foot') %>

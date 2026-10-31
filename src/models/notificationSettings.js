@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 export const notificationCategories = [
+  ['alert_level', '警戒レベルの新規登録・上昇（常時通知）'],
   ['good_place', 'わがまちのいいところ投稿'],
   ['danger_report', '緊急・危険情報'],
   ['officer_announcement', '役員から住民への連絡'], ['officer_network', '役員間の連絡'],
@@ -26,4 +27,4 @@ const schema = new mongoose.Schema({
 }, { timestamps: true });
 export const NotificationSettings = mongoose.model('NotificationSettings', schema);
 
-export const defaultNotificationChannel = category => ({ push: true, email: ['danger_report', 'good_place'].includes(category) });
+export const defaultNotificationChannel = category => ({ push: true, email: ['alert_level', 'danger_report', 'good_place'].includes(category) });

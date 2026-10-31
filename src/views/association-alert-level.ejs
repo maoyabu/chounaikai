@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>警戒レベルの登録</h1><p>自治体などの発表を確認し、この町内会に該当するレベルを登録してください。</p></div></section>
+  <p><a class="button button-quiet" href="/associations/<%= association._id %>/alert-level/history">過去の警戒情報一覧</a></p>
+  <section class="form-card">
+    <p>現在の登録：<strong><%= association.alertLevel ? '警戒レベル' + association.alertLevel : '登録なし' %></strong></p>
+    <% if (association.alertLevelUpdatedAt) { %><p class="help-text">更新日時：<%= new Date(association.alertLevelUpdatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p><% } %>
+    <form class="form-stack" action="/associations/<%= association._id %>/alert-level" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>警戒レベル<select name="alertLevel" required><option value="0" <%= !association.alertLevel ? 'selected' : '' %>>登録なし・解除</option><% [...alertLevels].reverse().forEach(item => { %><option value="<%= item.level %>" <%= association.alertLevel === item.level ? 'selected' : '' %>>警戒レベル<%= item.level %>：<%= item.name %></option><% }) %></select></label>
+      <p class="help-text">登録すると住人のホームに表示されます。発表内容が変わった場合は更新し、解除時は「登録なし・解除」を選んで保存してください。新規登録・レベル上昇時は、全住人にPush通知とメールで安否登録を呼びかけます。自動更新は行いません。解除後の再登録では安否情報を未確認から集め直します。発令中のレベル変更では安否情報を引き継ぎます。</p>
+      <div class="form-actions"><button class="button button-primary">保存</button></div>
+    </form>
+  </section>
+  <p class="help-text"><a href="https://www.jma.go.jp/bosai/warning/" target="_blank" rel="noopener noreferrer">気象庁の最新の気象警報・注意報を確認（別タブ）</a></p>
+  <%- include('partials/alert-level-guide', { guideId: 'officer-alert-guide' }) %>
+</main>
+<script src="/assets/alert-levels.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

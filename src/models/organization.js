@@ -55,6 +55,8 @@ const householdMemberSchema = new mongoose.Schema({
   lineAccount: { type: String, trim: true },
   isRepresentative: { type: Boolean, default: false },
   relationship: String,
+  supportRequired: { type: Boolean },
+  supportPriority: { type: Number, enum: [1, 2, 3] },
   startsAt: Date,
   endsAt: Date
 }, { timestamps: true, collection: 'household_members' });

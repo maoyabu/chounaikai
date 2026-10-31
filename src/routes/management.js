@@ -1,3 +1,4 @@
+import { parseHazardMapUrl } from '../lib/hazardMap.js';
 import { optionalAssociationFeatures, parseAssociationFeatures } from '../services/associationFeatureService.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -33,7 +34,7 @@ managementRouter.get('/:associationId/manage/notifications', requirePermission('
 });
 managementRouter.post('/:associationId/manage/notifications', requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
-    const channels = Object.fromEntries(notificationCategories.map(([key]) => [key, { push: req.body[`${key}_push`] === 'on', email: req.body[`${key}_email`] === 'on' }]));
+    const channels = Object.fromEntries(notificationCategories.map(([key]) => [key, { push: key === 'alert_level' || req.body[`${key}_push`] === 'on', email: key === 'alert_level' || req.body[`${key}_email`] === 'on' }]));
     await NotificationSettings.findOneAndUpdate({ association: req.params.associationId }, { $set: { channels } }, { upsert: true, runValidators: true });
     req.session.notice = '通知設定を保存しました。';
     res.redirect(`/associations/${req.params.associationId}/manage`);
@@ -312,7 +313,9 @@ managementRouter.post('/:associationId/manage/name', requirePermission('associat
     const name = String(req.body.name || '').trim(); if (!name) throw fail('町内会名を入力してください。');
     const annualAssociationFee = Number(req.body.annualAssociationFee || 0);
     if (!Number.isInteger(annualAssociationFee) || annualAssociationFee < 0) throw fail('町内会費は0以上の整数で入力してください。');
+    const hazardMapUrl = parseHazardMapUrl(req.body.hazardMapUrl);
     const association = await NeighborhoodAssociation.findById(req.params.associationId); if (!association) throw fail('町内会を確認できません。', 404);
+    association.hazardMapUrl = hazardMapUrl;
     const before = { name: association.name, annualAssociationFee: association.annualAssociationFee }; association.name = name; association.annualAssociationFee = annualAssociationFee;
     association.address = { postalCode: String(req.body.postalCode || '').replace(/[^0-9]/g, ''), prefecture: String(req.body.prefecture || '').trim(), city: String(req.body.city || '').trim(), street: String(req.body.street || '').trim() };
     association.serviceArea = String(req.body.serviceArea || '').trim(); association.introduction = String(req.body.introduction || '').trim();

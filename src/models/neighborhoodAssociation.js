@@ -21,6 +21,13 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
     city: String,
     street: String
   },
+  alertLevel: { type: Number, enum: [0, 1, 2, 3, 4, 5], default: 0 },
+  safetyEventKey: String,
+  alertRevision: { type: Number, default: 0 },
+  safetyRevision: { type: Number, default: 0 },
+  alertLevelUpdatedAt: Date,
+  alertLevelUpdatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  hazardMapUrl: { type: String, default: '', maxlength: 2048 },
   serviceArea: { type: String, default: '' },
   contact: {
     name: String,

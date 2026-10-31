@@ -4,16 +4,19 @@
   <a class="back-link" href="/dashboard">← ホームへ戻る</a>
   <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><h1><%= association.name %>　役員メニュー</h1></section>
   <% if (association.optionalFeatures?.equipment === true && typeof pendingLoanCount !== 'undefined' && pendingLoanCount > 0) { %><section class="content-card officer-loan-notice"><h2>お知らせ</h2><p>設備・備品の貸出依頼が<%= pendingLoanCount %>件あります。承認待ちの申込みを確認してください。</p><% pendingLoanItems.forEach(item => { %><p><a class="button officer-loan-approval-link" href="/associations/<%= association._id %>/equipment/<%= item.equipmentId %>/loans#equipment-loan-requests"><%= item.name %>：貸出依頼 <%= item.count %>件を確認・承認</a></p><% }) %></section><% } %>
-  <div class="officer-menu-layout"><section class="admin-section question-home-section officer-menu-section">
+  <div class="officer-menu-layout"><div class="officer-communication-column"><section class="admin-section question-home-section officer-menu-section">
     <div class="section-heading"><h2>役員の連絡</h2></div>
     <div class="question-home-list">
       <a class="question-home-link" href="/associations/<%= association._id %>/questions/officer"><span><strong class="officer-menu-title"><%- include('partials/officer-menu-icon', { icon: 'question' }) %><span>住人からの質問・ご意見</span></strong><small>投稿と再質問を確認して回答する</small></span><span class="question-home-counts"><% if (unansweredCount) { %><span class="status-badge status-pending">未回答 <%= unansweredCount %>件</span><% } %></span><span class="list-arrow" aria-hidden="true">›</span></a>
       <a class="question-home-link communication-menu-link" href="/associations/<%= association._id %>/announcements/officer"><span><strong class="officer-menu-title"><%- include('partials/officer-menu-icon', { icon: 'announcement' }) %><span>町内会役員から住人への連絡・回覧板</span></strong><small>班長または全住人へ送信し、確認状況を確認する</small></span><span class="list-arrow" aria-hidden="true">›</span></a>
       <a class="question-home-link communication-menu-link" href="/associations/<%= association._id %>/officer-network"><span><strong class="officer-menu-title"><%- include('partials/officer-menu-icon', { icon: 'network' }) %><span>役員間の連絡網</span></strong><small>全役員・部・個別役員・役員グループへ連絡する</small></span><span class="list-arrow" aria-hidden="true">›</span></a>
     </div>
-  </section><aside class="admin-section question-home-section officer-functions-section">
+  </section>
+  <section class="admin-section question-home-section officer-safety-section"><div class="section-heading"><h2>安否確認</h2></div><div class="question-home-list"><a class="question-home-link" href="/associations/<%= association._id %>/safety/officer"><span><strong>安否確認・被害状況</strong><small>全体状況・住民の被害・要支援者・建物の被害を確認する</small></span><span class="list-arrow" aria-hidden="true">›</span></a></div></section>
+  </div><aside class="admin-section question-home-section officer-functions-section">
     <div class="section-heading"><h2>役員機能</h2></div>
     <div class="question-home-list">
+      <a class="question-home-link" href="/associations/<%= association._id %>/alert-level"><span><strong>警戒レベルの登録</strong><small>警戒レベル1〜5の登録・更新・解除</small></span><span class="list-arrow" aria-hidden="true">›</span></a>
       <a class="question-home-link officer-function-green" href="/associations/<%= association._id %>/join/manage"><span><strong>加入申し込みページ管理</strong><small>参加するメリットを登録し、案内用QR付きPDFを作成する</small></span><span aria-hidden="true">›</span></a>
 <% if (association.optionalFeatures?.finance === true) { %>      <a class="question-home-link finance-menu-link" href="/associations/<%= association._id %>/finance"><span><strong class="officer-menu-title"><%- include('partials/officer-menu-icon', { icon: 'finance' }) %><span>町内会会計管理</span></strong><small>年度予算・収支・会計データを管理する</small></span><span class="list-arrow" aria-hidden="true">›</span></a><% } %>
 <% if (association.optionalFeatures?.events === true) { %>      <a class="question-home-link officer-function-calendar" href="/associations/<%= association._id %>/events/manage"><span><strong class="officer-menu-title"><%- include('partials/officer-menu-icon', { icon: 'calendar' }) %><span>町内会行事管理</span></strong><small>行事の登録・編集・公開・完了を管理する</small></span><span class="list-arrow" aria-hidden="true">›</span></a><% } %>

@@ -90,6 +90,7 @@
       <section class="profile-household form-card form-stack" id="household-<%= household._id %>"><div class="profile-household-heading"><div><p class="eyebrow"><%= household.association.name %></p><h2>所属する世帯</h2></div><span class="status-badge"><%= household.districtGroup?.name %></span></div>
         <p>世帯主：<%= household.representative?.displayname || household.representative?.username %></p><p><%= household.address?.postalCode %> <%= household.address?.street %> <%= household.address?.building || '' %></p><% if (household.phone) { %><p>電話番号：<%= household.phone %></p><% } %><p class="help-text">世帯情報やアカウントを持たない家族は世帯主が管理します。</p>
         <% if (ownMember) { %><form class="form-stack" action="/associations/<%= household.association._id %>/household/<%= household._id %>/members/<%= ownMember._id %>/self-update" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label>氏名（よみ）<input name="nameKana" value="<%= ownMember.nameKana %>" required></label><label>LINEアカウント（任意）<input name="lineAccount" value="<%= ownMember.lineAccount || '' %>"></label><label>続柄（任意）<input name="relationship" value="<%= ownMember.relationship || '' %>"></label><p class="help-text">氏名・メールアドレス・生年月日・性別は「本人情報」タブで変更できます。</p><div class="form-actions"><button class="button button-primary">本人の家族情報を保存</button></div></form><% } %>
+        <% if (ownMember) { %><%- include('partials/member-support', { member: ownMember, associationId: household.association._id, householdId: household._id, canEdit: true }) %><% } %>
       </section>
     <% }) %>
     <% if (!profileHouseholds.length && !availableRegistrations.length && !linkedHouseholds.length) { %>
@@ -129,6 +130,7 @@
           <% householdMembers.forEach((member) => { %>
             <article class="profile-member-row">
               <button type="button" class="profile-member-open" data-open-member-dialog="member-dialog-<%= member._id %>" aria-haspopup="dialog" aria-controls="member-dialog-<%= member._id %>"><span><strong><%= member.user?.displayname || member.name %></strong><small><%= member.isRepresentative ? '世帯代表者' : member.linkedAccountMissing ? 'アカウント削除済み' : member.user ? 'アカウント紐付け済み' : member.relationship || 'アカウント未紐付け' %></small></span><span aria-hidden="true">詳細を見る ›</span></button>
+              <%- include('partials/member-support', { member, associationId, householdId: household._id, canEdit: !member.linkedAccountMissing && (!member.user || String(member.user._id || member.user) === String(currentUser._id)) }) %>
               <dialog class="household-member-dialog" id="member-dialog-<%= member._id %>" aria-labelledby="member-dialog-title-<%= member._id %>">
                 <div class="dialog-heading"><div><p class="eyebrow">家族</p><h3 id="member-dialog-title-<%= member._id %>"><%= member.user?.displayname || member.name %>さんのプロフィール</h3></div><button type="button" class="dialog-close" data-close-member-dialog aria-label="閉じる">×</button></div>
               <% if (!member.isRepresentative && member.user) { %><div class="member-heading"><strong><%= member.user.displayname || member.name %></strong><span class="status-badge">アカウント紐付け済み</span></div>
@@ -209,6 +211,19 @@
   const initialProfileTab = new URLSearchParams(location.search).get('tab') || 'account';
   selectProfileTab(['login', 'disclosure', 'withdrawals'].includes(initialProfileTab) ? 'account' : initialProfileTab);
   selectAccountTab(['login', 'disclosure', 'withdrawals'].includes(initialProfileTab) ? initialProfileTab : ['#line-login', '#passkeys'].includes(location.hash) ? 'login' : 'basic');
+  document.querySelectorAll('[data-support-form]').forEach(form => {
+    const toggle = form.querySelector('[data-support-toggle]');
+    const refresh = () => {
+      const priorities = form.querySelector('[data-support-priorities]');
+      priorities.hidden = !toggle.checked;
+      priorities.disabled = !toggle.checked;
+      form.elements.supportRequired.value = toggle.checked ? 'yes' : 'no';
+      form.querySelector('[data-support-answer]').textContent = toggle.checked ? '（現状：必要）' : '（現状：不要）';
+    };
+    toggle.addEventListener('change', refresh);
+    form.closest('dialog').addEventListener('close', () => { form.reset(); refresh(); });
+    refresh();
+  });
   document.querySelectorAll('[data-open-member-dialog]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.openMemberDialog)?.showModal()));
   document.querySelectorAll('[data-close-member-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.household-member-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));

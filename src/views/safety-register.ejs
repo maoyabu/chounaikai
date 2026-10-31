@@ -1,0 +1,30 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell page-narrow safety-page">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>安否登録</h1><p>同じ世帯の家族の安否と、建物の状態を登録します。</p></div></section>
+  <% if (!association.alertLevel) { %><section class="content-card"><h2>現在、警戒レベルの登録はありません</h2><p>警戒レベルが登録されると安否登録ができます。</p></section>
+  <% } else if (!household) { %><section class="content-card"><h2>世帯情報が未登録です</h2><p>プロフィールの世帯情報を確認してください。</p><a class="button button-primary" href="/profile?tab=household">世帯情報を開く</a></section>
+  <% } else { const state = householdSafetyState(members, report); %>
+  <section class="content-card safety-status-heading"><h2><%= household.displayName %></h2><p>警戒レベル<%= association.alertLevel %> ／ 安否確認済み <strong><%= state.confirmed %>／<%= state.total %>人</strong></p><% if (state.complete) { %><span class="status-badge">安否登録完了</span><% } %><% if (report?.updatedAt) { %><p class="help-text">最終送信：<%= new Date(report.updatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p><% } %></section>
+  <form class="form-stack form-card" action="/associations/<%= association._id %>/safety" method="post" data-safety-form>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="eventKey" value="<%= safetyEventKey(association) %>">
+    <h2>家族の安否</h2>
+    <p>安否を確認できた人だけにチェックを入れ、状態を選んで送信してください。不明な人はチェックを入れず、未確認のままにしてください。</p><p class="help-text">チェックを外した人の登録済み情報はそのまま保持します。内容が変わった人はチェックを入れて再送信してください。</p>
+    <% if (!members.length) { %><p>登録されている家族はいません。<a href="/profile?tab=household">世帯情報で家族を登録</a>してください。</p><% } %>
+    <div class="safety-family-list"><% members.forEach(member => { const status = memberSafetyStatus(report, member._id); %>
+      <fieldset class="safety-family-row" data-safety-member><legend><%= member.user?.displayname || member.name %><% if (member.isRepresentative) { %>（世帯主）<% } %></legend>
+        <p class="help-text">現在：<strong><%= status ? safetyStatuses.find(([value]) => value === status)[1] : '未確認' %></strong></p>
+        <label class="safety-member-check"><input type="checkbox" name="memberIds" value="<%= member._id %>" data-safety-confirmed <%= status ? 'checked' : '' %>>安否を確認できた・今回送信する</label>
+        <label>安否情報<select name="status_<%= member._id %>" data-safety-select <%= status ? '' : 'disabled' %>><% safetyStatuses.forEach(([value,label]) => { %><option value="<%= value %>" <%= (status || 1) === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+      </fieldset>
+    <% }) %></div>
+    <h2>建物の状態</h2><label>世帯の建物・ライフライン<select name="buildingStatus"><% buildingStatuses.forEach(([value,label]) => { %><option value="<%= value %>" <%= (report?.buildingStatus || 1) === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label><p class="help-text">建物の状態を変更しない場合、初回は「無事」として登録します。</p>
+    <p>送信した情報は、同じ世帯の家族と町内会の役員・町内会管理者が確認できます。</p>
+    <div class="form-actions"><a class="button button-quiet" href="/dashboard">ホームへ戻る</a><button class="button button-primary">安否情報を送信</button></div>
+  </form>
+  <% } %>
+</main>
+<script src="/assets/safety.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>
