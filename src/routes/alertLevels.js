@@ -4,6 +4,7 @@ import { verifyCsrfToken } from '../middleware/csrf.js';
 import { alertLevels } from '../public/alert-level-data.js';
 import { loadAlertLevelOfficer, saveAlertLevel } from '../services/alertLevelService.js';
 import { listAlertHistory, loadAlertHistory } from '../services/safetyHistoryService.js';
+import { loadShelters } from '../services/shelterService.js';
 
 export const alertLevelsRouter = express.Router();
 alertLevelsRouter.use(requireLogin);
@@ -25,7 +26,11 @@ alertLevelsRouter.get('/:associationId/alert-level/history/:eventKey', async (re
 alertLevelsRouter.get('/:associationId/alert-level', async (req, res, next) => {
   try {
     const association = await loadAlertLevelOfficer(req.params.associationId, req.user._id);
-    return res.render('association-alert-level', { title: `${association.name} 警戒レベル`, association, alertLevels });
+    if (req.query.tab === 'shelters') {
+      const context = await loadShelters(req.params.associationId, req.user._id);
+      return res.render('association-shelters-manage', { ...context, title: `${association.name} 防災関連情報` });
+    }
+    return res.render('association-alert-level', { title: `${association.name} 防災関連情報`, association, alertLevels });
   } catch (error) { return next(error); }
 });
 

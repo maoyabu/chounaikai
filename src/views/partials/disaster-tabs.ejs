@@ -1,0 +1,4 @@
+<nav class="disaster-tabs" aria-label="防災関連情報の切り替え">
+  <a class="<%= selectedTab === 'alerts' ? 'is-current' : '' %>" href="/associations/<%= association._id %>/alert-level" <%= selectedTab === 'alerts' ? 'aria-current=page' : '' %>>警戒レベルの登録</a>
+  <a class="<%= selectedTab === 'shelters' ? 'is-current' : '' %>" href="/associations/<%= association._id %>/alert-level?tab=shelters" <%= selectedTab === 'shelters' ? 'aria-current=page' : '' %>>避難所の登録</a>
+</nav>

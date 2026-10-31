@@ -1,0 +1,19 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>防災関連情報</h1></div></section>
+  <%- include('partials/disaster-tabs', { selectedTab: 'shelters' }) %>
+  <% const sharedPage = typeof informationPage !== 'undefined' ? informationPage : association.shelterInformation || { name: '', url: '' }; %>
+  <section class="content-card shelter-information-settings"><h2>公共の指定避難所の情報ページ（任意）</h2><p>町内会共通の情報ページを1件登録できます。住人向けの避難所一覧の上に表示します。</p>
+    <form class="form-stack" action="/associations/<%= association._id %>/shelters/information" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><div class="form-columns"><label>ページの名称<input name="informationName" maxlength="200" value="<%= sharedPage.name || '' %>" placeholder="例：市の指定避難所一覧"></label><label>URL<input type="url" name="informationUrl" maxlength="2048" value="<%= sharedPage.url || '' %>" placeholder="https://…"></label></div><p class="help-text">名称とURLを両方入力してください。両方を空欄にして保存するとリンクを非表示にします。</p><div class="form-actions"><button class="button button-primary">情報ページを保存</button></div></form>
+  </section>
+  <section class="content-card"><div class="section-heading shelter-management-heading"><h2>避難所の登録</h2><div class="shelter-heading-actions"><a class="button button-quiet" href="/associations/<%= association._id %>/disaster?tab=shelters">住人向けの表示を確認</a><button type="button" class="button button-primary" data-shelter-open="new-shelter" aria-haspopup="dialog">新規追加</button></div></div>
+  <% if (!shelters.length) { %><p>避難所はまだ登録されていません。「新規追加」から登録してください。</p><% } else { %><div class="shelter-management-list"><% shelters.forEach(shelter => { %><article><div><h3><%= shelter.name %></h3><p><%= shelter.address %></p><small><%= shelter.kind || '種別未登録' %> ／ 収容人数：<%= shelter.capacity == null ? '未登録' : shelter.capacity + '人' %></small></div><div class="shelter-heading-actions"><button type="button" class="button button-quiet" data-shelter-open="edit-shelter-<%= shelter._id %>" aria-haspopup="dialog" aria-label="<%= shelter.name %>を編集">編集</button><form action="/associations/<%= association._id %>/shelters/<%= shelter._id %>/delete" method="post" onsubmit="return confirm('この避難所を一覧から削除しますか？');"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="text-danger">削除</button></form></div></article><% }) %></div><% } %>
+  </section>
+  <dialog class="shelter-dialog" id="new-shelter" aria-labelledby="new-shelter-title"><div class="dialog-heading"><h2 id="new-shelter-title">避難所の新規追加</h2><button type="button" class="dialog-close" data-shelter-close aria-label="閉じる">×</button></div><%- include('partials/shelter-form', { shelter: null }) %></dialog>
+  <% shelters.forEach(shelter => { %><dialog class="shelter-dialog" id="edit-shelter-<%= shelter._id %>" aria-labelledby="edit-shelter-title-<%= shelter._id %>"><div class="dialog-heading"><h2 id="edit-shelter-title-<%= shelter._id %>">避難所を編集</h2><button type="button" class="dialog-close" data-shelter-close aria-label="閉じる">×</button></div><%- include('partials/shelter-form', { shelter }) %></dialog><% }) %>
+</main>
+<script src="/assets/shelters.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

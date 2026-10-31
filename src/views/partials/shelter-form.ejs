@@ -1,0 +1,10 @@
+<form class="form-stack" action="/associations/<%= association._id %>/shelters<%= shelter ? '/' + shelter._id + '/update' : '' %>" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><% if (shelter) { %><input type="hidden" name="version" value="<%= shelter.__v || 0 %>"><% } %>
+  <label>設備名 <span class="required">必須</span><input name="name" maxlength="150" value="<%= shelter?.name || '' %>" required></label>
+  <label>住所 <span class="required">必須</span><input name="address" maxlength="500" value="<%= shelter?.address || '' %>" placeholder="都道府県・市区町村から入力してください" required><small>Googleマップでは登録した住所を表示します。</small></label>
+  <div class="form-columns"><label>電話番号<input name="phone" type="tel" maxlength="50" value="<%= shelter?.phone || '' %>"></label><label>収容人数（人）<input name="capacity" type="number" min="0" max="1000000" step="1" value="<%= shelter?.capacity ?? '' %>"><small>不明な場合は空欄にしてください。</small></label></div>
+  <label>種別<input name="kind" maxlength="100" value="<%= shelter?.kind || '' %>" placeholder="例：指定避難所、一時避難場所"></label>
+  <label>注意すべき危険箇所<textarea name="dangerPoints" maxlength="2000" rows="3"><%= shelter?.dangerPoints || '' %></textarea></label>
+  <fieldset class="shelter-photo-fields"><legend>写真（3枚まで）</legend><p class="help-text">写真は町内会のGoogle Driveに保存します。1枚15MB以下で選択してください。</p><% for (let slot = 0; slot < 3; slot++) { const photo = shelter?.photos?.[slot]; %><div class="shelter-photo-field"><label>写真<%= slot + 1 %><input type="file" name="photo<%= slot %>" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"></label><% if (photo) { %><img src="<%= photo.url %>" alt="登録済みの写真<%= slot + 1 %>" loading="lazy"><label class="shelter-checkbox"><input type="checkbox" name="removePhoto<%= slot %>">この写真を削除する</label><% } %></div><% } %></fieldset>
+  <div class="form-actions"><button type="button" class="button button-quiet" data-shelter-close>キャンセル</button><button class="button button-primary"><%= shelter ? '更新' : '登録' %></button></div>
+</form>

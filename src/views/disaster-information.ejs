@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell disaster-information-page">
+  <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>防災情報</h1><% if (activeAlert) { %><p>現在の登録：<strong>警戒レベル<%= association.alertLevel %></strong></p><% } %></div>
+  <% if (/^https?:\/\//i.test(association.hazardMapUrl || '')) { %><a class="button hazard-map-button" href="<%= association.hazardMapUrl %>" target="_blank" rel="noopener noreferrer">ハザードマップ（別タブ）</a><% } %></section>
+  <% if (activeAlert) { %><nav class="disaster-tabs" aria-label="防災情報の切り替え"><% [['safety','安否登録'],['alerts','警戒レベル'],['shelters','避難所情報']].forEach(([tab,label]) => { %><a href="/associations/<%= association._id %>/disaster?tab=<%= tab %>" class="<%= selectedTab === tab ? 'is-current' : '' %>" <%= selectedTab === tab ? 'aria-current=page' : '' %>><%= label %></a><% }) %></nav><% } %>
+  <% if (selectedTab === 'safety') { %>
+  <section class="disaster-safety-panel"><h2>安否登録</h2><p>同じ世帯の家族の安否と、建物の状態を登録します。</p><%- include('partials/safety-registration-content') %></section>
+  <% } else if (selectedTab === 'alerts') { %>
+  <section class="content-card"><div class="disaster-alert-emphasis alert-level-color-<%= association.alertLevel %>"><h2>警戒レベル<%= association.alertLevel %></h2><p><%= alertLevels.find(item => item.level === association.alertLevel)?.action %></p></div><% if (association.alertLevelUpdatedAt) { %><p class="help-text">町内会役員による登録・更新：<%= new Date(association.alertLevelUpdatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p><% } %><%- include('partials/alert-level-guide', { guideId: 'disaster-alert-guide' }) %></section>
+  <% } else { %>
+  <div class="disaster-shelter-heading"><h2>避難所情報</h2><% if (canManage) { %><a class="button button-quiet" href="/associations/<%= association._id %>/alert-level?tab=shelters">避難所を登録・管理</a><% } %></div><p>避難所を選択すると、登録住所をGoogleマップに表示します。</p><%- include('partials/shelter-list-content', { shelterQueryPrefix: 'tab=shelters&' }) %>
+  <% } %>
+</main>
+<% if (selectedTab === 'safety') { %><script src="/assets/safety.js?v=<%= assetVersion %>" defer></script><% } %>
+<% if (selectedTab === 'alerts') { %><script src="/assets/alert-levels.js?v=<%= assetVersion %>" defer></script><% } %>
+<% if (selectedTab === 'shelters') { %><script src="/assets/shelters.js?v=<%= assetVersion %>" defer></script><% } %>
+<%- include('partials/foot') %>

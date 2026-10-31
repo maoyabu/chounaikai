@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream/promises';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { AssociationGroup } from '../models/associationGroup.js';
 import { User } from '../models/user.js';
+import { Shelter } from '../models/shelter.js';
 import { attachmentContext } from '../services/messageAttachmentService.js';
 import { assertDriveItem, driveId } from '../services/driveService.js';
 
@@ -31,8 +32,8 @@ export const profileImageHandler = (dependencies = { User, attachmentContext, as
 };
 profileImagesRouter.get('/profile-images/:userId/:token', profileImageHandler());
 
-// Serve only photos still referenced by a PR page or association symbol.
-export const publicPhotoHandler = (dependencies = { NeighborhoodAssociation, AssociationGroup, attachmentContext, assertDriveItem }) => async (req, res, next) => {
+// Serve only photos still referenced by a PR page, association symbol or shelter.
+export const publicPhotoHandler = (dependencies = { NeighborhoodAssociation, AssociationGroup, Shelter, attachmentContext, assertDriveItem }) => async (req, res, next) => {
   try {
     res.set('Cache-Control', 'private, no-store');
     const { association, fileId, token } = req.params;
@@ -41,7 +42,10 @@ export const publicPhotoHandler = (dependencies = { NeighborhoodAssociation, Ass
     const owner = await dependencies.NeighborhoodAssociation.exists({ _id: association, status: 'active', deletedAt: { $exists: false }, $or: [{ 'publicPhotos.url': url }, { 'symbolImage.url': url }] });
     if (!owner) {
       const active = await dependencies.NeighborhoodAssociation.exists({ _id: association, status: 'active', deletedAt: { $exists: false } });
-      if (!active || !await dependencies.AssociationGroup.exists({ association, status: 'active', 'publicPhotos.url': url })) return res.sendStatus(404);
+      if (!active) return res.sendStatus(404);
+      const group = await dependencies.AssociationGroup.exists({ association, status: 'active', 'publicPhotos.url': url });
+      const shelter = !group && dependencies.Shelter && await dependencies.Shelter.exists({ association, active: true, 'photos.url': url });
+      if (!group && !shelter) return res.sendStatus(404);
     }
     const context = await dependencies.attachmentContext(association);
     const item = await dependencies.assertDriveItem(context.client, context.root, fileId, { allowRoot: false });

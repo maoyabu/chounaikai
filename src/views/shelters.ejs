@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>避難所一覧</h1><p>避難所を選択すると、登録住所をGoogleマップに表示します。</p></div><% if (canManage) { %><a class="button button-quiet" href="/associations/<%= association._id %>/alert-level?tab=shelters">避難所を登録・管理</a><% } %></section>
+  <%- include('partials/shelter-list-content', { shelterQueryPrefix: '' }) %>
+</main>
+<script src="/assets/shelters.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

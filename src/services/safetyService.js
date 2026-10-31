@@ -5,7 +5,7 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { Household, HouseholdMember } from '../models/organization.js';
 import { SafetyReport } from '../models/safetyReport.js';
 import { loadQuestionBoxAccess } from './questionBoxService.js';
-import { householdSafetyState, safetyEventKey, summarizeSafety } from '../lib/safetyStatus.js';
+import { householdSafetyState, safetyEventKey, summarizeSafety, summarizeSafetyRoster } from '../lib/safetyStatus.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const activeHouseholds = association => ({ association, active: true, deletedAt: { $exists: false } });
@@ -94,7 +94,7 @@ export async function loadOfficerSafety(associationId, userId) {
   const households = await Household.find(activeHouseholds(associationId)).populate('districtGroup', 'name').sort({ displayName: 1, _id: 1 }).lean();
   const [members, reports] = await Promise.all([
     HouseholdMember.find({ association: associationId, household: { $in: households.map(h => h._id) }, endsAt: null }).populate('user', 'displayname username').lean(),
-    SafetyReport.find({ association: associationId, eventKey: safetyEventKey(association), household: { $in: households.map(h => h._id) } }).lean()
+    association.alertLevel ? SafetyReport.find({ association: associationId, eventKey: safetyEventKey(association), household: { $in: households.map(h => h._id) } }).lean() : Promise.resolve([])
   ]);
-  return { association, summary: summarizeSafety(households, members, reports) };
+  return { association, summary: association.alertLevel ? summarizeSafety(households, members, reports) : summarizeSafetyRoster(households, members) };
 }

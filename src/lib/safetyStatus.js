@@ -14,6 +14,22 @@ export const householdSafetyState = (members, report) => {
   return { total: members.length, confirmed, complete: members.length > 0 && confirmed === members.length };
 };
 
+export function summarizeSafetyRoster(households, members) {
+  const byHousehold = new Map(households.map(household => [String(household._id), household]));
+  const currentMembers = members.filter(member => byHousehold.has(String(member.household)) && !member.endsAt);
+  const supportMembers = currentMembers.filter(member => member.supportRequired === true)
+    .map(member => ({ member, household: byHousehold.get(String(member.household)), status: null }))
+    .sort((a, b) => (a.member.supportPriority || 4) - (b.member.supportPriority || 4));
+  return {
+    totalHouseholds: households.length, totalPeople: currentMembers.length,
+    supportHouseholds: new Set(supportMembers.map(item => String(item.household._id))).size,
+    supportPeople: supportMembers.length, supportMembers,
+    confirmedHouseholds: '-', confirmedPeople: '-', unconfirmedHouseholds: '-', unconfirmedPeople: '-',
+    people: { 1: '-', 2: '-', 3: '-', 4: '-' },
+    buildings: { 2: '-', 3: '-', 4: '-' }, damagedHouseholds: []
+  };
+}
+
 export function summarizeSafety(households, members, reports) {
   const householdIds = new Set(households.map(h => String(h._id)));
   const currentMembers = members.filter(m => householdIds.has(String(m.household)) && !m.endsAt);

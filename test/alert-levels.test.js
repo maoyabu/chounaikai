@@ -79,22 +79,17 @@ test('both warning endpoints require login and saves require CSRF', () => {
 });
 
 const home = memberships => ejs.renderFile('src/views/partials/hazard-map-home.ejs', {memberships});
-test('warning appears to the left of hazard map, works without a map and disappears on removal', async () => {
+test('home consolidates level and safety, reverting to disaster information when cleared', async () => {
   const html = await home([{association:{_id:associationId,name:'第一町内会',alertLevel:4,hazardMapUrl:'https://disaportal.gsi.go.jp/'}}]);
-  assert.ok(html.indexOf('data-alert-open=') < html.indexOf('class="button hazard-map-button"'));
   assert.match(html,/alert-level-color-4/);
-  assert.match(html,/警戒レベル4<\/button>/);
-  const onlyWarning = await home([{association:{_id:associationId,name:'第一町内会',alertLevel:3}}]);
-  assert.match(onlyWarning,/警戒レベル3/);
-  assert.doesNotMatch(onlyWarning,/hazard-map-button/);
-  const cleared = await home([{association:{_id:associationId,name:'第一町内会',alertLevel:0,alertLevelUpdatedAt:new Date(),hazardMapUrl:'https://disaportal.gsi.go.jp/'}}]);
-  assert.match(cleared, /alert-level-none/);
-  assert.match(cleared, /警戒情報なし<\/span>/);
-  assert.ok(cleared.indexOf('alert-level-none') < cleared.indexOf('hazard-map-button'));
-  assert.doesNotMatch(cleared, /data-alert-open|safety-register-button/);
-  const withoutMap = await home([{association:{alertLevel:0,alertLevelUpdatedAt:new Date()}}]);
-  assert.match(withoutMap, /警戒情報なし/);
-  for (const alertLevel of [0,undefined,6,'4']) assert.equal((await home([{association:{alertLevel}}])).trim(),'');
+  assert.match(html,/警戒レベル4・安否登録<\/span>/);
+  assert.equal((html.match(/<a /g)||[]).length,1);
+  assert.doesNotMatch(html,/hazard-map-button|data-alert-open/);
+  for (const alertLevel of [0,undefined,6,'4']) {
+    const cleared=await home([{association:{_id:associationId,alertLevel}}]);
+    assert.match(cleared,/disaster-home-normal/);
+    assert.match(cleared,/>防災情報<\/span>/);
+  }
 });
 
 test('all five levels open matching detailed dialogs with unique association-specific IDs', async () => {

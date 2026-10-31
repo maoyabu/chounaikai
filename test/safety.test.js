@@ -219,15 +219,14 @@ test('officer page renders all four sections and relevant support/damage lists w
   assert.match(html,/被害発生世帯のリスト（1世帯）/);
   assert.match(html,/&lt;script&gt;bad&lt;\/script&gt;/);
 });
-test('home puts safety next to warning and changes name and color on full completion',async()=>{
-  const render=complete=>ejs.renderFile('src/views/partials/hazard-map-home.ejs',{memberships:[{association:{...association,hazardMapUrl:'https://disaportal.gsi.go.jp/'},safetyState:{complete}}]});
+test('home warning entry includes safety completion without a separate registration button',async()=>{
+  const render=complete=>ejs.renderFile('src/views/partials/hazard-map-home.ejs',{memberships:[{association,safetyState:{complete}}]});
   const html=await render(false);
-  assert.ok(html.indexOf('alert-level-button') < html.indexOf('safety-register-button'));
-  assert.ok(html.indexOf('safety-register-button') < html.indexOf('hazard-map-button'));
-  assert.match(html,/>安否登録<\/a>/);
+  assert.match(html,/警戒レベル3・安否登録<\/span>/);
   const completed=await render(true);
-  assert.match(completed,/safety-register-complete/);
-  assert.match(completed,/>安否登録完了<\/a>/);
+  assert.match(completed,/警戒レベル3・安否登録完了<\/span>/);
+  assert.equal((completed.match(/<a /g)||[]).length,1);
+  assert.match(completed,/alert-level-color-3/);
 });
 test('family selection enables status only when explicitly checked',async()=>{
   const checkbox={checked:false,addEventListener(type,fn){this.change=fn;}};
@@ -237,4 +236,24 @@ test('family selection enables status only when explicitly checked',async()=>{
   assert.equal(select.disabled,true);
   checkbox.checked=true;checkbox.change();assert.equal(select.disabled,false);
   checkbox.checked=false;checkbox.change();assert.equal(select.disabled,true);
+});
+
+test('without an active alert only roster and support totals are calculated; previous reports are never read',async t=>{
+  officerAccess(t,true);
+  const normal={...association,alertLevel:0};
+  NeighborhoodAssociation.findOne.mock.mockImplementation(()=>query(normal));
+  Household.find.mock.mockImplementation(()=>query([household]));
+  HouseholdMember.find.mock.mockImplementation(()=>query(members));
+  SafetyReport.find.mock.mockImplementation(()=>{throw new Error('must not read the previous disaster');});
+  const context=await loadOfficerSafety(ids.association,ids.user);
+  assert.equal(SafetyReport.find.mock.callCount(),0);
+  assert.equal(context.summary.totalHouseholds,1);assert.equal(context.summary.totalPeople,2);
+  assert.equal(context.summary.supportHouseholds,1);assert.equal(context.summary.supportPeople,1);
+  assert.equal(context.summary.confirmedPeople,'-');assert.equal(context.summary.unconfirmedPeople,'-');
+  assert.deepEqual(context.summary.people,{1:'-',2:'-',3:'-',4:'-'});
+  assert.deepEqual(context.summary.buildings,{2:'-',3:'-',4:'-'});
+  const html=await ejs.renderFile('src/views/safety-officer.ejs',{...locals,...context});
+  assert.match(html,/<th scope="row">安否確認済数<\/th><td>-<\/td><td>-<\/td>/);
+  assert.match(html,/<dt>無事（軽傷含む）<\/dt><dd>-<\/dd>/);
+  assert.doesNotMatch(html,/直近の登録状況|被害発生世帯のリスト/);
 });

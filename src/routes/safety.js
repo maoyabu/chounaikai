@@ -2,7 +2,7 @@ import express from 'express';
 import { requireLogin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
 import { buildingStatuses, safetyStatuses, safetyEventKey, memberSafetyStatus, householdSafetyState } from '../lib/safetyStatus.js';
-import { loadResidentSafety, saveResidentSafety, loadOfficerSafety } from '../services/safetyService.js';
+import { saveResidentSafety, loadOfficerSafety } from '../services/safetyService.js';
 import { listSafetyHistory, loadSafetyHistory } from '../services/safetyHistoryService.js';
 import { createSafetyReport, loadSafetyReport } from '../services/safetyReportService.js';
 import { safetyReportPdf } from '../services/safetyReportPdf.js';
@@ -55,8 +55,7 @@ safetyRouter.get('/:associationId/safety/officer/history/:eventKey', async (req,
 
 safetyRouter.get('/:associationId/safety', async (req, res, next) => {
   try {
-    const context = await loadResidentSafety(req.params.associationId, req.user._id);
-    return res.render('safety-register', { ...options, ...context, title: `${context.association.name} 安否登録` });
+    return res.redirect(`/associations/${req.params.associationId}/disaster?tab=safety`);
   } catch (error) { return next(error); }
 });
 
@@ -64,7 +63,7 @@ safetyRouter.post('/:associationId/safety', verifyCsrfToken, async (req, res, ne
   try {
     await saveResidentSafety({ associationId: req.params.associationId, userId: req.user._id, body: req.body });
     req.session.notice = '安否情報を送信しました。';
-    return res.redirect(`/associations/${req.params.associationId}/safety`);
+    return res.redirect(`/associations/${req.params.associationId}/disaster?tab=safety`);
   } catch (error) { return next(error); }
 });
 

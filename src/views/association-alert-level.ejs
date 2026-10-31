@@ -1,9 +1,11 @@
 <%- include('partials/head') %>
 <%- include('partials/header') %>
-<main class="page-shell page-narrow">
+<main class="page-shell">
   <% if (notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
   <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
-  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>警戒レベルの登録</h1><p>自治体などの発表を確認し、この町内会に該当するレベルを登録してください。</p></div></section>
+  <section class="page-heading"><div><p class="eyebrow"><%= association.name %></p><h1>防災関連情報</h1><p>自治体などの発表を確認し、この町内会に該当するレベルを登録してください。</p></div></section>
+  <%- include('partials/disaster-tabs', { selectedTab: 'alerts' }) %>
+  <h2>警戒レベルの登録</h2>
   <p><a class="button button-quiet" href="/associations/<%= association._id %>/alert-level/history">過去の警戒情報一覧</a></p>
   <section class="form-card">
     <p>現在の登録：<strong><%= association.alertLevel ? '警戒レベル' + association.alertLevel : '登録なし' %></strong></p>

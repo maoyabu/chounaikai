@@ -27,6 +27,7 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   safetyRevision: { type: Number, default: 0 },
   alertLevelUpdatedAt: Date,
   alertLevelUpdatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  shelterInformation: { type: new mongoose.Schema({ name: { type: String, maxlength: 200 }, url: { type: String, maxlength: 2048 } }, { _id: false }), default: undefined },
   hazardMapUrl: { type: String, default: '', maxlength: 2048 },
   serviceArea: { type: String, default: '' },
   contact: {

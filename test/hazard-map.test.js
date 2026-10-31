@@ -11,16 +11,16 @@ test('hazard map URL permits web links and removal but rejects unsafe schemes an
   }
 });
 
-test('home hazard links appear without danger reports, support multiple associations and escape URLs', async () => {
+test('home has one disaster entry per membership and no separate map button', async () => {
   const render = memberships => ejs.renderFile('src/views/partials/hazard-map-home.ejs', { memberships });
-  assert.equal((await render([{ association: { name: '未設定' } }])).trim(), '');
-  assert.equal((await render([{ association: { hazardMapUrl: 'javascript:alert(1)' } }])).trim(), '');
+  assert.equal((await render([])).trim(), '');
   const html = await render([
-    { association: { name: '第一町内会', hazardMapUrl: 'https://example.com/?a=1&b=2' } },
-    { association: { name: '第二町内会', hazardMapUrl: 'https://disaportal.gsi.go.jp/' } }
+    { association: { _id: 'one', name: '第一町内会', hazardMapUrl: 'https://example.com/?a=1&b=2' } },
+    { association: { _id: 'two', name: '第二町内会', hazardMapUrl: 'javascript:alert(1)' } }
   ]);
-  assert.match(html, /第一町内会のハザードマップ/);
-  assert.match(html, /第二町内会のハザードマップ/);
-  assert.match(html, /a=1&amp;b=2/);
-  assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 2);
+  assert.match(html, /第一町内会の防災情報/);
+  assert.match(html, /第二町内会の防災情報/);
+  assert.equal((html.match(/class="button disaster-home-button/g) || []).length, 2);
+  assert.match(html,/href="\/associations\/one\/disaster"/);
+  assert.doesNotMatch(html,/hazard-map-button|javascript:|target="_blank"/);
 });

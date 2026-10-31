@@ -1,3 +1,5 @@
+import { disasterInformationRouter } from './routes/disasterInformation.js';
+import { sheltersRouter } from './routes/shelters.js';
 import { safetyRouter } from './routes/safety.js';
 import { alertLevelsRouter } from './routes/alertLevels.js';
 import { profileImagesRouter } from './routes/profileImages.js';
@@ -146,6 +148,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/', withdrawalsRouter);
   app.use('/associations', dangerReportsRouter);
   app.use('/associations', safetyRouter);
+  app.use('/associations', disasterInformationRouter);
+  app.use('/associations', sheltersRouter);
   app.use('/associations', alertLevelsRouter);
   app.use('/associations', questionBoxRouter);
   app.use('/associations', officerAnnouncementsRouter);
