@@ -1904,3 +1904,5 @@ h1, h2, h3, h4, h5, h6,
 .benefit-row-actions .benefit-delete-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: #b83b2b; background: #fff3ef; border-color: #e6a99e; }
 .benefit-row-actions .benefit-delete-button:hover { color: #942b1e; background: #ffe5df; border-color: #b83b2b; }
 .benefit-delete-button svg { pointer-events: none; }
+
+.officer-functions-section .officer-function-disaster { border-left: 4px solid #17231f; }
