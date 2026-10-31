@@ -34,7 +34,7 @@ managementRouter.get('/:associationId/manage/notifications', requirePermission('
 });
 managementRouter.post('/:associationId/manage/notifications', requirePermission('association.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
-    const channels = Object.fromEntries(notificationCategories.map(([key]) => [key, { push: key === 'alert_level' || req.body[`${key}_push`] === 'on', email: key === 'alert_level' || req.body[`${key}_email`] === 'on' }]));
+    const channels = Object.fromEntries(notificationCategories.map(([key]) => [key, { push: req.body[`${key}_push`] === 'on', email: req.body[`${key}_email`] === 'on' }]));
     await NotificationSettings.findOneAndUpdate({ association: req.params.associationId }, { $set: { channels } }, { upsert: true, runValidators: true });
     req.session.notice = '通知設定を保存しました。';
     res.redirect(`/associations/${req.params.associationId}/manage`);

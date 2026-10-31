@@ -100,7 +100,7 @@ export const deliverNotification = async (notification, { emailRequired = false 
     if (!claimed) return notification;
     const settings = await NotificationSettings.findOne({ association: notification.association }).lean();
     const category = notificationCategory(notification.type);
-    const channel = category === 'alert_level' ? defaultNotificationChannel(category) : settings?.channels?.[category] || defaultNotificationChannel(category);
+    const channel = settings?.channels?.[category] || defaultNotificationChannel(category);
     const user = await import('../models/user.js').then(({ User }) => User.findById(recipient).select('displayname username email').lean());
     if (!user) {
       await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email.status': 'skipped', 'delivery.push.status': 'skipped' } });

@@ -20,8 +20,10 @@ test('settings save is login/permission/CSRF protected and scopes writes to the 
   assert.equal(route.stack[1].handle, verifyCsrfToken);
   let filter, update;
   t.mock.method(NotificationSettings, 'findOneAndUpdate', async (f, u) => { filter = f; update = u; });
-  await route.stack.at(-1).handle({ params: { associationId: 'association-A' }, session: {}, body: { officer_announcement_push: 'on', question_email: 'on', unknown_push: 'on', association: 'association-B' } }, { redirect: () => {} }, error => { throw error; });
+  await route.stack.at(-1).handle({ params: { associationId: 'association-A' }, session: {}, body: { officer_announcement_push: 'on', question_email: 'on', alert_level_push: 'on', unknown_push: 'on', association: 'association-B' } }, { redirect: () => {} }, error => { throw error; });
   assert.equal(filter.association, 'association-A');
+  assert.equal(update.$set.channels.alert_level.push, true);
+  assert.equal(update.$set.channels.alert_level.email, false);
   assert.equal(update.$set.channels.officer_announcement.push, true);
   assert.equal(update.$set.channels.question.email, true);
   assert.equal(update.$set.channels.question.push, false);

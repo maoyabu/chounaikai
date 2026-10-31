@@ -63,16 +63,17 @@ test('retry after partial queue or acknowledgement failure preserves existing an
   assert.equal(acknowledgements,2);
 });
 
-test('warning delivery sends push and email with the same safety link, even with stored channel settings off',async t=>{
+test('warning delivery shares safety links and honors push/email switches independently',async t=>{
   const values={SMTP_HOST:'smtp.example.test',SMTP_PORT:'587',SMTP_USER:'test',SMTP_PASS:'test',MAIL_FROM:'sender@example.test',PUBLIC_BASE_URL:'https://example.test',WEB_PUSH_PUBLIC_KEY:'test',WEB_PUSH_PRIVATE_KEY:'test',WEB_PUSH_SUBJECT:'mailto:test@example.test'};
   const previous=Object.fromEntries(Object.keys(values).map(name=>[name,process.env[name]]));
   Object.assign(process.env,values);
   t.after(()=>Object.entries(previous).forEach(([name,value])=>{if(value===undefined)delete process.env[name];else process.env[name]=value;}));
   const record=alertLevelNotificationRecord(event,change,'resident');
   let mail,push,result;
+  let channel={email:true,push:true};
   t.mock.method(Notification,'findOneAndUpdate',async()=>record);
   t.mock.method(Notification,'countDocuments',async()=>2);
-  t.mock.method(NotificationSettings,'findOne',()=>({lean:async()=>({channels:{alert_level:{email:false,push:false}}})}));
+  t.mock.method(NotificationSettings,'findOne',()=>({lean:async()=>({channels:{alert_level:channel}})}));
   t.mock.method(User,'findById',()=>({select:()=>({lean:async()=>({_id:'resident',displayname:'住人',email:'resident@example.test'})})}));
   t.mock.method(PushSubscription,'find',async()=>[{endpoint:'https://push.example.test',keys:{},save:async()=>{}}]);
   t.mock.method(webpush,'setVapidDetails',()=>{});
@@ -85,11 +86,21 @@ test('warning delivery sends push and email with the same safety link, even with
   assert.equal(push.url,`/associations/${aid}/safety`);
   assert.equal(result['delivery.email'].status,'sent');
   assert.equal(result['delivery.push'].status,'sent');
+  for(const setting of [{email:false,push:true},{email:true,push:false},{email:false,push:false}]) {
+    channel=setting;mail=undefined;push=undefined;
+    await deliverNotification(record);
+    assert.equal(Boolean(mail),setting.email);
+    assert.equal(Boolean(push),setting.push);
+    assert.equal(result['delivery.email'].status,setting.email?'sent':'skipped');
+    assert.equal(result['delivery.push'].status,setting.push?'sent':'skipped');
+  }
+
 });
 
-test('warning notifications are visibly fixed ON in settings',async()=>{
+test('warning notification switches reflect saved settings and remain editable',async()=>{
   assert.deepEqual(defaultNotificationChannel('alert_level'),{push:true,email:true});
   const html=await ejs.renderFile('src/views/notification-settings.ejs',{title:'設定',assetVersion:'test',currentUser:null,currentPath:'/',notice:null,csrfToken:'csrf',showNotificationPrompt:false,hideDangerCompose:true,association:{_id:aid,name:'町内会'},categories:notificationCategories,channels:{alert_level:{email:false,push:false}}});
-  assert.match(html,/name="alert_level_push" checked disabled/);
-  assert.match(html,/name="alert_level_email" checked disabled/);
+  assert.match(html,/name="alert_level_push"/);
+  assert.match(html,/name="alert_level_email"/);
+  assert.doesNotMatch(html,/name="alert_level_(?:push|email)"[^>]*(?:checked|disabled)/);
 });
