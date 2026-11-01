@@ -1,37 +1,23 @@
 .join-print-only { display: none; }
 .join-qr { align-items: center; gap: 1rem; }
 .join-qr small { overflow-wrap: anywhere; }
-@media print {
-  @page { size: A4; margin: 12mm; }
-  .join-screen-only, body > footer { display: none !important; }
-  .join-print-only { display: flex !important; }
-  .join-page { max-width: none; margin: 0; padding: 0; }
-  .join-page .content-card { box-shadow: none; margin: 0 0 5mm; padding: 4mm; }
-  .join-benefits article, .join-qr { break-inside: avoid; }
-  .join-page h1 { font-size: 23pt; }
-  .join-page h2 { font-size: 16pt; }
-  .join-page h3 { font-size: 12pt; }
-  .join-page p, .join-page li { font-size: 10pt; }
-}
-
 .join-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .join-card-heading .button { flex-shrink: 0; }
 .join-export-dialog { width: min(560px, calc(100% - 2rem)); border: 1px solid #c9dccc; border-radius: 16px; padding: 1.5rem; }
 .join-export-dialog::backdrop { background: rgb(19 37 29 / 50%); }
-.join-pdf-container { position: absolute; left: -10000px; top: 0; width: 186mm; background: #fff; }
-.join-pdf { width: 186mm; max-width: none; margin: 0; padding: 0; background: #fff; }
-.join-pdf .join-print-only { display: flex; }
-.join-pdf .content-card { box-shadow: none; margin: 0 0 5mm; padding: 4mm; }
-.join-pdf .bulletin-benefit-grid, .join-pdf .bulletin-outcome-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
-.join-pdf h1 { font-size: 23pt; }
-.join-pdf h2 { font-size: 16pt; }
-.join-pdf h3, .join-pdf .bulletin-benefit-card h3 { font-size: 12pt; }
-.join-pdf p, .join-pdf li { font-size: 10pt; }
-.join-pdf .bulletin-benefit-card h3 { padding: 2.5mm; gap: 2mm; }
-.join-pdf .join-benefit-icon-wrap { width: 7mm; height: 7mm; }
-.join-pdf .join-benefit-icon { width: 5mm; height: 5mm; }
-.join-pdf .bulletin-benefit-card ul, .join-pdf .bulletin-outcome-card ul { padding: 2.5mm 2.5mm 3mm 6mm; line-height: 1.6; }
-.join-pdf .bulletin-outcomes { margin-top: 5mm; padding-top: 4mm; }
+#join-export-preview { display: block; width: 100%; height: auto; margin: 1rem 0; }
+#join-export-preview[hidden] { display: none; }
+.join-export-dialog { max-height: 90vh; overflow: auto; }
+.join-image-container { position: absolute; left: -100000px; top: 0; background: white; }
+.join-image-container .join-page { box-sizing: border-box; max-width: none; margin: 0; }
+.join-image-container .join-print-only { display: flex; }
+.join-print-image { display: none; }
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  body.join-image-printing > :not(.join-print-image) { display: none !important; }
+  body.join-image-printing { margin: 0 !important; padding: 0 !important; background: white !important; }
+  body.join-image-printing > .join-print-image { display: block !important; width: auto; height: auto; max-width: 190mm; max-height: 277mm; margin: 0 auto; }
+}
 @media (max-width: 600px) { .join-card-heading { flex-wrap: wrap; } }
 
 .join-page-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1rem; margin-bottom: 1rem; }
