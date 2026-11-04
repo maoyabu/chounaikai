@@ -1,0 +1,33 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell leader-payments-page">
+  <a class="back-link" href="/associations/<%= association._id %>/leader">← 班長メニューへ戻る</a>
+  <% if (typeof notice !== 'undefined' && notice) { %><div class="alert alert-success" role="status"><%= notice %></div><% } %>
+  <section class="page-heading leader-fees-heading">
+    <div><h1><%= fiscalYear %>年度 町内会費納付管理</h1><p>役職タグは表示年度の情報です。世帯を開くと、過去の納付履歴と今年度の納付状況を確認できます。</p></div>
+    <form method="get" class="leader-fees-year-selector"><label>表示年度 <select name="year" onchange="this.form.submit()"><% years.forEach(year => { %><option value="<%= year %>" <%= year === fiscalYear ? 'selected' : '' %>><%= year %>年度</option><% }) %></select></label></form>
+  </section>
+  <section class="content-card management-card">
+    <h2><%= districtGroups.map(group => group.name).join('・') %> 世帯一覧（<%= households.length %>世帯）</h2>
+    <% if (!households.length) { %><p class="help-text">登録された世帯はありません。「班の世帯管理」から世帯を登録してください。</p><% } %>
+    <div class="payment-households">
+    <% households.forEach(household => { %>
+      <details class="payment-household" id="payment-<%= household._id %>">
+        <summary><span class="payment-household-name"><span><%= household.districtLabel %> ・ <strong><%= household.displayName %></strong></span><span class="payment-tags"><span class="payment-member-tag <%= household.isLinked ? 'is-linked' : '' %>"><%= household.isLinked ? '会員' : '非会員' %></span><% household.roleTags.forEach(role => { %><span class="payment-role-tag"><%= role %></span><% }) %></span><% if (household.linkedMemberNames.length) { %><small class="payment-linked-member">紐付け会員：<%= household.linkedMemberNames.join('・') %></small><% } %></span><span class="payment-status <%= household.payment?.paid ? 'is-paid' : '' %>"><%= household.payment?.paid ? '納付済み' : household.payment ? '未納' : '未納（記録なし）' %></span></summary>
+        <div class="payment-detail">
+          <form method="post" action="/associations/<%= association._id %>/leader/payments/<%= household._id %>/toggle">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="fiscalYear" value="<%= currentYear %>"><input type="hidden" name="viewYear" value="<%= fiscalYear %>">
+            <label class="payment-toggle"><strong><%= currentYear %>年度（今年度）</strong><input type="checkbox" role="switch" name="paid" aria-label="<%= household.displayName %>の<%= currentYear %>年度の納付済み" <%= household.currentPayment?.paid ? 'checked' : '' %> onchange="this.form.submit()"><span><%= household.currentPayment?.paid ? '納付済み' : '未納' %></span></label>
+          </form>
+          <h3>過去の納付状況</h3>
+          <% if (!household.history.length) { %><p class="help-text">過去の納付記録はありません。</p><% } else { %>
+          <ul class="payment-history"><% household.history.forEach(payment => { %><li><span><%= payment.fiscalYear %>年度</span><span><%= payment.paid ? '納付済み' : '未納' %></span></li><% }) %></ul>
+          <% } %>
+        </div>
+      </details>
+    <% }) %>
+    </div>
+  </section>
+</main>
+<script>(() => { const id = new URLSearchParams(location.search).get('household'); if (id) { const row = document.getElementById('payment-' + id); if (row) row.open = true; } })();</script>
+<%- include('partials/foot') %>

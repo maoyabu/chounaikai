@@ -9,6 +9,8 @@ import { DistrictGroup, Household, HouseholdMember } from '../models/organizatio
 import { JoinApplication, Invitation, WithdrawalApplication } from '../models/workflow.js';
 import { ResidentRegistration } from '../models/residentRegistration.js';
 import { ensureCanApply, decideJoinApplication, parseResidentProfile, notifyDistrictLeaders, loadLeaderDistrictIds } from '../services/householdParticipationService.js';
+import { AnnualOfficer } from '../models/annualOfficer.js';
+import { RoleAssignment } from '../models/role.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import crypto from 'node:crypto';
 import { loadLeaderHouseholdDeletion, deleteLeaderHousehold } from '../services/leaderHouseholdDeletionService.js';
@@ -209,20 +211,71 @@ householdsRouter.post('/:associationId/household/:householdId/members/:memberId/
 });
 
 
-householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
+householdsRouter.get('/:associationId/leader/payments', async (req, res, next) => {
   try {
-    const fiscalYear = Number(req.query.year || currentFiscalYear());
+    const currentYear = currentFiscalYear();
+    const fiscalYear = Number(req.query.year || currentYear);
     if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200) throw fail('年度を確認してください。');
     const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
     if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
-    const [association, districtGroups, households, payments, memberships] = await Promise.all([
+    const [association, districtGroups, households] = await Promise.all([
+      NeighborhoodAssociation.findById(req.params.associationId).lean(),
+      DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
+      Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').sort({ districtLabel: 1, displayName: 1 }).lean()
+    ]);
+    const householdIds = households.map(item => item._id);
+    const memberships = await AssociationMembership.find({ association: req.params.associationId, household: { $in: householdIds }, status: 'active' }).select('household user').lean();
+    const userIds = [...new Set([...households.flatMap(item => [item.representative?._id, item.feeRepresentative?._id]), ...memberships.map(item => item.user)].filter(Boolean).map(String))];
+    const periodStart = new Date(fiscalYear, 3, 1);
+    const periodEnd = new Date(fiscalYear + 1, 3, 1);
+    const [leaders, officers, roles] = await Promise.all([
+      AnnualLeaderAssignment.find({ association: req.params.associationId, fiscalYear, cancelledAt: null, $or: [{ representative: { $in: userIds } }, { household: { $in: householdIds } }] }).select('representative household').lean(),
+      AnnualOfficer.find({ association: req.params.associationId, fiscalYear, cancelledAt: null, user: { $in: userIds } }).populate('role', 'name').lean(),
+      RoleAssignment.find({ association: req.params.associationId, user: { $in: userIds }, startsAt: { $lt: periodEnd }, $or: [{ endsAt: null }, { endsAt: { $gte: periodStart } }] }).populate({ path: 'role', match: { active: true }, select: 'name' }).lean()
+    ]);
+    const payments = await AssociationFeePayment.find({ association: req.params.associationId, household: { $in: households.map(item => item._id) } }).sort({ fiscalYear: -1 }).lean();
+    const years = [...new Set([currentYear - 2, currentYear - 1, currentYear, currentYear + 1, fiscalYear, ...payments.map(item => item.fiscalYear)])].filter(year => year >= 2000 && year <= 2200).sort((a, b) => b - a);
+    const rows = households.map(household => {
+      const history = payments.filter(payment => String(payment.household) === String(household._id));
+      const linkedUsers = [household.representative, household.feeRepresentative].filter(Boolean);
+      const householdUserIds = new Set([...linkedUsers.map(user => String(user._id || user)), ...memberships.filter(item => String(item.household) === String(household._id)).map(item => String(item.user))]);
+      const roleTags = [...new Set([
+        ...leaders.filter(item => String(item.household) === String(household._id) || householdUserIds.has(String(item.representative))).map(() => '班長'),
+        ...[...officers, ...roles].filter(item => householdUserIds.has(String(item.user))).map(item => item.role?.name).filter(Boolean)
+      ])];
+      return { ...household, isLinked: householdUserIds.size > 0, linkedMemberNames: [...new Set(linkedUsers.map(user => user.displayname || user.username).filter(Boolean))], roleTags, history: history.filter(payment => payment.fiscalYear < currentYear), payment: history.find(payment => payment.fiscalYear === fiscalYear), currentPayment: history.find(payment => payment.fiscalYear === currentYear) };
+    });
+    return res.render('leader-payments', { title: `${fiscalYear}年度 町内会費納付管理`, association, districtGroups, fiscalYear, currentYear, years, households: rows });
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.post('/:associationId/leader/payments/:householdId/toggle', verifyCsrfToken, async (req, res, next) => {
+  try {
+    const fiscalYear = Number(req.body.fiscalYear);
+    if (fiscalYear !== currentFiscalYear()) throw fail('納付状況を変更できるのは今年度のみです。');
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
+    const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } });
+    if (!household) throw fail('担当班の世帯を確認できません。', 403);
+    const paid = req.body.paid === 'on';
+    await AssociationFeePayment.findOneAndUpdate({ association: req.params.associationId, household: household._id, fiscalYear }, { $set: { paid, paidAt: paid ? new Date() : null, checkedBy: req.user._id } }, { upsert: true, setDefaultsOnInsert: true, runValidators: true });
+    req.session.notice = paid ? '会費を納付済みにしました。' : '未納に戻しました。';
+    const viewYear = Number(req.body.viewYear);
+    const year = Number.isInteger(viewYear) && viewYear >= 2000 && viewYear <= 2200 ? viewYear : fiscalYear;
+    return res.redirect(`/associations/${req.params.associationId}/leader/payments?year=${year}&household=${household._id}#payment-${household._id}`);
+  } catch (error) { return next(error); }
+});
+
+householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
+  try {
+    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
+    const [association, districtGroups, households, memberships] = await Promise.all([
       NeighborhoodAssociation.findById(req.params.associationId).lean(),
       DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').populate('districtGroup', 'name').sort({ districtLabel: 1, displayName: 1 }).lean(),
-      AssociationFeePayment.find({ association: req.params.associationId, fiscalYear }).lean(),
       AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active' }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
     ]);
-    const paymentByHousehold = new Map(payments.map((item) => [String(item.household), item]));
     const [districtHouseholds, representativeMembers, linkedHouseholds] = await Promise.all([
       Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, representative: { $exists: true } }).select('representative').lean(),
       HouseholdMember.find({ association: req.params.associationId, household: { $in: memberships.map((item) => item.household?._id).filter(Boolean) }, isRepresentative: true, user: { $exists: true } }).select('household user').lean(),
@@ -235,34 +288,21 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
     memberships.forEach((item) => { if (item.user && item.household && linkedHouseholdIds.has(String(item.household._id))) linkedUserIds.add(String(item.user._id)); });
     const linkableHouseholds = households.filter((household) => !linkedHouseholdIds.has(String(household._id)));
     const leaderMembers = memberships.filter((item) => item.user && districtHeadIds.has(String(item.user._id)) && !linkedUserIds.has(String(item.user._id)));
-    return res.render('leader-fees', { title: `${fiscalYear}年度 班の世帯管理`, association, fiscalYear, districtGroups, households: households.map((household) => ({ ...household, representative: household.representative || household.feeRepresentative, payment: paymentByHousehold.get(String(household._id)) })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers, linkableHouseholds });
+    return res.render('leader-fees', { title: '班の世帯管理', association, districtGroups, households: households.map((household) => ({ ...household, representative: household.representative || household.feeRepresentative })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers, linkableHouseholds });
   } catch (error) { return next(error); }
 });
 
 householdsRouter.post('/:associationId/leader/fees/households', verifyCsrfToken, async (req, res, next) => {
   try {
     const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
+    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
     const districtGroup = String(districtIds[0]);
     const districtLabel = String(req.body.districtLabel || '').trim();
     const displayName = String(req.body.displayName || '').trim();
     if (!districtLabel || !displayName) throw fail('班区分と世帯名を入力してください。');
     await Household.create({ association: req.params.associationId, displayName, districtGroup, districtLabel, phone: String(req.body.phone || '').trim(), email: String(req.body.email || '').trim() });
     req.session.notice = '班の世帯台帳に追加しました。';
-    const fiscalYear = Number(req.body.fiscalYear || currentFiscalYear());
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${fiscalYear}`);
-  } catch (error) { return next(error); }
-});
-
-householdsRouter.post('/:associationId/leader/fees/:householdId/toggle', verifyCsrfToken, async (req, res, next) => {
-  try {
-    const fiscalYear = Number(req.body.fiscalYear || currentFiscalYear());
-    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
-    const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true });
-    if (!household) throw fail('担当班の世帯を確認できません。', 403);
-    const paid = req.body.paid === 'on';
-    await AssociationFeePayment.findOneAndUpdate({ association: req.params.associationId, household: household._id, fiscalYear }, { $set: { paid, paidAt: paid ? new Date() : null, checkedBy: req.user._id } }, { upsert: true, setDefaultsOnInsert: true });
-    req.session.notice = paid ? '会費を納入済みにしました。' : '未納に戻しました。';
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${fiscalYear}`);
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
   } catch (error) { return next(error); }
 });
 
@@ -277,7 +317,7 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/update', verifyC
     household.phone = String(req.body.phone || '').trim(); household.email = String(req.body.email || '').trim();
     await household.save();
     req.session.notice = '世帯情報を更新しました。';
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
   } catch (error) { return next(error); }
 });
 
@@ -288,7 +328,7 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/delete', verifyC
     if (!household) throw fail('担当班の世帯を確認できません。', 403);
     household.active = false; household.deletedAt = new Date(); household.deletedBy = req.user._id; await household.save();
     req.session.notice = '世帯を一覧から削除しました。';
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
   } catch (error) { return next(error); }
 });
 
@@ -301,12 +341,12 @@ householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async
     const alreadyLinked = household.representative || household.feeRepresentative || await Household.exists({ association: req.params.associationId, active: true, $or: [{ representative: membership.user }, { feeRepresentative: membership.user }, ...(membership.household ? [{ _id: membership.household, $or: [{ representative: { $ne: null } }, { feeRepresentative: { $ne: null } }] }] : [])] });
     if (alreadyLinked) {
       req.session.notice = '選択した世帯または会員は既に紐付け済みです。未紐付けの候補から選び直してください。';
-      return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+      return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
     }
     membership.household = household._id; await membership.save();
     household.feeRepresentative = membership.user; await household.save();
     req.session.notice = '会員と世帯を紐付けました。';
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees?year=${Number(req.body.fiscalYear || currentFiscalYear())}`);
+    return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
   } catch (error) { return next(error); }
 });
 
