@@ -12,7 +12,7 @@ import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js'
 const id = () => new mongoose.Types.ObjectId();
 const query = value => ({ populate() { return this; }, select() { return this; }, sort() { return this; }, lean() { return Promise.resolve(value); }, distinct() { return Promise.resolve(value); }, then(resolve, reject) { return Promise.resolve(value).then(resolve, reject); } });
 
-test('会員候補は班区分のない世帯への紐付けも除外する', async t => {
+for (const linked of [false, true]) test(linked ? '台帳に紐付け済みの会員は候補から除外する' : 'プロフィール世帯のある担当班の会員を候補に表示する', async t => {
   t.mock.method(AssociationFeePayment, 'find', () => { throw new Error('世帯管理では納付情報を取得しない'); });
   const user = id(), oldHousehold = id(), freeHousehold = id(), district = id();
   t.mock.method(AnnualLeaderAssignment, 'find', () => query([district]));
@@ -22,13 +22,15 @@ test('会員候補は班区分のない世帯への紐付けも除外する', as
   t.mock.method(HouseholdMember, 'find', () => query([]));
   t.mock.method(Household, 'find', filter => {
     if (filter.districtLabel) return query([{ _id: freeHousehold, districtLabel: '01' }]);
-    // Joining the association creates this household without districtLabel.
-    return query([{ _id: oldHousehold, representative: user }]);
+    assert.ok(filter.$or.some(condition => condition.districtLabel));
+    assert.ok(filter.$or.some(condition => condition.feeRepresentative));
+    return query(linked ? [{ _id: oldHousehold, feeRepresentative: user }] : []);
   });
   const handler = householdsRouter.stack.find(layer => layer.route?.path === '/:associationId/leader/fees' && layer.route.methods.get).route.stack.at(-1).handle;
   let result;
   await handler({ params: { associationId: String(id()) }, user: { _id: id() }, query: { year: 'invalid' } }, { render(view, data) { result = data; } }, error => { throw error; });
-  assert.deepEqual(result.members, []);
+  assert.equal(result.members.length, linked ? 0 : 1);
+  if (!linked) assert.equal(String(result.members[0].user._id), String(user));
   assert.equal(result.linkableHouseholds.length, 1);
   assert.equal(result.title, '班の世帯管理');
   assert.equal(result.fiscalYear, undefined);
@@ -42,14 +44,14 @@ test('会員候補は班区分のない世帯への紐付けも除外する', as
   assert.ok(!householdsRouter.stack.some(layer => layer.route?.path === '/:associationId/leader/fees/:householdId/toggle'));
 });
 
-test('班区分のない世帯に紐付いた会員の再送信では更新せず案内する', async t => {
+test('台帳に紐付いた会員の再送信では更新せず案内する', async t => {
   const user = id(), household = { _id: id() };
   t.mock.method(AnnualLeaderAssignment, 'find', () => query([id()]));
   const save = t.mock.fn();
   t.mock.method(AssociationMembership, 'findOne', () => query({ user, household: id(), save }));
   t.mock.method(Household, 'findOne', () => query(household));
   t.mock.method(Household, 'exists', filter => {
-    assert.equal(filter.districtLabel, undefined);
+    assert.ok(filter.$and[0].$or.some(condition => condition.districtLabel));
     return Promise.resolve({ _id: id() });
   });
   const req = { params: { associationId: String(id()) }, user: { _id: id() }, body: { userId: String(user), householdId: String(household._id), fiscalYear: 2026 }, session: {} };
@@ -59,4 +61,27 @@ test('班区分のない世帯に紐付いた会員の再送信では更新せ�
   assert.equal(save.mock.callCount(), 0);
   assert.match(req.session.notice, /既に紐付け済み/);
   assert.match(redirect, /leader\/fees$/);
+});
+
+for (const hasProfile of [false, true]) test(`未紐付け会員を保存できる（プロフィール世帯${hasProfile ? 'あり' : 'なし'}）`, async t => {
+  const user = id(), district = id();
+  const membership = { user, ...(hasProfile ? { household: id() } : {}), save: t.mock.fn() };
+  const household = { _id: id(), save: t.mock.fn() };
+  t.mock.method(AnnualLeaderAssignment, 'find', () => query([district]));
+  t.mock.method(AssociationMembership, 'findOne', filter => {
+    assert.deepEqual(filter.districtGroup.$in, [district]);
+    assert.equal(filter.status, 'active');
+    return query(membership);
+  });
+  t.mock.method(Household, 'findOne', () => query(household));
+  t.mock.method(Household, 'exists', filter => {
+    assert.ok(filter.$and[0].$or.some(condition => condition.districtLabel));
+    return Promise.resolve(null);
+  });
+  const request = { params: { associationId: String(id()) }, user: { _id: id() }, body: { userId: String(user), householdId: String(household._id) }, session: {} };
+  const handler = householdsRouter.stack.find(layer => layer.route?.path === '/:associationId/leader/fees/link').route.stack.at(-1).handle;
+  await handler(request, { redirect() {} }, error => { throw error; });
+  assert.equal(membership.save.mock.callCount(), 1);
+  assert.equal(household.save.mock.callCount(), 1);
+  assert.equal(household.feeRepresentative, user);
 });
