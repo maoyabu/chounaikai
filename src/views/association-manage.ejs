@@ -5,7 +5,7 @@
   <a class="back-link" href="/associations/<%= association._id %>">← <%= association.name %>へ戻る</a>
   <section class="page-heading association-title-heading"<% if (association.symbolImage?.url) { %> style="--symbol-url: url('<%= association.symbolImage.url %>')"<% } %>><div><p class="eyebrow">町内会管理</p><h1><%= association.name %> 運営管理</h1><p>参加申請の確認、役員・班長・住人の確認、町内会の設定を行います。</p></div></section>
   <div class="association-manage-layout">
-    <div class="association-manage-main">
+    <div class="association-manage-main"><a class="settings-entry-card" href="/associations/<%= association._id %>/manage/location-links"><strong>地区・班の確認依頼</strong><p>班長からの依頼を確認し、地区・班を統一して会員を紐付けます。</p></a>
       <section class="association-manage-section" aria-labelledby="manage-applications-heading">
         <div class="association-manage-section-heading"><div><p class="eyebrow">受付・承認</p><h2 id="manage-applications-heading">参加申請</h2></div></div>
         <a class="settings-entry-card association-manage-application" href="/associations/<%= association._id %>/manage/applications"><span class="settings-step">参加申請<% if (pendingApplicationCount) { %><span class="pending-count-badge"><%= pendingApplicationCount %>件</span><% } %></span><h3 class="manage-menu-title"><%- include('partials/officer-menu-icon', { icon: 'approval' }) %><span>住人の参加申請・世帯主からの招待</span></h3><p>招待元と世帯の確認状況を確認して、参加を承認できます。</p><strong>参加申請を確認 →</strong></a>

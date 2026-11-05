@@ -497,14 +497,13 @@ test('invitation page offers signup/login and binds acceptance to the exact invi
   assert.doesNotMatch(mismatch, /\/accept"/);
 });
 
-test('registration and joining expose general/resident routes and household-head email', async () => {
-  const registration = await render('register', { values: { residentMode: 'general', householdHeadEmail: 'head@example.test' } });
-  assert.match(registration, /name="householdHeadEmail"/);
-  assert.match(registration, /value="general" selected/);
+test('registration and joining use household-head participation and family invitations', async () => {
+  const registration = await render('register', { values: {} });
+  assert.match(registration, /name="residentMode" value="representative"/);
+  assert.doesNotMatch(registration, /name="householdHeadEmail"/);
   const joining = await render('household-application', { association, districtGroups: [{ _id: ids.district, name: '1班' }] });
-  assert.match(joining, /世帯主として登録する/);
-  assert.match(joining, /一般メンバーとして既存の世帯に参加する/);
-  assert.match(joining, /name="householdHeadEmail"/);
+  assert.match(joining, /name="residentMode" value="representative"/);
+  assert.doesNotMatch(joining, /name="householdHeadEmail"/);
   assert.match(joining, /メールアドレス <span class="required">必須<\/span><input type="email" name="email"[^>]*required/);
 });
 
@@ -538,7 +537,7 @@ test('guardian profile supports accounts and accountless children together with 
   assert.doesNotMatch(html, new RegExp(`/members/${ids.member}/update`));
   assert.match(html, /アカウント紐付け済み/);
   assert.match(html, new RegExp(`/members/${ids.member}/delete`));
-  assert.match(html, /このメンバーを世帯から削除/);
+  assert.match(html, /この家族を世帯から削除/);
   assert.match(html, /ユーザー名：hanako/);
   assert.match(html, /メールアドレス：hanako@example.test/);
   assert.match(html, new RegExp(`data-open-member-dialog="member-dialog-${ids.member}"`));
@@ -558,7 +557,8 @@ test('application status and onboarding pages render the household-confirmation 
   const html = await render('participation-status', { application: { association, districtGroup: { name: '1班' }, status: 'awaiting_household', source: 'household_link' } });
   assert.match(html, /世帯主の確認待ち/);
   const onboarding = await render('resident-onboarding', { associations: [association], registration: { residentMode: 'general', householdHeadEmail: 'head@example.test' } });
-  assert.match(onboarding, /head@example.test/);
+  assert.match(onboarding, /家族は世帯主が世帯情報に登録し、招待できます/);
+  assert.doesNotMatch(onboarding, /head@example.test/);
   assert.match(onboarding, new RegExp(`/associations/${ids.association}/join`));
 });
 
@@ -708,7 +708,8 @@ test('all new mutation endpoints require CSRF verification', () => {
     [householdInvitationsRouter, '/household-invitations/decline'],
     [householdInvitationsRouter, '/associations/:associationId/household/:householdId/members/:memberId/invite'],
     [householdInvitationsRouter, '/associations/:associationId/household/:householdId/invitations/:invitationId/cancel'],
-    [householdsRouter, '/:associationId/household/:householdId/applications/:applicationId/confirm'],
+    [householdsRouter, '/:associationId/leader/applications/:applicationId/approve'],
+    [householdsRouter, '/:associationId/leader/applications/:applicationId/reject'],
     [householdsRouter, '/:associationId/household/:householdId/members/:memberId/self-update'],
     [managementRouter, '/:associationId/manage/applications/:applicationId/approve']
   ];

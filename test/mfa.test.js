@@ -257,7 +257,7 @@ async function withMfaApp(task, siteSecurityService = { async get() { return { m
     };
   };
   ResidentRegistration.findOne = () => ({ async lean() { return null; } });
-  const menuReads = [[RoleAssignment, 'find'], [AnnualLeaderAssignment, 'find'], [AnnualOfficer, 'find'], [AssociationMembership, 'findOne'], [AssociationGroupMembership, 'find']].map(([model, method]) => [model, method, model[method]]);
+  const menuReads = [[RoleAssignment, 'find'], [AnnualLeaderAssignment, 'find'], [AnnualOfficer, 'find'], [AssociationMembership, 'findOne'], [AssociationMembership, 'find'], [AssociationGroupMembership, 'find']].map(([model, method]) => [model, method, model[method]]);
   for (const [model, method] of menuReads) model[method] = () => ({ populate() { return this; }, sort() { return this; }, async lean() { return method === 'findOne' ? null : []; } });
   const app = createApp({ mongoUri: 'mongodb://127.0.0.1:27017/unused', sessionSecret: 'mfa-http-test', mfaService: f.service, siteSecurityService, privacyAuditWriter: async () => {}, rateLimitStore: { async increment() { return 1; } } });
   const server = http.createServer(app);

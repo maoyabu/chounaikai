@@ -1,3 +1,4 @@
+import { handleLocationLink } from './locationLinks.js';
 import { loadMemberTags } from '../services/memberTagService.js';
 import { parseHazardMapUrl } from '../lib/hazardMap.js';
 import { optionalAssociationFeatures, parseAssociationFeatures } from '../services/associationFeatureService.js';
@@ -558,13 +559,7 @@ managementRouter.post('/:associationId/manage/annual/officers/create', requirePe
 
 managementRouter.post('/:associationId/manage/annual/officers/:officerId/link', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
-    const officer = await AnnualOfficer.findOne({ _id: req.params.officerId, association: req.params.associationId });
-    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active' });
-    if (!officer || !membership) throw fail('役員または会員を確認できません。', 404);
-    const changed = String(officer.user) !== String(membership.user);
-    officer.user = membership.user; await officer.save();
-    if (changed) await queueNotice({ association: req.params.associationId, recipients: [membership.user], type: 'officer_assigned', title: `${officer.fiscalYear}年度の役員に登録されました`, relatedId: officer._id });
-    req.session.notice = '役員に会員を紐付けました。'; return redirectAnnualSettings(res, req.params.associationId, officer.fiscalYear);
+    return await handleLocationLink(req, res, { kind: 'officer', recordId: req.params.officerId, manager: true });
   } catch (error) { return next(error); }
 });
 
@@ -704,21 +699,7 @@ managementRouter.post('/:associationId/manage/leaders/create', requirePermission
 
 managementRouter.post('/:associationId/manage/leaders/:leaderId/link', requirePermission('role.manage'), verifyCsrfToken, async (req, res, next) => {
   try {
-    const leader = await AnnualLeaderAssignment.findOne({ _id: req.params.leaderId, association: req.params.associationId });
-    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active' });
-    if (!leader || !membership) throw fail('班長または会員を確認できません。', 404);
-    const changed = String(leader.representative) !== String(membership.user);
-    // Reuse an existing ledger/profile household before creating a leader household.
-    let household = await Household.findOne({ association: req.params.associationId, active: true, $or: [{ feeRepresentative: membership.user }, { representative: membership.user }, ...(membership.household ? [{ _id: membership.household }] : [])] });
-    if (!household) {
-      household = await Household.create({ association: req.params.associationId, districtGroup: leader.districtGroup, districtLabel: '班長世帯', displayName: `${leader.name || '班長'}世帯`, feeRepresentative: membership.user });
-      membership.household = household._id;
-      membership.districtGroup = membership.districtGroup || leader.districtGroup;
-      await membership.save();
-    }
-    leader.representative = membership.user; leader.household = household._id; await leader.save();
-    if (changed) await queueNotice({ association: req.params.associationId, recipients: [membership.user], type: 'district_leader_assigned', title: `${leader.fiscalYear}年度の班長に登録されました`, relatedId: leader._id });
-    req.session.notice = '班長に会員を紐付けました。'; return redirectAnnualSettings(res, req.params.associationId, leader.fiscalYear);
+    return await handleLocationLink(req, res, { kind: 'leader', recordId: req.params.leaderId, manager: true });
   } catch (error) { return next(error); }
 });
 

@@ -1,7 +1,7 @@
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import ejs from 'ejs';
 import { fileURLToPath } from 'node:url';
 import { PasswordReset } from '../src/models/passwordReset.js';
 import { User } from '../src/models/user.js';
@@ -64,7 +64,7 @@ test('reset token validation enforces expiry and rejects malformed links', async
 
 test('password reset forms have CSRF and never expose the emailed token', async () => {
   for (const mode of ['request', 'reset', 'invalid', 'complete']) {
-    const html = await ejs.renderFile(fileURLToPath(new URL('../src/views/password-reset.ejs', import.meta.url)), { title: '再設定', csrfToken: 'csrf', mode, message: null, formError: null });
+    const html = await renderView(fileURLToPath(new URL('../src/views/password-reset.ejs', import.meta.url)), { title: '再設定', csrfToken: 'csrf', mode, message: null, formError: null });
     if (['request', 'reset'].includes(mode)) assert.match(html, /name="_csrf"/);
     assert.doesNotMatch(html, /name="token"/);
     assert.match(html, /\/login/);

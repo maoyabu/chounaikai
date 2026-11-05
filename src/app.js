@@ -1,3 +1,4 @@
+import { locationLinksRouter } from './routes/locationLinks.js';
 import { disasterInformationRouter } from './routes/disasterInformation.js';
 import { sheltersRouter } from './routes/shelters.js';
 import { safetyRouter } from './routes/safety.js';
@@ -155,6 +156,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/associations', officerAnnouncementsRouter);
   app.use('/associations', officerNetworkRouter);
   app.use('/associations', districtMessagesRouter);
+  app.use('/associations', locationLinksRouter);
   app.use('/associations', managementRouter);
   app.use('/associations', equipmentRouter);
   app.use('/associations', documentsRouter);

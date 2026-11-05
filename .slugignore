@@ -4,6 +4,6 @@ test/
 # scripts ディレクトリ全体は除外しない。
 coverage/
 .env.example
-README.md
+docs/
 *.test.js
 *.test.mjs

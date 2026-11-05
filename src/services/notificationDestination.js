@@ -13,6 +13,8 @@ export const notificationAction = (notification, context = {}) => {
     case 'good_place': return action(id ? `${base}/good-places/${id}` : `${base}/good-places`);
     case 'question_created': case 'question_reopened': return action(`${base}/questions/officer`, '質問を確認');
     case 'question_answered': return action(id ? `${base}/questions?open=own-${id}` : `${base}/questions`, '回答を確認');
+    case 'location_link_requested': return action(`${base}/manage/location-links`, '地区・班の確認依頼');
+    case 'location_link_decided': return action(`${base}/leader/fees`, '世帯管理を確認');
     case 'join_application_received': return action(manager ? `${base}/manage/applications` : leader ? `${base}/leader?tab=applications#application-${id}` : `${base}/participation`, '参加申請を確認');
     case 'join_application_approved': case 'join_application_rejected': return action(`${base}/participation`);
     case 'household_link_requested': case 'household_removed': return action('/profile?tab=household');

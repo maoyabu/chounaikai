@@ -1,15 +1,16 @@
+import { optionalAssociationFeatures } from '../src/services/associationFeatureService.js';
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ejs from 'ejs';
 import { provideCsrfToken, verifyCsrfToken } from '../src/middleware/csrf.js';
 import { createEmailVerification } from '../src/services/emailVerificationService.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test('login view renders the existing-account form', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/login.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/login.ejs'), {
     title: 'ログイン',
     csrfToken: 'test-token',
     errorMessage: null,
@@ -21,7 +22,7 @@ test('login view renders the existing-account form', async () => {
 });
 
 test('error view renders when session loading fails before user locals exist', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/error.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/error.ejs'), {
     title: 'エラー', message: 'データベースに接続できません。'
   });
   assert.match(html, /データベースに接続できません/);
@@ -29,7 +30,7 @@ test('error view renders when session loading fails before user locals exist', a
 });
 
 test('registration view renders shared-account fields', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/register.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/register.ejs'), {
     title: '新規会員登録',
     csrfToken: 'test-token',
     values: {},
@@ -42,24 +43,23 @@ test('registration view renders shared-account fields', async () => {
 });
 
 test('public association list offers both creation application paths', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-list.ejs'), {
-    title: '町内会一覧', currentUser: null, associations: [], currentPath: '/associations'
+  const html = await renderView(path.join(dirname, '../src/views/association-list.ejs'), {
+    title: '町内会一覧', currentUser: null, associations: [], prefectures: [], filters: {}, citiesByPrefecture: {}, currentPath: '/associations'
   });
   assert.match(html, /href="\/associations\/create\/start"/);
   assert.match(html, /href="\/associations\/create\/register"/);
-  assert.match(html, /href="\/login"/);
-  assert.match(html, /ログインして申請/);
-  assert.match(html, /新規会員登録して申請/);
+  assert.match(html, /href="\/associations\/create\/start">ログインして申請<\/a>/);
+  assert.match(html, /会員登録して申請/);
 });
 
 test('admin view provides association management', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/admin-dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/admin-dashboard.ejs'), {
     title: '管理者メニュー',
     csrfToken: 'test-token',
     notice: null,
     currentPath: '/admin',
     currentUser: { username: 'admin', email: 'admin@example.test', isAdmin: true },
-    associations: [],
+    associations: [], prefectures: [], filters: {}, citiesByPrefecture: {},
     stats: { total: 0, active: 0, pending: 0, users: 1 }
   });
   assert.match(html, /管理者メニュー/);
@@ -69,7 +69,7 @@ test('admin view provides association management', async () => {
 
 test('admin view exposes cleanup for pending registration and pending association', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/admin-dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/admin-dashboard.ejs'), {
     title: '管理者メニュー', csrfToken: 'test-token', notice: null, currentPath: '/admin',
     currentUser: { username: 'admin', email: 'admin@example.test', isAdmin: true },
     associations: [{ _id: id, name: '試験町内会', status: 'pending', requestedBy: null }],
@@ -82,7 +82,7 @@ test('admin view exposes cleanup for pending registration and pending associatio
 });
 
 test('hamburger hides admin links from regular users', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token',
     currentPath: '/dashboard',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false }
@@ -93,7 +93,7 @@ test('hamburger hides admin links from regular users', async () => {
 });
 
 test('header renders role tags beside the account name', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token', currentPath: '/dashboard',
     currentUser: { username: 'owner', email: 'owner@example.test', isAdmin: false },
     currentRoleTags: ['町内会管理者', '会長']
@@ -105,7 +105,7 @@ test('header renders role tags beside the account name', async () => {
 
 test('header renders an association manager menu for each managed association', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token', currentPath: '/dashboard',
     currentUser: { username: 'owner', email: 'owner@example.test', isAdmin: false }, currentRoleTags: ['町内会管理者'],
     currentManagerAssociations: [{ _id: id, name: 'テスト町内会' }], currentLeaderAssociations: [], currentHasAssociationMembership: true,
@@ -118,7 +118,7 @@ test('header renders an association manager menu for each managed association', 
 });
 
 test('header renders fiscal year and district in a leader role tag', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token', currentPath: '/dashboard',
     currentUser: { username: 'leader', email: 'leader@example.test', isAdmin: false },
     currentRoleTags: ['2026年度 1班 班長']
@@ -127,7 +127,7 @@ test('header renders fiscal year and district in a leader role tag', async () =>
 });
 
 test('header links to profile and renders an existing avatar', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token', currentPath: '/profile',
     currentUser: { username: 'member', displayname: '山田 太郎', email: 'member@example.test', avatar: 'https://res.cloudinary.com/example/image/upload/avatar.jpg', isAdmin: false },
     currentRoleTags: []
@@ -139,7 +139,7 @@ test('header links to profile and renders an existing avatar', async () => {
 });
 
 test('header hides household and association application links for an existing member', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/partials/header.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/partials/header.ejs'), {
     csrfToken: 'test-token', currentPath: '/dashboard',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false },
     currentRoleTags: [], currentLeaderAssociations: [], currentHasAssociationMembership: true
@@ -153,7 +153,7 @@ test('header hides household and association application links for an existing m
 
 test('dashboard heading links the association with district and member attribute tags', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/dashboard.ejs'), {
     title: '町内会ホーム', csrfToken: 'x', notice: null, currentPath: '/dashboard',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false }, currentRoleTags: [],
     memberships: [{ association: { _id: id, name: '戸塚区吉田町町内会' }, districtGroup: { name: '1109班' }, memberTags: ['役員', '班長'] }],
@@ -167,9 +167,9 @@ test('dashboard heading links the association with district and member attribute
   assert.doesNotMatch(html, /class="association-grid"/);
 });
 
-test('dashboard notifications start collapsed with unread count and disabled confirmed action', async () => {
+test('dashboard notifications start collapsed with unread count and confirmed status', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/dashboard.ejs'), {
     title: '町内会ホーム', csrfToken: 'token', notice: null, currentPath: '/dashboard', currentUser: { username: 'member', email: 'member@example.test' }, currentRoleTags: [],
     memberships: [], applications: [], pendingJoins: [], availableAssociations: [], residentRegistration: null,
     notifications: [
@@ -181,11 +181,12 @@ test('dashboard notifications start collapsed with unread count and disabled con
   assert.match(html, /未読 1件/);
   assert.match(html, new RegExp(`/notifications/${id}/read`));
   assert.match(html, new RegExp(`/notifications/${id}/delete`));
-  assert.match(html, /disabled>確認済み<\/button>/);
+  assert.match(html, /class="status-badge">確認済み<\/span>/);
+  assert.doesNotMatch(html, /notifications\/507f1f77bcf86cd799439012\/read/);
 });
 
 test('profile view supports shared profile fields and an image upload', async () => {
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/profile.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/profile.ejs'), {
     title: 'プロフィール変更', csrfToken: 'test-token', notice: null, formError: null, currentPath: '/profile',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false },
     currentRoleTags: [], values: { username: 'member', displayname: '山田 太郎', email: 'member@example.test', avatar: '' }
@@ -199,7 +200,7 @@ test('profile view supports shared profile fields and an image upload', async ()
 
 test('profile view provides tabbed household and member management', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/profile.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/profile.ejs'), {
     title: 'プロフィール管理', csrfToken: 'test-token', notice: null, formError: null, currentPath: '/profile',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false }, currentRoleTags: [],
     values: { username: 'member', displayname: '山田 太郎', email: 'member@example.test', avatar: '' },
@@ -208,18 +209,18 @@ test('profile view provides tabbed household and member management', async () =>
   });
   assert.match(html, /data-profile-tab="account"/);
   assert.match(html, /data-profile-tab="household"/);
-  assert.match(html, /同一世帯のメンバー/);
+  assert.match(html, /<h2>家族<\/h2>/);
   assert.match(html, /data-open-member-dialog/);
   assert.match(html, /class="household-member-dialog"/);
   assert.match(html, /name="postalCode"/);
   assert.match(html, /name="lineAccount"/);
-  assert.match(html, /世帯メンバーを追加/);
+  assert.match(html, /家族を追加/);
 });
 
 test('profile view allows household registration after joining an association', async () => {
   const id = '507f1f77bcf86cd799439011';
   const districtId = '507f191e810c19729de860ea';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/profile.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/profile.ejs'), {
     title: 'プロフィール管理', csrfToken: 'test-token', notice: null, formError: null, currentPath: '/profile',
     currentUser: { username: 'member', email: 'member@example.test', isAdmin: false }, currentRoleTags: [],
     values: { username: 'member', displayname: '山田 太郎', email: 'member@example.test', avatar: '' },
@@ -256,7 +257,7 @@ test('email verification creates an expiring token and stores only its digest', 
 
 test('association management view exposes required management areas', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-manage.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-manage.ejs'), {
     title: '管理', assetVersion: 'test', showNotificationPrompt: false, pendingApplicationCount: 0, pendingGroupRequestCount: 0, csrfToken: 'test-token', notice: null, currentPath: `/associations/${id}/manage`,
     currentUser: { username: 'owner', email: 'owner@example.test' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027,
     departments: [], districtGroups: [], roles: [], officers: [], memberships: [], leaderAssignments: [], households: []
@@ -264,8 +265,8 @@ test('association management view exposes required management areas', async () =
   assert.match(html, /部/);
   assert.match(html, /班/);
   assert.match(html, /役員/);
-  assert.match(html, /<strong>基本設定<\/strong>/);
-  assert.match(html, /<strong>年度設定<\/strong>/);
+  assert.match(html, /manage\/basic/);
+  assert.match(html, /manage\/annual/);
   assert.match(html, /2027年度の役員一覧/);
   assert.match(html, /2027年度の班長一覧/);
   assert.match(html, /テスト町内会住人一覧/);
@@ -273,7 +274,7 @@ test('association management view exposes required management areas', async () =
 
 test('basic settings are ordered as roles, departments, districts and name', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-basic-settings.ejs'), { title: '基本設定', csrfToken: 'x', notice: null, currentPath: '/basic', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: 'テスト町内会' }, roles: [], departments: [], districtGroups: [] });
+  const html = await renderView(path.join(dirname, '../src/views/association-basic-settings.ejs'), { title: '基本設定', optionalAssociationFeatures, csrfToken: 'x', notice: null, currentPath: '/basic', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: 'テスト町内会' }, roles: [], departments: [], districtGroups: [] });
   const positions = ['id="roles"', 'id="departments"', 'id="district-groups"', 'id="association-name"'].map((text) => html.indexOf(text));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -285,8 +286,9 @@ test('basic settings are ordered as roles, departments, districts and name', asy
 
 test('annual settings support officer assignments and district leaders', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-annual-settings.ejs'), { title: '年度設定', csrfToken: 'x', notice: null, currentPath: '/annual', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027, memberships: [], householdRepresentatives: [{ user: { _id: id, displayname: '山田 太郎', email: 'taro@example.test' }, household: { displayName: '山田世帯', address: {} }, districtGroup: { _id: id, name: '1班' }, residentProfile: { name: '山田 太郎' }, attributeTags: ['役員'] }], officers: [], roles: [], departments: [], districtGroups: [{ _id: id, name: '1班' }], leaderAssignments: [] });
-  assert.match(html, /2027年度の運営体制/);
+  const html = await renderView(path.join(dirname, '../src/views/association-annual-settings.ejs'), { title: '年度設定', officerRecords: [], leaderRecords: [], officerCandidates: [], leaderCandidates: [], departmentPlans: [], csrfToken: 'x', notice: null, currentPath: '/annual', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027, memberships: [], householdRepresentatives: [{ user: { _id: id, displayname: '山田 太郎', email: 'taro@example.test' }, household: { displayName: '山田世帯', address: {} }, districtGroup: { _id: id, name: '1班' }, residentProfile: { name: '山田 太郎' }, attributeTags: ['役員'] }], officers: [], roles: [], departments: [], districtGroups: [{ _id: id, name: '1班' }], leaderAssignments: [] });
+  assert.match(html, /value="2027" selected/);
+  assert.match(html, /の運営体制/);
   assert.match(html, /世帯主から役員を選定・設定/);
   assert.match(html, /officer-resident-search/);
   assert.match(html, />所属班<select name="membershipDistrictGroupId"/);
@@ -304,8 +306,8 @@ test('annual selections move assigned officers and leaders into lower groups', a
     { user: { _id: '507f1f77bcf86cd799439013', displayname: '役員B', email: 'b@example.test' }, officer: { _id: '507f1f77bcf86cd799439014' } },
     { user: { _id: '507f1f77bcf86cd799439015', displayname: '班長C', email: 'c@example.test' }, leaderAssignment: { _id: '507f1f77bcf86cd799439016' } }
   ].map(item => ({ ...item, household: { address: {} }, districtGroup: { _id: associationId, name: '1班' }, attributeTags: [] }));
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-annual-settings.ejs'), {
-    title: '年度設定', csrfToken: 'x', notice: null, currentPath: '/annual', currentUser: { username: 'owner', email: 'o@x' },
+  const html = await renderView(path.join(dirname, '../src/views/association-annual-settings.ejs'), {
+    title: '年度設定', officerRecords: [], leaderRecords: [], officerCandidates: [], leaderCandidates: [], departmentPlans: [], csrfToken: 'x', notice: null, currentPath: '/annual', currentUser: { username: 'owner', email: 'o@x' },
     association: { _id: associationId, name: 'テスト町内会' }, fiscalYear: 2027, memberships: [], householdRepresentatives: representatives,
     officers: [], roles: [], departments: [], districtGroups: [{ _id: associationId, name: '1班' }], leaderAssignments: []
   });
@@ -319,7 +321,7 @@ test('annual selections move assigned officers and leaders into lower groups', a
 
 test('officer directory renders the selected fiscal year and officer details', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-officers.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-officers.ejs'), {
     title: '2027年度の役員一覧', csrfToken: 'x', notice: null, currentPath: '/officers', currentUser: { username: 'owner', email: 'o@x' },
     association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027, roles: [{ _id: id, name: '会長' }], departments: [{ _id: id, name: '総務部' }], districtGroups: [{ _id: id, name: '1班' }],
     officers: [{ user: { displayname: '山田 太郎', email: 'taro@example.test' }, role: { name: '会長' }, department: { name: '総務部' }, membership: { districtGroup: { name: '1班' }, household: { displayName: '山田世帯', address: { postalCode: '100-0001', street: '東京都' } } } }]
@@ -334,7 +336,7 @@ test('officer directory renders the selected fiscal year and officer details', a
 
 test('leader directory supports fiscal year selection and searchable rows', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-leaders.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-leaders.ejs'), {
     title: '2027年度の班長一覧', csrfToken: 'x', notice: null, currentPath: '/leaders', currentUser: { username: 'owner', email: 'o@x' },
     association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027, districtGroups: [{ _id: id, name: '1班' }],
     leaders: [{ representative: { _id: id, displayname: '山田 太郎', email: 'taro@example.test', avatar: '' }, districtGroup: { _id: id, name: '1班' }, membership: { districtGroup: { _id: id, name: '1班' } }, household: { address: { postalCode: '100-0001', street: '東京都' } } }]
@@ -343,18 +345,18 @@ test('leader directory supports fiscal year selection and searchable rows', asyn
   assert.match(html, /name="year"/);
   assert.match(html, /山田 太郎/);
   assert.match(html, /leader-directory-search/);
-  assert.match(html, /name="membershipDistrictGroupId"/);
-  assert.match(html, /data-open-leader-dialog/);
+  assert.match(html, /manage\/annual\/leaders\//);
+  assert.match(html, /data-open-record="leader-/);
 });
 
 test('resident association detail shares the public page layout and shows resident actions', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-detail.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-detail.ejs'), {
     title: '町内会', csrfToken: 'x', notice: null, currentPath: `/associations/${id}`, currentUser: { username: 'member', isAdmin: false },
-    association: { _id: id, name: 'テスト町内会', status: 'active', contact: { email: 'contact@example.test' }, introduction: 'ご案内' },
+    association: { _id: id, name: 'テスト町内会', status: 'active', optionalFeatures: { events: true }, contact: { email: 'contact@example.test' }, introduction: 'ご案内' },
     associationManager: { displayname: '山田 管理者' }, membership: {}, canManage: false,
-    pageData: { events: [], months: [{ label: '2026年9月', cells: ['2026-09-01'] }], calendarWindow: { currentMonth: '2026-09', previousMonth: '2026-08', nextMonth: '2026-10' }, fiscalYear: 2026,
-      officers: [{ user: { displayname: '山田 太郎' }, role: { name: '会長' } }], householdCount: 2, residentCount: 5,
+    pageData: { departmentPlans: [], events: [], months: [{ label: '2026年9月', cells: ['2026-09-01'] }], calendarWindow: { currentMonth: '2026-09', previousMonth: '2026-08', nextMonth: '2026-10' }, fiscalYear: 2026,
+      officers: [{ displayLabel: '山田 太郎', user: { displayname: '山田 太郎' }, role: { name: '会長' } }], householdCount: 2, residentCount: 5,
       districtStats: [{ name: '１班', householdCount: 2, residentCount: 5 }] }
   });
   assert.match(html, /町内会の基本情報/);
@@ -368,11 +370,11 @@ test('resident association detail shares the public page layout and shows reside
 
 test('public officer page shows role name officer name and department', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-public-officers.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-public-officers.ejs'), {
     title: '役員', csrfToken: 'x', currentPath: '/officers', currentUser: { username: 'member' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027,
-    officers: [{ user: { displayname: '山田 太郎', avatar: '' }, role: { name: '会長' }, department: { name: '総務部' } }]
+    officers: [{ displayLabel: '山田 太郎', user: { displayname: '山田 太郎', avatar: '' }, role: { name: '会長' }, department: { name: '総務部' } }]
   });
-  assert.match(html, /2027年度の役員/);
+  assert.match(html, /2027年度/);
   assert.match(html, /会長/);
   assert.match(html, /山田 太郎/);
   assert.match(html, /総務部/);
@@ -380,7 +382,7 @@ test('public officer page shows role name officer name and department', async ()
 
 test('member directory provides district role department and free-word filters', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-members.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/association-members.ejs'), {
     title: '住人一覧', csrfToken: 'x', currentPath: '/members', currentUser: { username: 'owner' }, association: { _id: id, name: 'テスト町内会' }, fiscalYear: 2027,
     districtGroups: [{ _id: id, name: '1班' }], roles: [{ _id: id, name: '会長' }], departments: [{ _id: id, name: '総務部' }],
     members: [{ user: { displayname: '山田 太郎', email: 'taro@example.test', avatar: '' }, districtGroup: { _id: id, name: '1班' }, household: { address: { postalCode: '100-0001', street: '東京都' } }, officer: { role: { _id: id, name: '会長' }, department: { _id: id, name: '総務部' } }, isLeader: true, isAssociationManager: false }]
@@ -397,7 +399,7 @@ test('member directory provides district role department and free-word filters',
 
 test('order settings provide move controls for roles, departments and districts', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/association-order-settings.ejs'), { title: '並び順', csrfToken: 'x', notice: null, currentPath: '/order', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: '町内会' }, roles: [{ _id: id, name: '会長' }], departments: [{ _id: id, name: '総務部' }], districtGroups: [{ _id: id, name: '1班' }] });
+  const html = await renderView(path.join(dirname, '../src/views/association-order-settings.ejs'), { title: '並び順', csrfToken: 'x', notice: null, currentPath: '/order', currentUser: { username: 'owner', email: 'o@x' }, association: { _id: id, name: '町内会' }, roles: [{ _id: id, name: '会長' }], departments: [{ _id: id, name: '総務部' }], districtGroups: [{ _id: id, name: '1班' }] });
   assert.match(html, /並び順設定/);
   assert.match(html, /name="itemId"/);
   assert.match(html, /上へ移動/);
@@ -406,7 +408,7 @@ test('order settings provide move controls for roles, departments and districts'
 
 test('leader view renders pending application count and district members', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/leader-dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/leader-dashboard.ejs'), {
     title: '班長', csrfToken: 'test-token', notice: null, currentPath: `/associations/${id}/leader`,
     currentUser: { username: 'owner', email: 'owner@example.test' }, association: { _id: id, name: 'テスト町内会' },
     districtGroups: [{ _id: id, name: '1班' }], fiscalYear: 2026,
@@ -419,7 +421,7 @@ test('leader view renders pending application count and district members', async
 
 test('leader member list shows a household count and hides private contact details', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/leader-dashboard.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/leader-dashboard.ejs'), {
     title: '班長', csrfToken: 'test-token', notice: null, currentPath: `/associations/${id}/leader`,
     currentUser: { username: 'leader', email: 'leader@example.test' }, association: { _id: id, name: 'テスト町内会' },
     districtGroups: [{ _id: id, name: '1班' }], fiscalYear: 2026, applications: [],
@@ -433,7 +435,7 @@ test('leader member list shows a household count and hides private contact detai
 
 test('household application view requires association, district and representative details', async () => {
   const id = '507f1f77bcf86cd799439011';
-  const html = await ejs.renderFile(path.join(dirname, '../src/views/household-application.ejs'), {
+  const html = await renderView(path.join(dirname, '../src/views/household-application.ejs'), {
     title: '参加申請', csrfToken: 'test-token', currentPath: `/associations/${id}/join`,
     currentUser: { username: 'member', email: 'member@example.test' }, currentRoleTags: [],
     association: { _id: id, name: 'テスト町内会' }, districtGroups: [{ _id: id, name: '1班' }], values: {}

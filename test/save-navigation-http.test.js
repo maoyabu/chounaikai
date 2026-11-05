@@ -1,3 +1,4 @@
+import { stubNavigation } from '../test-support/navigation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -21,6 +22,7 @@ const start = async t => {
     req.user = req.isAuthenticated() ? { _id: id, isAdmin: true, displayname: '管理者' } : null;
     next();
   });
+  stubNavigation(t);
   app.use(webRouter); app.use('/associations', managementRouter);
   app.use((error, _req, res, _next) => res.status(error.status || 500).send(error.message));
   const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');

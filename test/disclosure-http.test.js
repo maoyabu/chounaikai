@@ -1,3 +1,4 @@
+import { stubNavigation } from '../test-support/navigation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -27,7 +28,7 @@ const start = async (t, { realRender = false } = {}) => {
     if (!realRender) res.render = (view, locals) => res.json({ view, ...locals });
     next();
   });
-  if (realRender) app.use(webRouter);
+  if (realRender) { stubNavigation(t); app.use(webRouter); }
   app.use(disclosureRouter); app.get('/login', (_req, res) => res.send('login accessible'));
   app.use((err, _req, res, _next) => res.status(err.status || 500).json({ error: err.message }));
   const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');

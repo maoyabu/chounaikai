@@ -131,7 +131,7 @@ test('personal disclosure returns to profile and policy returns to basic setting
   t.mock.method(AnnualOfficer, 'exists', async () => true); t.mock.method(AssociationMembership, 'exists', async () => true);
   t.mock.method(DisclosureConsent, 'findOneAndUpdate', async () => {}); t.mock.method(NeighborhoodAssociation, 'updateOne', async () => ({ matchedCount: 1 }));
   const own = await invoke(disclosureRouter, '/profile/disclosure/:associationId', { body: { ...defaultPolicy, policyRevision: '0', confirmDisclosure: 'yes' } });
-  assert.equal(own.error, undefined); assert.equal(own.res.location, '/profile');
+  assert.equal(own.error, undefined); assert.equal(own.res.location, '/profile?tab=disclosure');
   const policy = await invoke(disclosureRouter, '/associations/:associationId/manage/disclosure', { body: { ...defaultPolicy, policyRevision: '0' } });
   assert.equal(policy.error, undefined); assert.equal(policy.res.location, `/associations/${id}/manage/basic`);
 });

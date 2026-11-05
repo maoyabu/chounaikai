@@ -1,0 +1,12 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow">
+<a class="back-link" href="<%= backUrl %>">← 登録を中止して戻る</a>
+<section class="content-card"><h1>地区・班が一致していません</h1><p><strong><%= memberName %></strong>の会員紐付けを確認します。</p><div class="alert" role="alert">登録はまだ完了していません。正しい地区・班を選んでください。</div>
+<% conflictRows.forEach(row => { %><p><strong><%= row.typeLabel %><%= row.fiscalYear ? `（${row.fiscalYear}年度）` : '' %></strong>：<%= row.label %></p><% }) %>
+<p>統一の対象：会員・家族 <%= impact.memberships %>件、世帯・台帳 <%= impact.households %>件、役員 <%= impact.officers %>件、班長 <%= impact.leaders %>件。処理待ちの世帯の参加申請も合わせて変更します。</p>
+<p>班長の地区・班を変更すると担当範囲と利用権限も変わります。現在利用対象の年度・将来年度の役員と班長の情報、および今回選択した記録を更新します。それ以外の過去年度の記録は変更しません。</p>
+<% if (!manager) { %><p class="help-text">地区・班の変更は管理者が確認します。承認されるまで紐付けを保留し、登録情報は変更しません。</p><% } %>
+<form method="post" action="<%= action %>" class="form-stack"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="userId" value="<%= userId %>"><input type="hidden" name="householdId" value="<%= typeof householdId !== 'undefined' ? householdId : '' %>"><input type="hidden" name="confirmationToken" value="<%= confirmationToken %>">
+<fieldset><legend>正しい地区・班</legend><% choices.forEach(choice => { %><label><input type="radio" name="districtId" value="<%= choice.id %>" required> <%= choice.label %><%= choice.id === requestedDistrict ? '（班長の希望）' : '' %></label><% }) %></fieldset>
+<div class="form-actions"><button class="button button-primary"><%= manager ? '選択した地区・班に統一して登録' : '管理者へ確認を依頼する' %></button><a class="button button-quiet" href="<%= backUrl %>">登録を中止</a></div></form>
+</section></main><%- include('partials/foot') %>

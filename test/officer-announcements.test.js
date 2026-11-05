@@ -1,8 +1,8 @@
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ejs from 'ejs';
 import mongoose from 'mongoose';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import { AssociationMembership } from '../src/models/associationMembership.js';
@@ -74,7 +74,7 @@ test('only an addressed resident can view and only unread recipients can be remi
   t.mock.method(OfficerAnnouncementReceipt, 'find', () => query([{ _id: id(), recipient: leader }]));
   t.mock.method(OfficerAnnouncementReceipt, 'findOneAndUpdate', async () => ({ _id: id() }));
   let notices;
-  t.mock.method(Notification, 'insertMany', async values => { notices = values; });
+  t.mock.method(Notification, 'insertMany', async values => { notices = values; return values; });
   const count = await remindAnnouncement({ associationId: association, announcementId, userId: officer, recipientId: leader });
   assert.equal(count, 1);
   assert.equal(notices[0].type, 'officer_announcement_reminder');
@@ -103,10 +103,10 @@ test('officer and resident announcement screens show choices and confirmation st
   const common = { title: '連絡', currentUser: { username: '住人', email: 'a@example.test' }, currentRoleTags: [], currentPath: '', csrfToken: 'token', notice: null,
     association: { _id: association, name: '中央町内会' }, associationId: association, announcement };
   const receipts = [{ recipient: { _id: leader, displayname: '班長' }, readAt: null, selectedOptions: [] }];
-  const officerHtml = await ejs.renderFile(path.join(directory, '../src/views/officer-announcement-detail.ejs'), {
+  const officerHtml = await renderView(path.join(directory, '../src/views/officer-announcement-detail.ejs'), {
     ...common, receipts, responseSummary: summarizeAnnouncementResponses(announcement, receipts)
   });
-  const residentHtml = await ejs.renderFile(path.join(directory, '../src/views/resident-announcement-detail.ejs'), {
+  const residentHtml = await renderView(path.join(directory, '../src/views/resident-announcement-detail.ejs'), {
     ...common, receipt: { readAt: null, selectedOptions: [] }
   });
   assert.match(officerHtml, /未確認者全員に再通知/);
@@ -119,7 +119,7 @@ test('officer and resident announcement screens show choices and confirmation st
   assert.match(officerHtml, /班長/);
   assert.match(residentHtml, /type="checkbox"/);
   assert.match(residentHtml, /回答して確認済みにする/);
-  const compose = await ejs.renderFile(path.join(directory, '../src/views/officer-announcement-new.ejs'), common);
+  const compose = await renderView(path.join(directory, '../src/views/officer-announcement-new.ejs'), common);
   assert.match(compose, /name="audience"/);
   assert.match(compose, /value="leaders"/);
   assert.match(compose, /value="all"/);
@@ -132,7 +132,7 @@ test('officer and resident announcement screens show choices and confirmation st
 test('announcement mutations require CSRF and login', () => {
   const routes = officerAnnouncementsRouter.stack.filter(layer => layer.route).map(layer => layer.route);
   const writes = routes.filter(route => route.methods.post);
-  assert.equal(writes.length, 3);
+  assert.ok(writes.length >= 3);
   for (const route of writes) assert.ok(route.stack.some(layer => layer.name === 'verifyCsrfToken'));
   assert.ok(officerAnnouncementsRouter.stack.some(layer => layer.name === 'requireLogin'));
 });

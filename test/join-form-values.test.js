@@ -1,6 +1,6 @@
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import ejs from 'ejs';
 import { fileURLToPath } from 'node:url';
 import { Household, HouseholdMember, DistrictGroup } from '../src/models/organization.js';
 import { AssociationMembership } from '../src/models/associationMembership.js';
@@ -49,24 +49,24 @@ test('current account birth date and gender override older household copies', as
   assert.equal(values.gender, 'unspecified');
 });
 
-test('former head now defaults to general registration with the new head email', async t => {
+test('former head rejoins as a representative without a household-head email shortcut', async t => {
   setup(t, { ...member, household: { ...household, active: true, representative: { _id: 'new-head', email: 'head@example.test' } } });
   const values = await load();
-  assert.equal(values.residentMode, 'general');
-  assert.equal(values.householdHeadEmail, 'head@example.test');
+  assert.equal(values.residentMode, 'representative');
+  assert.equal(values.householdHeadEmail, undefined);
 });
 
-test('pending onboarding selection is preserved and earlier application profile is a fallback', async t => {
+test('earlier application details are preserved without restoring retired self-link registration', async t => {
   setup(t, null, { residentProfile: member, applicantNote: '以前のメッセージ', districtGroup: 'district' }, { residentMode: 'general', householdHeadEmail: 'chosen@example.test' });
   const values = await load();
   assert.equal(values.representativeKana, member.nameKana);
-  assert.equal(values.residentMode, 'general');
-  assert.equal(values.householdHeadEmail, 'chosen@example.test');
+  assert.equal(values.residentMode, 'representative');
+  assert.equal(values.householdHeadEmail, undefined);
   assert.equal(values.applicantNote, '以前のメッセージ');
   assert.equal(values.street, '');
 });
 
-test('general member defaults to the active household head district', async t => {
+test('retired household-head email does not select another household district', async t => {
   setup(t, null, null, { residentMode: 'general', householdHeadEmail: 'HEAD@example.test' });
   User.findOne.mock.mockImplementation(filter => {
     assert.equal(filter.email, 'head@example.test');
@@ -79,7 +79,7 @@ test('general member defaults to the active household head district', async t =>
   t.mock.method(AssociationMembership, 'exists', async () => ({ _id: 'membership' }));
   t.mock.method(DistrictGroup, 'exists', async () => ({ _id: 'head-district' }));
   const values = await load();
-  assert.equal(values.districtGroupId, 'head-district');
+  assert.equal(values.districtGroupId, '');
 });
 
 test('general member does not default to an inactive household district', async t => {
@@ -104,8 +104,8 @@ test('first participation uses account information and leaves unknown fields emp
 test('participation form renders saved values and selected district and gender safely', async t => {
   setup(t, { ...member, household: { ...household, address: { ...household.address, street: '住所"<script>' } } });
   const values = await load();
-  const html = await ejs.renderFile(fileURLToPath(new URL('../src/views/household-application.ejs', import.meta.url)), { title: '参加申請', currentUser: user, currentPath: '/join', csrfToken: 'csrf', association: { _id: 'association', name: '町内会' }, districtGroups: [{ _id: 'district', name: '1班' }], values });
-  assert.match(html, /value="district" selected/);
+  const html = await renderView(fileURLToPath(new URL('../src/views/household-application.ejs', import.meta.url)), { title: '参加申請', currentUser: user, currentPath: '/join', csrfToken: 'csrf', association: { _id: 'association', name: '町内会' }, districtGroups: [{ _id: 'district', name: '1班' }], values });
+  assert.match(html, /name="districtGroupId" id="join-district-group" value="district"/);
   assert.match(html, /value="male" selected/);
   assert.match(html, /value="1990-04-01"/);
   assert.match(html, /value="やまだ たろう"/);

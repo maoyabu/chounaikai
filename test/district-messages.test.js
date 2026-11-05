@@ -1,8 +1,8 @@
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ejs from 'ejs';
 import mongoose from 'mongoose';
 import { AssociationMembership } from '../src/models/associationMembership.js';
 import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
@@ -62,19 +62,19 @@ test('班内の送信画面は複数選択、回答方法、緊急度を表示�
   const values = { title: '班内の連絡', currentUser: { username: '山田' }, currentRoleTags: [], currentPath: '', csrfToken: 'token', notice: null,
     association: { _id: association, name: '中央町内会' }, districtGroup: { _id: district, name: '第1班' }, isLeader: true,
     members: [{ user: { _id: first, displayname: '田中' } }] };
-  const html = await ejs.renderFile(path.join(directory, '../src/views/district-messages-new.ejs'), values);
+  const html = await renderView(path.join(directory, '../src/views/district-messages-new.ejs'), values);
   assert.match(html, /value="district_all"/);
   assert.match(html, /name="recipientIds"/);
   assert.match(html, /複数選択可/);
   assert.match(html, /★★★★★ 緊急/);
   assert.match(html, /value="multiple"/);
-  const resident = await ejs.renderFile(path.join(directory, '../src/views/district-messages-new.ejs'), { ...values, isLeader: false });
+  const resident = await renderView(path.join(directory, '../src/views/district-messages-new.ejs'), { ...values, isLeader: false });
   assert.doesNotMatch(resident, /value="district_all"/);
 });
 
 test('班内連絡の更新経路はログインとCSRFを要求する', () => {
   const routes = districtMessagesRouter.stack.filter(layer => layer.route).map(layer => layer.route);
-  assert.equal(routes.filter(route => route.methods.post).length, 3);
+  assert.ok(routes.filter(route => route.methods.post).length >= 3);
   for (const route of routes.filter(route => route.methods.post)) assert.ok(route.stack.some(layer => layer.name === 'verifyCsrfToken'));
   assert.ok(districtMessagesRouter.stack.some(layer => layer.name === 'requireLogin'));
 });

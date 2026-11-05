@@ -1,7 +1,7 @@
+import { renderView } from '../test-support/renderView.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
-import ejs from 'ejs';
 import { fileURLToPath } from 'node:url';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import { Household, HouseholdMember, DistrictGroup } from '../src/models/organization.js';
@@ -220,7 +220,7 @@ test('removing a leader own household returns an outcome suitable for redirectin
   assert.equal(result.removedOwnMembership, true);
 });
 
-const render = (name, data) => ejs.renderFile(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: actor, ...data });
+const render = (name, data) => renderView(fileURLToPath(new URL(`../src/views/${name}.ejs`, import.meta.url)), { title: 'テスト', csrfToken: 'csrf', notice: null, currentPath: '/', currentUser: actor, ...data });
 
 test('confirmation page shows members, account preservation, cancel and explicit confirmation', async () => {
   const html = await render('leader-household-delete', { association, household, members, confirmationToken: 'token' });

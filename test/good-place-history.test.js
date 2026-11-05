@@ -12,15 +12,15 @@ test('history renders reaction counts and escapes comment text', async () => {
   assert.match(html, /ライク♡ 3/);
   assert.match(html, /&lt;script&gt;bad&lt;\/script&gt;/);
   assert.match(html, /最新の感想/);
-  assert.match(html, /data-good-place-enlarge/);
-  assert.match(html, /<dialog/);
+  assert.match(html, /data-good-place-detail="\/associations\/association\/good-places\/report"/);
+  assert.match(html, /aria-haspopup="dialog"/);
 });
 
 test('photo selection updates map and opens the selected full photo; close works', () => {
   const photo = {}, frame = {}, status = {}, close = {};
   const dialog = { querySelector: selector => selector === 'img' ? photo : close, showModal() { this.open = true; }, close() { this.open = false; }, addEventListener(_event,handler) { this.backdropClick=handler; } };
   close.addEventListener = (_type, handler) => { close.click = handler; };
-  const button = { dataset: { dangerQuery: '35,139' }, hasAttribute: () => true, querySelector: () => ({ src: '/photo', alt: '写真' }), setAttribute() {}, addEventListener(_type, handler) { this.click = handler; } };
+  const button = { dataset: { dangerQuery: '35,139' }, hasAttribute: name => name === 'data-good-place-enlarge', querySelector: () => ({ src: '/photo', alt: '写真' }), setAttribute() {}, addEventListener(_type, handler) { this.click = handler; } };
   vm.runInNewContext(fs.readFileSync('src/public/danger-history.js', 'utf8'), { document: { querySelectorAll: selector => selector === '[data-danger-focus]' ? [button] : [], getElementById: id => ({ 'danger-history-frame': frame, 'danger-map-status': status, 'good-place-photo-dialog': dialog })[id] } });
   button.click();
   assert.match(frame.src, /35%2C139/);
@@ -44,7 +44,7 @@ test('changing sort submits the selected order automatically', () => {
 test('detail comment icon opens modal and return from comment submission reopens it',()=>{
   const dialog={open:false,showModal(){this.open=true;},close(){this.open=false;},querySelector(){return {addEventListener(_event,handler){dialog.closeClick=handler;}};}};
   let openClick;
-  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>dialog,querySelector:selector=>selector === '[data-open-comments]' ? {addEventListener(_event,handler){openClick=handler;}} : null},window:{addEventListener(){}},location:{hash:'#good-place-reactions',search:''},URLSearchParams});
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>dialog,querySelector:selector=>selector === '[data-open-comments]' ? {addEventListener(_event,handler){openClick=handler;}} : null},window:{top:{},self:{},addEventListener(){}},location:{hash:'#good-place-reactions',search:''},URLSearchParams});
   assert.equal(dialog.open,true);dialog.closeClick();assert.equal(dialog.open,false);openClick();assert.equal(dialog.open,true);
 });
 
@@ -53,7 +53,7 @@ test('location thumbnail opens a large separate map window and keeps native fall
   const popup={opener:{},location:{replace(url){destination=url;}}};
   const link={href:'https://www.google.com/maps/search/?api=1&query=35%2C139',addEventListener(_event,handler){click=handler;}};
   let blocked=false;
-  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>null,querySelector:()=>link},window:{open(url,target,features){assert.match(features,/width=1200/);return blocked?null:popup;}}});
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:()=>null,querySelector:()=>link},window:{top:{},self:{},open(url,target,features){assert.match(features,/width=1200/);return blocked?null:popup;}}});
   click({preventDefault(){prevented=true;}});
   assert.equal(destination,link.href);assert.equal(popup.opener,null);assert.equal(prevented,true);
   prevented=false;blocked=true;click({preventDefault(){prevented=true;}});assert.equal(prevented,false);
@@ -62,6 +62,6 @@ test('location thumbnail opens a large separate map window and keeps native fall
 test('detail photo tap opens enlargement and close returns to the page',()=>{
   let tap,close;
   const dialog={showModal(){this.open=true;},close(){this.open=false;},addEventListener(_event,handler){close=handler;},querySelector:()=>null};
-  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{document:{getElementById:id=>id==='good-place-detail-photo-dialog'?dialog:null,querySelector:selector=>selector==='[data-open-detail-photo]'?{addEventListener(_event,handler){tap=handler;}}:null}});
+  vm.runInNewContext(fs.readFileSync('src/public/good-place-detail.js','utf8'),{window:{top:{},self:{}},document:{getElementById:id=>id==='good-place-detail-photo-dialog'?dialog:null,querySelector:selector=>selector==='[data-open-detail-photo]'?{addEventListener(_event,handler){tap=handler;}}:null}});
   tap();assert.equal(dialog.open,true);close({target:{}});assert.equal(dialog.open,true);close({target:dialog});assert.equal(dialog.open,false);
 });

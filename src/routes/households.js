@@ -1,5 +1,5 @@
+import { handleLocationLink } from './locationLinks.js';
 import { loadMemberTags } from '../services/memberTagService.js';
-import { linkHouseholdLedger } from '../services/householdLedgerLinkService.js';
 import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { saveMemberSupport } from '../services/memberSupportService.js';
 import express from 'express';
@@ -279,15 +279,16 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
       NeighborhoodAssociation.findById(req.params.associationId).lean(),
       DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { _id: { $in: leaderHouseholds } }, { representative: req.user._id }, { feeRepresentative: req.user._id }] }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').populate('districtGroup', 'name').sort({ districtLabel: 1, displayName: 1 }).lean(),
-      AssociationMembership.find({ association: req.params.associationId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
+      AssociationMembership.find({ association: req.params.associationId, status: 'active' }).select('user household districtGroup startedAt').populate('user', 'displayname username').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
     ]);
     const profileIds = new Set(rosterHouseholds.map(item => String(item.profileHousehold || '')).filter(Boolean));
     const households = rosterHouseholds.filter(item => item.districtLabel || !profileIds.has(String(item._id)));
     // 入会時のプロフィール世帯と、班長が登録した世帯台帳は別の情報。
     // 台帳への紐付け（または既存の feeRepresentative）だけを重複扱いにする。
-    const linkedHouseholds = await Household.find({ association: req.params.associationId, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }).select('representative feeRepresentative profileHousehold').lean();
+    const linkedHouseholds = await Household.find({ association: req.params.associationId, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }).select('representative feeRepresentative profileHousehold districtLabel').lean();
     const refId = value => value ? String(value._id || value) : '';
-    const ledgerHouseholds = [...linkedHouseholds, ...households];
+    const isLedger = item => Boolean(item.districtLabel || item.feeRepresentative) && !(item.districtLabel === '班長世帯' && !item.representative);
+    const ledgerHouseholds = [...linkedHouseholds, ...households].filter(isLedger);
     const ledgerHouseholdIds = new Set(ledgerHouseholds.flatMap(item => [item._id, item.profileHousehold]).filter(Boolean).map(refId));
     const linkedUserIds = new Set(ledgerHouseholds.flatMap(item => [item.representative, item.feeRepresentative]).filter(Boolean).map(refId));
     const linkedHouseholdIds = new Set(ledgerHouseholds.filter(item => item.representative || item.feeRepresentative).map(item => refId(item._id)));
@@ -301,7 +302,7 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
       linkedHouseholdIds.add(householdId);
       if (!membersByLedgerHousehold.has(householdId)) membersByLedgerHousehold.set(householdId, membership.user);
     }
-    const linkableHouseholds = households.filter(household => !linkedHouseholdIds.has(refId(household._id)));
+    const linkableHouseholds = households.filter(household => household.districtLabel && !linkedHouseholdIds.has(refId(household._id)) && !(household.districtLabel === '班長世帯' && !household.representative));
     const leaderMembers = memberships.filter(item => item.user && !linkedUserIds.has(refId(item.user)));
     const memberTags = await loadMemberTags(req.params.associationId);
     return res.render('leader-fees', { title: '班の世帯管理', association, districtGroups, households: households.map((household) => ({ ...household, isLedgerLinked: memberTags.isLinked(household.feeRepresentative || household.representative, household._id), roleTags: memberTags.roles([household.representative, household.feeRepresentative, ...memberships.filter(item => [refId(household._id), refId(household.profileHousehold)].includes(refId(item.household))).map(item => item.user)]), representative: household.representative || household.feeRepresentative || membersByLedgerHousehold.get(refId(household._id)) })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers, linkableHouseholds });
@@ -350,19 +351,7 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/delete', verifyC
 
 householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async (req, res, next) => {
   try {
-    const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
-    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
-    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] });
-    const household = await Household.findOne({ _id: req.body.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } });
-    if (!membership || !household) throw fail('会員または世帯を確認できません。', 403);
-    const alreadyLinked = household.representative || household.feeRepresentative || await Household.exists({ association: req.params.associationId, active: true, $and: [{ $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }, { $or: [{ representative: membership.user }, { feeRepresentative: membership.user }, ...(membership.household ? [{ _id: membership.household }, { profileHousehold: membership.household }] : [])] }] });
-    if (alreadyLinked) {
-      req.session.notice = '選択した世帯または会員は既に紐付け済みです。未紐付けの候補から選び直してください。';
-      return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
-    }
-    await linkHouseholdLedger({ associationId: req.params.associationId, membership, household });
-    req.session.notice = '会員と世帯を紐付けました。';
-    return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
+    return await handleLocationLink(req, res, { kind: 'ledger', recordId: req.body.householdId, manager: false });
   } catch (error) { return next(error); }
 });
 

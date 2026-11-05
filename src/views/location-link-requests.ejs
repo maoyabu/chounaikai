@@ -1,0 +1,6 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell"><a class="back-link" href="/associations/<%= associationId %>/manage">← 運営管理へ戻る</a><h1>地区・班の確認依頼</h1>
+<% if (typeof notice !== 'undefined' && notice) { %><div class="alert alert-success"><%= notice %></div><% } %>
+<section class="content-card"><% if (!requests.length) { %><p>確認待ちの依頼はありません。</p><% } %>
+<% requests.forEach(request => { %><article><h2><%= request.user?.displayname || request.user?.username || '会員' %></h2><p>依頼した班長：<%= request.requestedBy?.displayname || request.requestedBy?.username || '退会済み' %> ／ 希望：<%= request.districtGroup?.name || '地区・班未設定' %></p><div class="form-actions"><a class="button button-primary" href="/associations/<%= associationId %>/manage/location-links/<%= request._id %>">内容を確認</a><form method="post" action="/associations/<%= associationId %>/manage/location-links/<%= request._id %>/reject"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-danger-outline">却下する</button></form></div></article><% }) %>
+</section></main><%- include('partials/foot') %>
