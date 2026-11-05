@@ -1,3 +1,4 @@
+import { surveyExportView } from '../services/surveyExportService.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -78,6 +79,7 @@ districtMessagesRouter.get('/:associationId/district-messages/officer-announceme
     const { announcement, membershipIds } = await residentAnnouncementForDistrict(association._id, req.params.announcementId, districtGroup._id, req.user._id);
     announcement.attachments = (announcement.attachments || []).map(file => ({ ...file, originalName: repairMojibakeFilename(file.originalName) }));
     const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id, recipient: { $in: membershipIds } }).populate('recipient', 'displayname username').sort({ readAt: 1 }).lean();
+    res.set('Cache-Control', 'private, no-store');
     return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts, responseSummary: summarizeAnnouncementResponses(announcement, receipts), leaderAnnouncementMode: true, leaderMessageBase: `/associations/${association._id}/district-messages/officer-announcements` });
   } catch (error) { return next(error); }
 });
@@ -147,7 +149,8 @@ districtMessagesRouter.get('/:associationId/district-messages/:announcementId', 
     const { association, districtGroup } = await context(req.params.associationId, req.user._id);
     const announcement = await sentAnnouncement(association._id, req.params.announcementId, req.user._id, districtGroup._id);
     const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id }).populate('recipient', 'displayname username').sort({ readAt: 1 }).lean();
-    return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts,
+    res.set('Cache-Control', 'private, no-store');
+    return res.render('officer-announcement-detail', { ...surveyExportView(req, announcement), title: announcement.title, association, announcement, receipts,
       responseSummary: summarizeAnnouncementResponses(announcement, receipts), districtMode: true });
   } catch (error) { return next(error); }
 });

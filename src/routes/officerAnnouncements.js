@@ -1,3 +1,4 @@
+import { surveyExportView, createSurveyWorkbook } from '../services/surveyExportService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -72,7 +73,8 @@ officerAnnouncementsRouter.get('/:associationId/announcements/officer/:announcem
       return groups;
     }, new Map()).values()];
     const responseSummary = summarizeAnnouncementResponses(announcement, receipts);
-    return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts, groupedReceipts, responseSummary });
+    res.set('Cache-Control', 'private, no-store');
+    return res.render('officer-announcement-detail', { ...surveyExportView(req, announcement), title: announcement.title, association, announcement, receipts, groupedReceipts, responseSummary });
   } catch (error) { return next(error); }
 });
 
@@ -81,6 +83,30 @@ officerAnnouncementsRouter.post('/:associationId/announcements/officer/:announce
     const count = await remindAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, recipientId: req.body.recipientId || null, channel: 'resident' });
     req.session.notice = `${count}人の未確認者に再通知しました。`;
     return res.redirect(`/associations/${req.params.associationId}/announcements/officer`);
+  } catch (error) { return next(error); }
+});
+
+officerAnnouncementsRouter.get('/:associationId/announcements/:announcementId/responses.xlsx', async (req, res, next) => {
+  res.set('Cache-Control', 'private, no-store');
+  try {
+    checkedId(req.params.associationId);
+    checkedId(req.params.announcementId);
+    const { association, membership, canAnswer } = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id });
+    const announcement = await OfficerAnnouncement.findOne({ _id: req.params.announcementId, association: association._id, sender: req.user._id }).lean();
+    if (!announcement) throw Object.assign(new Error('作成者本人だけが回答を出力できます。'), { status: 403 });
+    if (!['single', 'multiple'].includes(announcement.responseMode)) throw Object.assign(new Error('アンケートの回答集計だけを出力できます。'), { status: 400 });
+    const channel = announcement.channel || 'resident';
+    if (!['resident', 'officer', 'district'].includes(channel) || (channel === 'district' ? String(announcement.districtGroup) !== String(membership.districtGroup) : !canAnswer)) {
+      throw Object.assign(new Error('このアンケートを出力する権限がありません。'), { status: 403 });
+    }
+    if (!req.session.surveyExportSecret) throw Object.assign(new Error('回答集計の画面を開いてパスワードを確認してください。'), { status: 409 });
+    const { surveyExportPassword } = surveyExportView(req, announcement);
+    const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id, association: association._id }).populate('recipient', 'displayname username').sort({ createdAt: 1 }).lean();
+    const memberships = await AssociationMembership.find({ association: association._id, status: 'active', user: { $in: receipts.map(item => item.recipient?._id).filter(Boolean) } }).select('user districtGroup').populate('districtGroup', 'name').lean();
+    const buffer = await createSurveyWorkbook({ announcement, receipts, password: surveyExportPassword, districtByUser: new Map(memberships.map(item => [String(item.user), item.districtGroup])) });
+    res.attachment(`survey-${announcement._id}.xlsx`);
+    res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.send(buffer);
   } catch (error) { return next(error); }
 });
 

@@ -1,3 +1,4 @@
+import { surveyExportView } from '../services/surveyExportService.js';
 import { annualRoleYearFilter, uniqueAnnualMenuRoles } from '../lib/annualRoleAccess.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
@@ -142,7 +143,8 @@ officerNetworkRouter.get('/:associationId/officer-network/:announcementId', asyn
       .populate('targetDepartment', 'name').populate('targetOfficer', 'displayname username').populate('targetGroup', 'name').lean();
     if (!announcement) return next(Object.assign(new Error('連絡を確認できません。'), { status: 404 }));
     const receipts = await OfficerAnnouncementReceipt.find({ announcement: announcement._id }).populate('recipient', 'displayname username').sort({ readAt: 1 }).lean();
-    return res.render('officer-announcement-detail', { title: announcement.title, association, announcement, receipts,
+    res.set('Cache-Control', 'private, no-store');
+    return res.render('officer-announcement-detail', { ...surveyExportView(req, announcement), title: announcement.title, association, announcement, receipts,
       responseSummary: summarizeAnnouncementResponses(announcement, receipts), networkMode: true });
   } catch (error) { return next(error); }
 });
