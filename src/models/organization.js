@@ -35,6 +35,8 @@ const householdSchema = new mongoose.Schema({
   phone: String,
   email: { type: String, trim: true, lowercase: true },
   districtLabel: { type: String, trim: true },
+  // Explicit link from the ledger to the household that owns family profiles.
+  profileHousehold: { type: mongoose.Schema.Types.ObjectId, ref: 'Household', index: true },
   feeRepresentative: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   active: { type: Boolean, default: true },
   deletedAt: Date,

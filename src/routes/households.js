@@ -1,3 +1,4 @@
+import { linkHouseholdLedger } from '../services/householdLedgerLinkService.js';
 import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { saveMemberSupport } from '../services/memberSupportService.js';
 import express from 'express';
@@ -273,18 +274,20 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
     if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
     const leaderAssignments = await AnnualLeaderAssignment.find({ association: req.params.associationId, representative: req.user._id, districtGroup: { $in: districtIds }, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('household').lean();
     const leaderHouseholds = leaderAssignments.map(item => item.household).filter(Boolean);
-    const [association, districtGroups, households, memberships] = await Promise.all([
+    const [association, districtGroups, rosterHouseholds, memberships] = await Promise.all([
       NeighborhoodAssociation.findById(req.params.associationId).lean(),
       DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { _id: { $in: leaderHouseholds } }, { representative: req.user._id }, { feeRepresentative: req.user._id }] }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').populate('districtGroup', 'name').sort({ districtLabel: 1, displayName: 1 }).lean(),
       AssociationMembership.find({ association: req.params.associationId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
     ]);
+    const profileIds = new Set(rosterHouseholds.map(item => String(item.profileHousehold || '')).filter(Boolean));
+    const households = rosterHouseholds.filter(item => item.districtLabel || !profileIds.has(String(item._id)));
     // 入会時のプロフィール世帯と、班長が登録した世帯台帳は別の情報。
     // 台帳への紐付け（または既存の feeRepresentative）だけを重複扱いにする。
-    const linkedHouseholds = await Household.find({ association: req.params.associationId, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }).select('representative feeRepresentative').lean();
+    const linkedHouseholds = await Household.find({ association: req.params.associationId, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }).select('representative feeRepresentative profileHousehold').lean();
     const refId = value => value ? String(value._id || value) : '';
     const ledgerHouseholds = [...linkedHouseholds, ...households];
-    const ledgerHouseholdIds = new Set(ledgerHouseholds.map(item => refId(item._id)));
+    const ledgerHouseholdIds = new Set(ledgerHouseholds.flatMap(item => [item._id, item.profileHousehold]).filter(Boolean).map(refId));
     const linkedUserIds = new Set(ledgerHouseholds.flatMap(item => [item.representative, item.feeRepresentative]).filter(Boolean).map(refId));
     const linkedHouseholdIds = new Set(ledgerHouseholds.filter(item => item.representative || item.feeRepresentative).map(item => refId(item._id)));
     // Check both directions: older/partially saved links may only exist on membership.household.
@@ -350,16 +353,12 @@ householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async
     const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] });
     const household = await Household.findOne({ _id: req.body.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } });
     if (!membership || !household) throw fail('会員または世帯を確認できません。', 403);
-    const alreadyLinked = household.representative || household.feeRepresentative || await Household.exists({ association: req.params.associationId, active: true, $and: [{ $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }, { $or: [{ representative: membership.user }, { feeRepresentative: membership.user }, ...(membership.household ? [{ _id: membership.household }] : [])] }] });
+    const alreadyLinked = household.representative || household.feeRepresentative || await Household.exists({ association: req.params.associationId, active: true, $and: [{ $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }, { $or: [{ representative: membership.user }, { feeRepresentative: membership.user }, ...(membership.household ? [{ _id: membership.household }, { profileHousehold: membership.household }] : [])] }] });
     if (alreadyLinked) {
       req.session.notice = '選択した世帯または会員は既に紐付け済みです。未紐付けの候補から選び直してください。';
       return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
     }
-    membership.ledgerPreviousHousehold = membership.household;
-    membership.ledgerPreviousDistrictGroup = membership.districtGroup;
-    membership.districtGroup = household.districtGroup;
-    membership.household = household._id; await membership.save();
-    household.feeRepresentative = membership.user; await household.save();
+    await linkHouseholdLedger({ associationId: req.params.associationId, membership, household });
     req.session.notice = '会員と世帯を紐付けました。';
     return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
   } catch (error) { return next(error); }
@@ -382,6 +381,7 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/unlink', verifyC
       await membership.save();
     }
     household.feeRepresentative = undefined;
+    household.profileHousehold = undefined;
     await household.save();
     req.session.notice = '会員との紐付けを解除しました。「会員との紐付け」から正しい会員を選び直せます。';
     return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
@@ -417,12 +417,21 @@ householdsRouter.get('/:associationId/leader', async (req, res, next) => {
     const [association, districtGroups, applications, memberships] = await Promise.all([
       NeighborhoodAssociation.findById(req.params.associationId).lean(), DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
       JoinApplication.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending' }).populate('applicant', 'displayname username email').populate('invitedBy', 'displayname username email').populate('districtGroup', 'name').populate('household').sort({ createdAt: 1 }).lean(),
-      AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active', household: { $exists: true } }).select('household').lean()
+      AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active', household: { $exists: true } }).select('household user').populate('user', 'displayname username').lean()
     ]);
     const households = (await Household.find({ _id: { $in: memberships.map((item) => item.household) }, association: req.params.associationId, active: true }).populate('representative', 'displayname username email').populate('districtGroup', 'name').sort('displayName').lean()).map((household) => ({ ...household, address: household.address || {} }));
-    const members = await HouseholdMember.find({ household: { $in: households.map((item) => item._id) }, endsAt: null }).sort({ birthDate: 1 }).lean();
+    const members = await HouseholdMember.find({ association: req.params.associationId, household: { $in: households.map((item) => item._id) }, endsAt: null }).sort({ birthDate: 1 }).lean();
     const withdrawalApplications = await WithdrawalApplication.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'pending' }).populate('requestedBy', 'displayname username email').populate('household', 'displayName').populate('districtGroup', 'name').populate('successor', 'displayname username').sort({ createdAt: 1 }).lean();
     const membersByHousehold = Object.groupBy ? Object.groupBy(members, (item) => String(item.household)) : members.reduce((result, item) => ((result[String(item.household)] ||= []).push(item), result), {});
+    // An active account is still a resident when older data lacks a family row.
+    for (const household of households) {
+      const key = String(household._id);
+      if (membersByHousehold[key]?.length) continue;
+      membersByHousehold[key] = memberships.filter(item => String(item.household) === key && item.user?._id).map(item => ({
+        _id: `account-${item.user._id}`, household: household._id, user: item.user._id,
+        name: item.user.displayname || item.user.username, isRepresentative: String(household.representative?._id || household.representative || '') === String(item.user._id)
+      }));
+    }
     return res.render('leader-dashboard', { title: '班長メニュー', association, districtGroups, applications, withdrawalApplications, households, membersByHousehold, fiscalYear: currentFiscalYear() });
   } catch (error) { return next(error); }
 });
