@@ -277,7 +277,7 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
       NeighborhoodAssociation.findById(req.params.associationId).lean(),
       DistrictGroup.find({ _id: { $in: districtIds } }).sort({ sortOrder: 1, name: 1 }).lean(),
       Household.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { _id: { $in: leaderHouseholds } }, { representative: req.user._id }, { feeRepresentative: req.user._id }] }).populate('representative', 'displayname username').populate('feeRepresentative', 'displayname username').populate('districtGroup', 'name').sort({ districtLabel: 1, displayName: 1 }).lean(),
-      AssociationMembership.find({ association: req.params.associationId, districtGroup: { $in: districtIds }, status: 'active' }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
+      AssociationMembership.find({ association: req.params.associationId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] }).populate('user', 'displayname username email').populate('household', 'displayName representative').sort({ startedAt: 1 }).lean()
     ]);
     // 入会時のプロフィール世帯と、班長が登録した世帯台帳は別の情報。
     // 台帳への紐付け（または既存の feeRepresentative）だけを重複扱いにする。
@@ -346,7 +346,8 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/delete', verifyC
 householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async (req, res, next) => {
   try {
     const districtIds = await loadLeaderDistrictIds(req.params.associationId, req.user._id);
-    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, districtGroup: { $in: districtIds }, status: 'active' });
+    if (!districtIds.length) throw fail('現在年度の班長だけが利用できます。', 403);
+    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active', $or: [{ districtGroup: { $in: districtIds } }, { user: req.user._id }] });
     const household = await Household.findOne({ _id: req.body.householdId, association: req.params.associationId, districtGroup: { $in: districtIds }, active: true, districtLabel: { $exists: true, $nin: ['', null] } });
     if (!membership || !household) throw fail('会員または世帯を確認できません。', 403);
     const alreadyLinked = household.representative || household.feeRepresentative || await Household.exists({ association: req.params.associationId, active: true, $and: [{ $or: [{ districtLabel: { $exists: true, $nin: ['', null] } }, { feeRepresentative: { $ne: null } }] }, { $or: [{ representative: membership.user }, { feeRepresentative: membership.user }, ...(membership.household ? [{ _id: membership.household }] : [])] }] });
@@ -355,6 +356,8 @@ householdsRouter.post('/:associationId/leader/fees/link', verifyCsrfToken, async
       return res.redirect(`/associations/${req.params.associationId}/leader/fees`);
     }
     membership.ledgerPreviousHousehold = membership.household;
+    membership.ledgerPreviousDistrictGroup = membership.districtGroup;
+    membership.districtGroup = household.districtGroup;
     membership.household = household._id; await membership.save();
     household.feeRepresentative = membership.user; await household.save();
     req.session.notice = '会員と世帯を紐付けました。';
@@ -373,7 +376,9 @@ householdsRouter.post('/:associationId/leader/fees/:householdId/unlink', verifyC
     if (membership) {
       const profile = membership.ledgerPreviousHousehold || (await Household.findOne({ association: req.params.associationId, representative: household.feeRepresentative, active: true }))?._id;
       membership.household = profile;
+      if (membership.ledgerPreviousDistrictGroup) membership.districtGroup = membership.ledgerPreviousDistrictGroup;
       membership.ledgerPreviousHousehold = undefined;
+      membership.ledgerPreviousDistrictGroup = undefined;
       await membership.save();
     }
     household.feeRepresentative = undefined;

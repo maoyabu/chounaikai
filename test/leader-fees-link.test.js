@@ -65,11 +65,11 @@ test('台帳に紐付いた会員の再送信では更新せず案内する', as
 
 for (const hasProfile of [false, true]) test(`未紐付け会員を保存できる（プロフィール世帯${hasProfile ? 'あり' : 'なし'}）`, async t => {
   const user = id(), district = id();
-  const membership = { user, ...(hasProfile ? { household: id() } : {}), save: t.mock.fn() };
-  const household = { _id: id(), save: t.mock.fn() };
+  const membership = { user, districtGroup: district, ...(hasProfile ? { household: id() } : {}), save: t.mock.fn() };
+  const household = { _id: id(), districtGroup: district, save: t.mock.fn() };
   t.mock.method(AnnualLeaderAssignment, 'find', () => query([district]));
   t.mock.method(AssociationMembership, 'findOne', filter => {
-    assert.deepEqual(filter.districtGroup.$in, [district]);
+    assert.deepEqual(filter.$or[0].districtGroup.$in, [district]);
     assert.equal(filter.status, 'active');
     return query(membership);
   });
@@ -84,6 +84,8 @@ for (const hasProfile of [false, true]) test(`未紐付け会員を保存でき�
   assert.equal(membership.save.mock.callCount(), 1);
   assert.equal(household.save.mock.callCount(), 1);
   assert.equal(household.feeRepresentative, user);
+  assert.equal(membership.districtGroup, district);
+  assert.equal(membership.ledgerPreviousDistrictGroup, district);
 });
 
 test('班長自身のプロフィール世帯を一覧と紐付け済み対象に含める', async t => {
@@ -107,9 +109,9 @@ test('班長自身のプロフィール世帯を一覧と紐付け済み対象�
 });
 
 for (const allowed of [true, false]) test(`会員紐付け解除（${allowed ? '担当班' : '担当外を拒否'}）`, async t => {
-  const original = id(), user = id();
+  const original = id(), user = id(), previousDistrict = id();
   const household = { _id: id(), feeRepresentative: user, save: t.mock.fn() };
-  const membership = { household: household._id, ledgerPreviousHousehold: original, save: t.mock.fn() };
+  const membership = { household: household._id, ledgerPreviousHousehold: original, ledgerPreviousDistrictGroup: previousDistrict, save: t.mock.fn() };
   t.mock.method(AnnualLeaderAssignment, 'find', () => query([id()]));
   t.mock.method(Household, 'findOne', filter => {
     assert.ok(filter.districtGroup.$in.length);
@@ -123,6 +125,8 @@ for (const allowed of [true, false]) test(`会員紐付け解除（${allowed ? '
   if (!allowed) { assert.equal(error.status, 403); assert.equal(household.save.mock.callCount(), 0); return; }
   assert.equal(error, undefined);
   assert.equal(membership.household, original);
+  assert.equal(membership.districtGroup, previousDistrict);
+  assert.equal(membership.ledgerPreviousDistrictGroup, undefined);
   assert.equal(membership.ledgerPreviousHousehold, undefined);
   assert.equal(household.feeRepresentative, undefined);
   assert.equal(membership.save.mock.callCount(), 1);
@@ -175,4 +179,48 @@ for (const populated of [true, false]) test(`会員側だけに保存された�
   assert.ok(memberOptions.includes(String(freeUser)));
   const householdOptions = html.match(/<select name="householdId" required>([\s\S]*?)<\/select>/)[1];
   assert.ok(!householdOptions.includes(String(householdId)));
+});
+
+test('担当班と会員の所属班が異なる班長自身も紐付け候補になる', async t => {
+  const user = id(), assignedDistrict = id(), residenceDistrict = id(), freeHousehold = id();
+  t.mock.method(AnnualLeaderAssignment, 'find', () => query([assignedDistrict]));
+  t.mock.method(NeighborhoodAssociation, 'findById', () => query({}));
+  t.mock.method(DistrictGroup, 'find', () => query([]));
+  t.mock.method(Household, 'find', filter => query(filter.districtGroup ? [{ _id: freeHousehold, districtLabel: '08' }] : [{ _id: freeHousehold }]));
+  t.mock.method(AssociationMembership, 'find', filter => {
+    assert.equal(filter.status, 'active');
+    assert.deepEqual(filter.$or, [{ districtGroup: { $in: [assignedDistrict] } }, { user }]);
+    return query([{ user: { _id: user }, districtGroup: residenceDistrict, household: { _id: id() } }]);
+  });
+  const handler = householdsRouter.stack.find(layer => layer.route?.path === '/:associationId/leader/fees').route.stack.at(-1).handle;
+  let result;
+  await handler({ params: { associationId: String(id()) }, user: { _id: user } }, { render(view, data) { result = data; } }, error => { throw error; });
+  assert.equal(result.members[0].user._id, user);
+  assert.equal(result.linkableHouseholds[0]._id, freeHousehold);
+});
+
+for (const self of [true, false]) test(`担当班外の会員の紐付けは班長本人だけに許可する（${self ? '本人' : '他人を拒否'}）`, async t => {
+  const actor = id(), user = self ? actor : id(), district = id(), oldDistrict = id(), profileHousehold = id();
+  const membership = { user, districtGroup: oldDistrict, household: profileHousehold, save: t.mock.fn() };
+  const household = { _id: id(), districtGroup: district, save: t.mock.fn() };
+  t.mock.method(AnnualLeaderAssignment, 'find', () => query([district]));
+  t.mock.method(AssociationMembership, 'findOne', filter => {
+    assert.equal(filter.user, String(user));
+    assert.deepEqual(filter.$or, [{ districtGroup: { $in: [district] } }, { user: actor }]);
+    return query(self ? membership : null);
+  });
+  t.mock.method(Household, 'findOne', filter => {
+    assert.deepEqual(filter.districtGroup.$in, [district]);
+    return query(household);
+  });
+  t.mock.method(Household, 'exists', () => query(null));
+  const handler = householdsRouter.stack.find(layer => layer.route?.path === '/:associationId/leader/fees/link').route.stack.at(-1).handle;
+  let error;
+  await handler({ params: { associationId: String(id()) }, user: { _id: actor }, body: { userId: String(user), householdId: String(household._id) }, session: {} }, { redirect() {} }, value => { error = value; });
+  if (!self) { assert.equal(error.status, 403); assert.equal(membership.save.mock.callCount(), 0); return; }
+  assert.equal(error, undefined);
+  assert.equal(membership.household, household._id);
+  assert.equal(membership.districtGroup, district);
+  assert.equal(membership.ledgerPreviousHousehold, profileHousehold);
+  assert.equal(membership.ledgerPreviousDistrictGroup, oldDistrict);
 });
