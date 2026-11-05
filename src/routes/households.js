@@ -1,3 +1,4 @@
+import { loadMemberTags } from '../services/memberTagService.js';
 import { linkHouseholdLedger } from '../services/householdLedgerLinkService.js';
 import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
 import { saveMemberSupport } from '../services/memberSupportService.js';
@@ -302,7 +303,8 @@ householdsRouter.get('/:associationId/leader/fees', async (req, res, next) => {
     }
     const linkableHouseholds = households.filter(household => !linkedHouseholdIds.has(refId(household._id)));
     const leaderMembers = memberships.filter(item => item.user && !linkedUserIds.has(refId(item.user)));
-    return res.render('leader-fees', { title: '班の世帯管理', association, districtGroups, households: households.map((household) => ({ ...household, representative: household.representative || household.feeRepresentative || membersByLedgerHousehold.get(refId(household._id)) })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers, linkableHouseholds });
+    const memberTags = await loadMemberTags(req.params.associationId);
+    return res.render('leader-fees', { title: '班の世帯管理', association, districtGroups, households: households.map((household) => ({ ...household, isLedgerLinked: memberTags.isLinked(household.feeRepresentative || household.representative, household._id), roleTags: memberTags.roles([household.representative, household.feeRepresentative, ...memberships.filter(item => [refId(household._id), refId(household.profileHousehold)].includes(refId(item.household))).map(item => item.user)]), representative: household.representative || household.feeRepresentative || membersByLedgerHousehold.get(refId(household._id)) })), leaderHouseholdIds: households.filter((household) => String(household.representative?._id || household.representative || household.feeRepresentative?._id || household.feeRepresentative) === String(req.user._id)).map((household) => String(household._id)), members: leaderMembers, linkableHouseholds });
   } catch (error) { return next(error); }
 });
 
@@ -431,6 +433,16 @@ householdsRouter.get('/:associationId/leader', async (req, res, next) => {
         _id: `account-${item.user._id}`, household: household._id, user: item.user._id,
         name: item.user.displayname || item.user.username, isRepresentative: String(household.representative?._id || household.representative || '') === String(item.user._id)
       }));
+    }
+    const memberTags = await loadMemberTags(req.params.associationId);
+    for (const household of households) {
+      const family = membersByHousehold[String(household._id)] || [];
+      household.isLedgerLinked = memberTags.isLinked(household.representative, household._id);
+      household.roleTags = memberTags.roles([household.representative, ...family.map(member => member.user)]);
+      for (const member of family) {
+        member.isLedgerLinked = Boolean(member.user) && memberTags.isLinked(member.user, household._id);
+        member.roleTags = memberTags.roles([member.user]);
+      }
     }
     return res.render('leader-dashboard', { title: '班長メニュー', association, districtGroups, applications, withdrawalApplications, households, membersByHousehold, fiscalYear: currentFiscalYear() });
   } catch (error) { return next(error); }

@@ -1,3 +1,4 @@
+import { loadMemberTags } from '../services/memberTagService.js';
 import { parseHazardMapUrl } from '../lib/hazardMap.js';
 import { optionalAssociationFeatures, parseAssociationFeatures } from '../services/associationFeatureService.js';
 import express from 'express';
@@ -249,7 +250,8 @@ managementRouter.get('/:associationId/manage/members', requirePermission('associ
     const officerByUser = new Map(officers.map((item) => [String(item.user), item]));
     const leaderUserIds = new Set(leaders.map((item) => String(item.representative)));
     const managerUserIds = new Set(managerAssignments.filter((item) => item.role).map((item) => String(item.user)));
-    const members = memberships.filter((item) => item.user).map((membership) => ({ ...membership, officer: officerByUser.get(String(membership.user._id)), isLeader: leaderUserIds.has(String(membership.user._id)), isAssociationManager: managerUserIds.has(String(membership.user._id)) }));
+    const memberTags = await loadMemberTags(association._id);
+    const members = memberships.filter((item) => item.user).map((membership) => ({ ...membership, isLedgerLinked: memberTags.isLinked(membership.user._id, membership.household), officer: officerByUser.get(String(membership.user._id)), isLeader: leaderUserIds.has(String(membership.user._id)), isAssociationManager: managerUserIds.has(String(membership.user._id)) }));
     return res.render('association-members', { title: `${association.name}住人一覧`, association, fiscalYear, members, districtGroups, locationOptions, roles, departments });
   } catch (error) { return next(error); }
 });

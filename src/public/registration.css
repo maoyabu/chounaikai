@@ -1928,3 +1928,9 @@ h1, h2, h3, h4, h5, h6,
 .payment-linked-member { flex-basis: 100%; color: var(--muted); font-size: .8rem; }
 .leader-fees-page .member-table > div > span:nth-of-type(1), .leader-fees-page .member-table > div > strong, .leader-fees-page .member-table > div > span.household-member-tag, .leader-fees-page .member-table > div > span.household-row-actions { grid-row: 1; min-width: 0; }
 @media (max-width: 800px) { .leader-fees-page .member-table > div > span:nth-of-type(1), .leader-fees-page .member-table > div > strong, .leader-fees-page .member-table > div > span.household-member-tag, .leader-fees-page .member-table > div > span.household-row-actions { grid-row: auto; } }
+
+.member-link-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+.link-tag { display: inline-block; padding: .2rem .55rem; border-radius: 999px; font-size: .8rem; font-weight: 800; white-space: nowrap; }
+.link-tag-admin { background: #e3efff; color: #1e5597; }
+.link-tag-member { background: var(--green-pale); color: var(--green-dark); }
+.link-tag-unlinked { background: var(--danger-bg); color: var(--danger); }

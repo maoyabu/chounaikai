@@ -1,3 +1,4 @@
+import { AnnualOfficer } from '../src/models/annualOfficer.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
@@ -57,6 +58,7 @@ test('紐付け保存に失敗した場合は所属世帯と家族会員の班�
 });
 
 for (const familySize of [4, 0]) test(`班のメンバーは家族情報${familySize}件を参照し、人数と家族一覧を表示する`, async t => {
+  t.mock.method(AnnualOfficer, 'find', () => query([]));
   const association = id(), profile = id(), district = id(), head = id();
   const memberships = [{ household: profile, user: { _id: head, displayname: '世帯主' } }];
   const family = Array.from({ length: familySize }, (_, n) => ({ _id: id(), household: profile, user: n === 0 ? head : undefined, isRepresentative: n === 0, name: `家族${n + 1}`, nameKana: 'かぞく', gender: 'unspecified' }));
@@ -67,6 +69,7 @@ for (const familySize of [4, 0]) test(`班のメンバーは家族情報${family
   t.mock.method(WithdrawalApplication, 'find', () => query([]));
   t.mock.method(AssociationMembership, 'find', () => query(memberships));
   t.mock.method(Household, 'find', filter => {
+    if (!filter._id) return query([]);
     assert.deepEqual(filter._id.$in, [profile]);
     return query([{ _id: profile, displayName: '世帯', representative: { _id: head }, districtGroup: { name: '８班' } }]);
   });

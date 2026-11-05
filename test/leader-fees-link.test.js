@@ -1,3 +1,4 @@
+import { AnnualOfficer } from '../src/models/annualOfficer.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
@@ -10,6 +11,7 @@ import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.j
 import { AssociationFeePayment } from '../src/models/associationFeePayment.js';
 import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
 mongoose.connection.db = { admin: () => ({ command: async () => ({}) }) };
+test.beforeEach(t => { t.mock.method(AnnualOfficer, 'find', () => query([])); });
 const id = () => new mongoose.Types.ObjectId();
 const query = value => ({ session() { return this; }, populate() { return this; }, select() { return this; }, sort() { return this; }, lean() { return Promise.resolve(value); }, distinct() { return Promise.resolve(value); }, then(resolve, reject) { return Promise.resolve(value).then(resolve, reject); } });
 
@@ -23,6 +25,7 @@ for (const linked of [false, true]) test(linked ? '台帳に紐付け済みの�
   t.mock.method(HouseholdMember, 'find', () => query([]));
   t.mock.method(Household, 'find', filter => {
     if (filter.districtGroup) return query([{ _id: freeHousehold, districtLabel: '01' }]);
+    if (!filter.$or) return query([]);
     assert.ok(filter.$or.some(condition => condition.districtLabel));
     assert.ok(filter.$or.some(condition => condition.feeRepresentative));
     return query(linked ? [{ _id: oldHousehold, feeRepresentative: user }] : []);
