@@ -11,7 +11,7 @@ withdrawalsRouter.get('/profile/withdrawals', requireLogin, async (req, res, nex
   try {
     const memberships = await AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).populate('household').lean();
     const visibleMemberships = memberships.filter(membership => membership.association && membership.household?.active);
-    const ownedIds = visibleMemberships.filter(membership => String(membership.household.representative) === String(req.user._id)).map(membership => membership.household._id);
+    const ownedIds = visibleMemberships.filter(membership => String(membership.household.representative || membership.household.feeRepresentative) === String(req.user._id)).map(membership => membership.household._id);
     const [successorMemberships, members, applications, headApplications] = await Promise.all([
       AssociationMembership.find({ household: { $in: ownedIds }, user: { $ne: req.user._id }, status: 'active' }).populate('user', 'displayname username').lean(),
       HouseholdMember.find({ household: { $in: ownedIds }, endsAt: null }).select('user').lean(),

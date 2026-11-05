@@ -316,3 +316,44 @@ test('hamburger menu shows participation and withdrawal tags together and hides 
   const clear = await ejs.renderFile('src/views/partials/header.ejs', { ...values, currentLeaderAssociations: [{ _id: association, actionCount: 0, withdrawalCount: 0 }] });
   assert.doesNotMatch(clear, /menu-action-tag/);
 });
+
+test('system admin linked through the leader ledger can request and complete household withdrawal', async t => {
+  const records = setup(t);
+  const admin = records(User).find(user => user._id === head);
+  admin.isAdmin = true;
+  const ledger = records(Household)[0];
+  ledger.feeRepresentative = head;
+  delete ledger.representative;
+  ledger.districtLabel = '01';
+  const application = await request(head, 'household');
+  assert.equal(application.status, 'pending');
+  assert.equal(application.originalRepresentative, head);
+  await decide(application);
+  assert.equal(records(AssociationMembership)[0].status, 'inactive');
+  assert.equal(ledger.active, false);
+  assert.equal(admin.isAdmin, true);
+  assert.deepEqual(admin.groups, [otherGroup]);
+});
+
+test('ledger household head can transfer representation on withdrawal', async t => {
+  const records = setup(t), ledger = records(Household)[0];
+  ledger.feeRepresentative = head;
+  delete ledger.representative;
+  const application = await request(head, 'representative', resident);
+  await decide(application);
+  assert.equal(ledger.feeRepresentative, resident);
+  assert.equal(records(AssociationMembership)[0].status, 'inactive');
+  assert.equal(records(AssociationMembership)[1].status, 'active');
+});
+
+test('profile offers head withdrawal choices to a ledger-linked system admin', async () => {
+  const template = fileURLToPath(new URL('../src/views/partials/profile-withdrawals-content.ejs', import.meta.url));
+  const html = await ejs.renderFile(template, {
+    currentUser: { _id: head, isAdmin: true }, csrfToken: 'token',
+    memberships: [{ association: { _id: association, name: '町内会' }, household: { _id: household, feeRepresentative: head } }],
+    successors: [], busyHouseholds: [], applications: [], headApplications: []
+  });
+  assert.match(html, /name="scope"/);
+  assert.match(html, /世帯全員で退会する/);
+  assert.ok(!html.includes('name="scope" value="individual"'));
+});

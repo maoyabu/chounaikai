@@ -23,8 +23,9 @@ const context = async (associationId, householdId, session = null) => {
   const association = await NeighborhoodAssociation.findOne({ _id: associationId, status: 'active', deletedAt: { $exists: false } }).session(session).lean();
   const household = await Household.findOne({ _id: householdId, association: associationId, active: true }).session(session).lean();
   if (!association || !household || !await DistrictGroup.exists({ _id: household.districtGroup, association: associationId, active: true }).session(session)) throw fail('参加中の町内会・世帯・班を確認できません。');
-  if (!await AssociationMembership.exists({ association: associationId, household: householdId, user: household.representative, status: 'active' }).session(session)) throw fail('現在の世帯主を確認できません。');
-  return { association, household };
+  const representative = household.representative || household.feeRepresentative;
+  if (!representative || !await AssociationMembership.exists({ association: associationId, household: householdId, user: representative, status: 'active' }).session(session)) throw fail('現在の世帯主を確認できません。');
+  return { association, household: { ...household, representative, representativeField: household.representative ? 'representative' : 'feeRepresentative' } };
 };
 
 const notify = async (application, type, recipients) => {
@@ -102,11 +103,11 @@ export const decideWithdrawal = async ({ associationId, applicationId, actorId, 
       if (application.scope === 'household') {
         const current = await AssociationMembership.find({ association: associationId, household: household._id, status: 'active' }).session(session).lean();
         if (current.length !== memberships.length) throw fail('申請後に家族が増えています。再申請してください。');
-        const change = await mutate(Household, { _id: household._id, active: true, representative: household.representative, districtGroup: household.districtGroup, updatedAt: household.updatedAt }, { $set: { active: false } }, ['active']);
+        const change = await mutate(Household, { _id: household._id, active: true, [household.representativeField]: household.representative, districtGroup: household.districtGroup, updatedAt: household.updatedAt }, { $set: { active: false } }, ['active']);
         if (change.matchedCount !== 1) throw fail('世帯情報が変更されました。再申請してください。');
       } else if (application.scope === 'representative') {
         if (!same(application.requestedBy, household.representative) || !await AssociationMembership.exists({ association: associationId, household: household._id, districtGroup: household.districtGroup, user: application.successor, status: 'active' }).session(session) || !await HouseholdMember.exists({ association: associationId, household: household._id, user: application.successor, endsAt: null }).session(session)) throw fail('新しい世帯主が参加中ではありません。再申請してください。');
-        const change = await mutate(Household, { _id: household._id, active: true, representative: household.representative, districtGroup: household.districtGroup, updatedAt: household.updatedAt }, { $set: { representative: application.successor } }, ['representative']);
+        const change = await mutate(Household, { _id: household._id, active: true, [household.representativeField]: household.representative, districtGroup: household.districtGroup, updatedAt: household.updatedAt }, { $set: { [household.representativeField]: application.successor } }, [household.representativeField]);
         if (change.matchedCount !== 1) throw fail('世帯情報が変更されました。再申請してください。');
         await mutate(HouseholdMember, { association: associationId, household: household._id, isRepresentative: true }, { $set: { isRepresentative: false } }, ['isRepresentative']);
         await mutate(HouseholdMember, { association: associationId, household: household._id, user: application.successor }, { $set: { isRepresentative: true } }, ['isRepresentative']);

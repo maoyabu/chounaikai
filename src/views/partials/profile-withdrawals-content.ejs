@@ -1,5 +1,5 @@
   <% headApplications.forEach(application => { %><section class="content-card"><h2>家族からの退会申請</h2><%- include('withdrawal-list', { association: application.association, withdrawalApplications: [application], withdrawalDecisionPath: 'head' }) %></section><% }) %>
-  <% memberships.forEach(membership => { const household = membership.household, isHead = String(household.representative) === String(currentUser._id); const candidates = successors.filter(candidate => String(candidate.household) === String(household._id)); %>
+  <% memberships.forEach(membership => { const household = membership.household, isHead = String(household.representative || household.feeRepresentative) === String(currentUser._id); const candidates = successors.filter(candidate => String(candidate.household) === String(household._id)); %>
     <section class="form-card form-stack"><h2><%= membership.association.name %>から退会</h2>
       <% if (busyHouseholds.includes(String(household._id))) { %><p>この世帯には確認中の退会申請があります。完了または取り消し後に申請できます。</p><% } else { %>
       <form class="form-stack" action="/associations/<%= membership.association._id %>/withdrawals" method="post">
