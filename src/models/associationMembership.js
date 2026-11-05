@@ -9,6 +9,7 @@ const associationMembershipSchema = new mongoose.Schema({
   startedAt: Date,
   endedAt: Date,
   household: { type: mongoose.Schema.Types.ObjectId, ref: 'Household' },
+  ledgerPreviousHousehold: { type: mongoose.Schema.Types.ObjectId, ref: 'Household' },
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },
   residentVerifiedAt: Date,
   joinedBy: { type: String, enum: ['application', 'invitation', 'admin'], required: true },

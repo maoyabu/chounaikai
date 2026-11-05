@@ -706,7 +706,15 @@ managementRouter.post('/:associationId/manage/leaders/:leaderId/link', requirePe
     const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.body.userId, status: 'active' });
     if (!leader || !membership) throw fail('班長または会員を確認できません。', 404);
     const changed = String(leader.representative) !== String(membership.user);
-    leader.representative = membership.user; leader.household = membership.household; await leader.save();
+    // Reuse an existing ledger/profile household before creating a leader household.
+    let household = await Household.findOne({ association: req.params.associationId, active: true, $or: [{ feeRepresentative: membership.user }, { representative: membership.user }, ...(membership.household ? [{ _id: membership.household }] : [])] });
+    if (!household) {
+      household = await Household.create({ association: req.params.associationId, districtGroup: leader.districtGroup, districtLabel: '班長世帯', displayName: `${leader.name || '班長'}世帯`, feeRepresentative: membership.user });
+      membership.household = household._id;
+      membership.districtGroup = membership.districtGroup || leader.districtGroup;
+      await membership.save();
+    }
+    leader.representative = membership.user; leader.household = household._id; await leader.save();
     if (changed) await queueNotice({ association: req.params.associationId, recipients: [membership.user], type: 'district_leader_assigned', title: `${leader.fiscalYear}年度の班長に登録されました`, relatedId: leader._id });
     req.session.notice = '班長に会員を紐付けました。'; return redirectAnnualSettings(res, req.params.associationId, leader.fiscalYear);
   } catch (error) { return next(error); }
