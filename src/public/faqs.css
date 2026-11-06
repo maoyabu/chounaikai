@@ -36,7 +36,7 @@
 .faq-editor-tools { display: flex; flex-wrap: wrap; gap: .4rem; padding: .6rem; border: 1px solid var(--line); border-bottom: 0; border-radius: .5rem .5rem 0 0; background: var(--surface); }
 .faq-editor-tools[hidden], .faq-answer-editor[hidden] { display: none; }
 .form-stack .faq-editor-tools button, .form-stack .faq-editor-tools select { width: auto; min-height: 40px; padding: .4rem .65rem; border: 1px solid var(--line); border-radius: .35rem; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-.faq-answer-editor { min-height: 240px; padding: 1rem; border: 1px solid var(--line); border-radius: 0 0 .5rem .5rem; background: var(--surface); line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }
+.faq-answer-editor { box-sizing: border-box; height: clamp(240px, 45dvh, 480px); overflow-y: auto; scrollbar-gutter: stable; padding: 1rem; border: 1px solid var(--line); border-radius: 0 0 .5rem .5rem; background: var(--surface); line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }
 .faq-answer-editor:focus-visible, .faq-editor-tools :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .faq-answer-editor p { margin: 0 0 .8rem; }
 .faq-answer-editor ul, .faq-answer-editor ol { padding-left: 2rem; }
