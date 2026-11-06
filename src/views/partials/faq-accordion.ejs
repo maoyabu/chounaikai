@@ -2,7 +2,7 @@
   <% items.forEach(item => { %>
   <details class="support-qa" name="support-questions">
     <summary><span><%= item.question %></span><span class="support-chevron" aria-hidden="true"></span></summary>
-    <div class="support-answer"><p><%= item.answer %></p><% if (item.relatedUrl) { %><a href="<%= item.relatedUrl %>" target="_blank" rel="noopener noreferrer">詳しくはこちら<span class="sr-only">（新しいタブで開く）</span></a><% } %></div>
+    <div class="support-answer"><p><%= item.answer %></p><div class="faq-images"><% (item.images || []).forEach((image, index) => { if (image && image.url) { %><a href="<%= image.url %>" target="_blank" rel="noopener noreferrer"><img src="<%= image.url %>" alt="回答の画像<%= index + 1 %>" loading="lazy"></a><% } }); %></div><% if (item.relatedUrl) { %><a href="<%= item.relatedUrl %>" target="_blank" rel="noopener noreferrer">詳しくはこちら<span class="sr-only">（新しいタブで開く）</span></a><% } %></div>
   </details>
   <% }) %>
 </div>

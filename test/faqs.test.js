@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import ejs from 'ejs';
 import mongoose from 'mongoose';
 import { faqsRouter, faqInput, publishedFaqFilter } from '../src/routes/faqs.js';
+import { persistFaqImages, uploadFaqImage } from '../src/services/faqImageService.js';
+import { v2 as cloudinary } from 'cloudinary';
 import { Faq } from '../src/models/faq.js';
 import { RoleAssignment } from '../src/models/role.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
@@ -11,9 +13,9 @@ const id = new mongoose.Types.ObjectId().toString();
 const query = value => ({ sort() { return this; }, populate() { return this; }, lean: async () => value });
 const request = (path, { method = 'get', admin = true, body = {}, csrf = true, queryParams = {}, locals = {}, authenticated = true } = {}) => {
   const layer = faqsRouter.stack.find(layer => layer.route?.methods[method] && layer.match(path));
-  const req = { params: layer.params, originalUrl: path, user: { _id: id, isAdmin: admin }, isAuthenticated: () => authenticated, body, query: queryParams, session: { csrfToken: 'token' }, get: () => csrf ? 'token' : '' };
+  const req = { headers: {}, params: layer.params, originalUrl: path, user: { _id: id, isAdmin: admin }, isAuthenticated: () => authenticated, body, query: queryParams, session: { csrfToken: 'token' }, get: () => csrf ? 'token' : '' };
   return new Promise(resolve => {
-    const res = { locals, statusCode: 200, status(code) { this.statusCode = code; return this; }, render(view, data) { resolve({ status: this.statusCode, view, data }); }, json(data) { resolve({ status: this.statusCode, data }); }, redirect(url) { resolve({ status: 302, url }); } };
+    const res = { set() { return this; }, locals, statusCode: 200, status(code) { this.statusCode = code; return this; }, render(view, data) { resolve({ status: this.statusCode, view, data }); }, json(data) { resolve({ status: this.statusCode, data }); }, redirect(url) { resolve({ status: 302, url }); } };
     let index = 0;
     const next = error => {
       if (error) return resolve({ status: error.status || 500 });
@@ -150,4 +152,42 @@ test('anonymous association FAQ and support never disclose login-only Q&As', asy
     await request(`/associations/${associationId}/${page}`, { authenticated: false });
     assert.deepEqual(filter, { published: true, association: null, openToPublic: true });
   }
+});
+
+test('FAQ image slots replace and remove only after persistence, rolling back uploads on failure', async () => {
+  const old = { url: '/old', publicId: 'old' }, added = { url: '/new', publicId: 'new' };
+  const deleted = [];
+  let saved;
+  await persistFaqImages({ previous: [old, old], files: { photo0: [{}] }, body: { removePhoto1: 'on' }, association: associationId,
+    upload: async (_file, association) => { assert.equal(association, associationId); return added; },
+    remove: async image => { assert.ok(saved); deleted.push(image); }, persist: async images => { saved = images; } });
+  assert.deepEqual(saved, [added, null]);
+  assert.deepEqual(deleted, [old, old]);
+  deleted.length = 0;
+  await assert.rejects(persistFaqImages({ previous: [old], files: { photo0: [{}] }, body: {},
+    upload: async () => added, remove: async image => deleted.push(image), persist: async () => { throw new Error('DB failure'); } }));
+  assert.deepEqual(deleted, [added]);
+});
+test('system FAQ images are uploaded to Cloudinary', async t => {
+  const names = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+  const previous = names.map(name => process.env[name]);
+  names.forEach(name => { process.env[name] = 'test'; });
+  t.after(() => names.forEach((name, index) => { if (previous[index] === undefined) delete process.env[name]; else process.env[name] = previous[index]; }));
+  t.mock.method(cloudinary, 'config', () => {});
+  t.mock.method(cloudinary.uploader, 'upload_stream', (options, callback) => {
+    assert.equal(options.resource_type, 'image');
+    return { end(buffer) { assert.equal(buffer.toString(), 'image'); callback(null, { secure_url: 'https://example.com/image', public_id: 'faqs/test' }); } };
+  });
+  assert.deepEqual(await uploadFaqImage({ buffer: Buffer.from('image') }, null), { url: 'https://example.com/image', publicId: 'faqs/test' });
+});
+test('FAQ Drive images require a stored reference and protect unpublished images', async t => {
+  t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: associationId }));
+  const path = `/faq-images/${associationId}/drive-file/${'a'.repeat(64)}`;
+  t.mock.method(Faq, 'findOne', () => query(null));
+  assert.equal((await request(path)).status, 404);
+  t.mock.method(Faq, 'findOne', () => query({ published: true }));
+  assert.equal((await request(path, { authenticated: false })).status, 403);
+  t.mock.method(Faq, 'findOne', () => query({ published: false }));
+  t.mock.method(RoleAssignment, 'findOne', () => query(null));
+  assert.equal((await request(path, { admin: false })).status, 403);
 });

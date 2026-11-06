@@ -2,11 +2,17 @@
 <link rel="stylesheet" href="/assets/faqs.css?v=<%= assetVersion %>">
 <main class="page-shell"><a class="back-link" href="<%= baseUrl %>">← Q&A一覧を見る</a><section class="page-heading"><h1><%= title %></h1></section>
 <% if (error) { %><div class="alert" role="alert"><%= error %></div><% } %>
-<form class="content-card form-stack" method="post" action="<%= baseUrl %><%= item._id ? '/' + item._id + '/edit' : '' %>">
+<form class="content-card form-stack" method="post" enctype="multipart/form-data" action="<%= baseUrl %><%= item._id ? '/' + item._id + '/edit' : '' %>">
 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 <label>カテゴリー<input name="category" list="faq-categories" required maxlength="100" value="<%= item.category || '' %>" placeholder="入力または登録済みカテゴリーを選択"><datalist id="faq-categories"><% categories.forEach(category => { %><option value="<%= category %>"><% }) %></datalist></label>
 <label>質問<textarea name="question" rows="3" required maxlength="1000"><%= item.question || '' %></textarea></label>
 <label>回答<textarea name="answer" rows="8" required maxlength="10000"><%= item.answer || '' %></textarea></label>
+<fieldset><legend>画像（最大3枚）</legend>
+<p class="help-text">1枚15MB以下。JPEG、PNG、WebP、GIF、HEIC形式。<%= system ? 'Cloudinary' : '町内会のGoogle Drive' %>に保存します。エラー時は画像を選び直してください。</p>
+<div class="faq-images"><% for (let slot = 0; slot < 3; slot++) { const image = (item.images || [])[slot]; %>
+<div><% if (image && image.url) { %><img src="<%= image.url %>" alt="登録済み画像<%= slot + 1 %>"><label><input type="checkbox" name="removePhoto<%= slot %>">この画像を削除</label><% } %>
+<label>画像<%= slot + 1 %><input type="file" name="photo<%= slot %>" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"></label></div>
+<% } %></div></fieldset>
 <label>関連URL（任意）<input type="url" name="relatedUrl" maxlength="2000" value="<%= item.relatedUrl || '' %>" placeholder="https://"></label>
 <label class="faq-publish-toggle"><span>FAQとして公開する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="published" <%= item.published ? 'checked' : '' %>></label>
 <% if (system) { %>

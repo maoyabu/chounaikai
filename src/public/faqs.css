@@ -27,3 +27,8 @@
 .form-stack .faq-publish-switch:checked::before { transform: translateX(22px); }
 .form-stack .faq-publish-switch:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .form-stack .faq-publish-switch, .form-stack .faq-publish-switch::before { transition: none; } }
+
+.faq-images { display: flex; flex-wrap: wrap; gap: 1rem; }
+.faq-images > * { min-width: 0; max-width: 100%; flex: 0 1 240px; }
+.faq-images img { display: block; width: 100%; max-height: 240px; object-fit: contain; margin-bottom: .5rem; }
+.faq-images input[type="file"] { max-width: 100%; }

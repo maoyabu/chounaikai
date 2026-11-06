@@ -1,4 +1,10 @@
 import express from 'express';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { acceptPublicPhotos } from '../services/publicPageImageService.js';
+import { persistFaqImages, deleteFaqImage } from '../services/faqImageService.js';
+import { attachmentContext } from '../services/messageAttachmentService.js';
+import { assertDriveItem, driveId } from '../services/driveService.js';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission, requireSystemAdmin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
@@ -107,7 +113,7 @@ for (const system of [false, true]) {
     const assoc = await association(req), categories = await Faq.distinct('category', scope(req));
     res.render('faq-form', { title: 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: {}, categories, error: null });
   }));
-  for (const edit of [false, true]) faqsRouter.post(edit ? `${base}/:faqId/edit` : base, requireLogin, guard, verifyCsrfToken, wrap(async (req, res) => {
+  for (const edit of [false, true]) faqsRouter.post(edit ? `${base}/:faqId/edit` : base, requireLogin, guard, acceptPublicPhotos, verifyCsrfToken, wrap(async (req, res) => {
     const assoc = await association(req), original = edit ? await load(req) : {};
     let data;
     try { data = faqInput(req.body, system); } catch (error) {
@@ -115,11 +121,15 @@ for (const system of [false, true]) {
       const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), published: req.body.published === 'on', openToPublic: system && req.body.openToPublic === 'on' };
       return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
-    if (edit) await Faq.updateOne({ _id: original._id, ...scope(req) }, { $set: data }, { runValidators: true });
-    else {
-      const last = await Faq.findOne(scope(req)).sort({ position: -1 }).lean();
-      await Faq.create({ ...data, ...scope(req), position: (last?.position ?? -1) + 1 });
-    }
+    await persistFaqImages({ files: req.files, body: req.body, previous: original.images, association: system ? null : assoc._id,
+      persist: async images => {
+        if (edit) await Faq.updateOne({ _id: original._id, ...scope(req) }, { $set: { ...data, images } }, { runValidators: true });
+        else {
+          const last = await Faq.findOne(scope(req)).sort({ position: -1 }).lean();
+          await Faq.create({ ...data, images, ...scope(req), position: (last?.position ?? -1) + 1 });
+        }
+      }
+    });
     req.session.notice = 'Q&Aを保存しました。';
     res.redirect(url(req));
   }));
@@ -141,7 +151,35 @@ for (const system of [false, true]) {
     await association(req);
     const item = await load(req);
     await Faq.deleteOne({ _id: item._id, ...scope(req) });
+    await Promise.allSettled((item.images || []).filter(Boolean).map(deleteFaqImage));
     req.session.notice = 'Q&Aを削除しました。';
     res.redirect(url(req));
   }));
 }
+
+faqsRouter.get('/faq-images/:associationId/:fileId/:token', wrap(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const { associationId, fileId, token } = req.params;
+  await loadAssociation(associationId);
+  driveId(fileId);
+  if (!/^[a-f0-9]{64}$/.test(token)) throw fail('画像が見つかりません。', 404);
+  const imageUrl = `/faq-images/${associationId}/${fileId}/${token}`;
+  const item = await Faq.findOne({ association: associationId, 'images.url': imageUrl }).lean();
+  if (!item) throw fail('画像が見つかりません。', 404);
+  if (!req.isAuthenticated?.()) throw fail('ログインしてください。', 403);
+  if (!item.published) {
+    return requirePermission('association.manage')(req, res, error => {
+      if (error) return res.sendStatus(error.status || 403);
+      serveFaqImage(req, res, associationId, fileId).catch(error => res.sendStatus(error.status || 500));
+    });
+  }
+  await serveFaqImage(req, res, associationId, fileId);
+}));
+const serveFaqImage = async (req, res, associationId, fileId) => {
+  const context = await attachmentContext(associationId);
+  const image = await assertDriveItem(context.client, context.root, fileId, { allowRoot: false });
+  if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'].includes(image.mimeType) || image.capabilities?.canDownload === false) throw fail('画像が見つかりません。', 404);
+  const response = await context.client.request(`drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`);
+  res.set({ 'Content-Type': image.mimeType, 'Content-Disposition': 'inline', 'X-Content-Type-Options': 'nosniff' });
+  await pipeline(Readable.fromWeb(response.body), res);
+};
