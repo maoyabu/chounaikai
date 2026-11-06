@@ -32,6 +32,7 @@
       <a class="association-manage-setting-link association-setting-green" href="/associations/<%= association._id %>/manage/annual"><span><strong class="manage-menu-title"><%- include('partials/officer-menu-icon', { icon: 'calendar' }) %><span>年度設定</span></strong><small>年度役員・所属部・班長</small></span><span aria-hidden="true">→</span></a>
 <% if (association.optionalFeatures?.finance === true) { %>      <a class="association-manage-setting-link finance-manage-link" href="/associations/<%= association._id %>/finance/settings"><span><strong class="manage-menu-title"><%- include('partials/officer-menu-icon', { icon: 'finance' }) %><span>会計管理の基本設定</span></strong><small>公開設定・開始月・予算項目</small></span><span aria-hidden="true">→</span></a><% } %>
       <a class="association-manage-setting-link association-setting-orange" href="/associations/<%= association._id %>/public/edit"><span><strong class="manage-menu-title"><%- include('partials/officer-menu-icon', { icon: 'globe' }) %><span>公開ページの設定</span></strong><small>メインフォト・町内会の基本情報</small></span><span aria-hidden="true">→</span></a>
+      <a class="association-manage-setting-link association-setting-orange" href="/associations/<%= association._id %>/manage/faqs"><span><strong>Q&Aの管理</strong><small>カテゴリー・質問・回答・公開設定</small></span><span aria-hidden="true">→</span></a>
     </aside>
   </div>
 </main>

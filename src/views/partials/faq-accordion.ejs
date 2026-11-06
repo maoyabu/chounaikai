@@ -1,0 +1,9 @@
+<div class="support-accordion">
+  <% items.forEach(item => { %>
+  <details class="support-qa" name="support-questions">
+    <summary><span><%= item.question %></span><span class="support-chevron" aria-hidden="true"></span></summary>
+    <div class="support-answer"><p><%= item.answer %></p><% if (item.relatedUrl) { %><a href="<%= item.relatedUrl %>" target="_blank" rel="noopener noreferrer">詳しくはこちら<span class="sr-only">（新しいタブで開く）</span></a><% } %></div>
+  </details>
+  <% }) %>
+</div>
+<% if (!items.length) { %><p class="support-empty" role="status"><%= typeof category !== 'undefined' && category ? '該当するカテゴリーのQ&Aはありません。' : '公開中のQ&Aはありません。' %></p><% } %>

@@ -1,0 +1,11 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<link rel="stylesheet" href="/assets/support.css?v=<%= assetVersion %>">
+<main class="page-shell support-page">
+  <a class="back-link" href="<%= supportUrl %>">← サポートページへ戻る</a>
+  <section class="page-heading"><div><% if (association) { %><p class="eyebrow"><%= association.name %></p><% } %><h1>Q&A一覧</h1></div></section>
+  <form class="support-filter" method="get" action="<%= faqUrl %>">
+    <label for="support-category">カテゴリーで絞り込み：</label>
+    <div class="support-filter-controls"><select id="support-category" name="category"><option value="">すべて表示</option><% if (category && !categories.includes(category)) { %><option value="<%= category %>" selected><%= category %></option><% } %><% categories.forEach(value => { %><option value="<%= value %>" <%= category === value ? 'selected' : '' %>><%= value %></option><% }) %></select><button class="button button-quiet" type="submit">絞り込む</button></div>
+  </form>
+  <%- include('partials/faq-accordion', { items, category }) %>
+</main><script src="/assets/support.js?v=<%= assetVersion %>" defer></script><%- include('partials/foot') %>

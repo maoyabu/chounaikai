@@ -1,0 +1,22 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<link rel="stylesheet" href="/assets/support.css?v=<%= assetVersion %>">
+<main class="page-shell support-page">
+  <section class="page-heading"><div><% if (association) { %><p class="eyebrow"><%= association.name %></p><% } %><h1><svg class="support-heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v7h4v-7ZM20 12h2v7h-4v-7ZM20 19c0 2-3 3-7 3"/></svg>サポートページ</h1></div><%- include('partials/guide-link', { guideLinkClass: 'button button-quiet' }) %></section>
+  <section class="support-section" aria-labelledby="support-faq-heading">
+    <div class="support-section-heading"><h2 id="support-faq-heading"><span aria-hidden="true">？</span> よくあるご質問</h2><a class="button button-primary" href="<%= faqUrl %>">全てのQ&Aを確認する</a></div>
+    <%- include('partials/faq-accordion', { items }) %>
+  </section>
+  <section class="support-section" aria-labelledby="support-contact-heading">
+    <div class="support-section-heading"><h2 id="support-contact-heading"><span aria-hidden="true">✉</span> お問い合わせ先</h2></div>
+    <% if (supportContactUrl) { %>
+    <p>サポートへのご連絡はこちらからお願いします。</p>
+    <a class="button button-primary" href="<%= supportContactUrl %>">質問・ご意見箱へ</a>
+    <% } else if (currentUser) { %>
+    <p>質問・ご意見箱は、町内会に参加すると利用できます。</p>
+    <a class="button button-primary" href="/associations">町内会一覧へ</a>
+    <% } else { %>
+    <p>質問・ご意見箱を利用するには、参加中の町内会のアカウントでログインしてください。</p>
+    <a class="button button-primary" href="/login">ログインする</a>
+    <% } %>
+  </section>
+</main><%- include('partials/foot') %>

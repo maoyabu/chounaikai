@@ -1,0 +1,25 @@
+.support-page { max-width: 1160px; }
+.support-page h1 { display: flex; align-items: center; gap: .6rem; }
+.support-heading-icon { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.support-section { margin: 2.5rem 0; }
+.support-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #c5dafe; padding-bottom: 1rem; margin-bottom: 1rem; }
+.support-section-heading h2 { color: #0869da; font-size: 1.15rem; margin: 0; }
+.support-accordion { border: 1px solid #d5dbe0; border-radius: 5px; overflow: hidden; }
+.support-accordion:empty { display: none; }
+.support-qa + .support-qa { border-top: 1px solid #d5dbe0; }
+.support-qa summary { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; list-style: none; cursor: pointer; padding: 1rem 1.25rem; overflow-wrap: anywhere; }
+.support-qa summary::-webkit-details-marker { display: none; }
+.support-qa summary:focus-visible { outline: 3px solid #91bfff; outline-offset: -3px; }
+.support-qa[open] summary { color: #0064d7; background: #e6f1ff; box-shadow: inset 0 0 0 2px #b9d5ff; }
+.support-chevron { width: 10px; height: 10px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); flex-shrink: 0; margin-right: .3rem; }
+.support-qa[open] .support-chevron { transform: rotate(225deg); }
+.support-answer { padding: 1rem 1.25rem; border-top: 1px solid #d5dbe0; overflow-wrap: anywhere; }
+.support-answer p { white-space: pre-wrap; margin: 0 0 .8rem; }
+.support-answer p:last-child { margin-bottom: 0; }
+.support-filter { margin: 0 0 1.5rem; }
+.support-filter label { display: block; font-weight: 700; margin-bottom: .6rem; }
+.support-filter-controls { display: flex; gap: .75rem; }
+.support-filter select { flex: 1; min-width: 0; text-align: center; }
+.support-empty { padding: 1.25rem; background: #f6f8fa; border-radius: 5px; }
+@media (max-width: 600px) { .support-section-heading { align-items: flex-start; flex-direction: column; } .support-qa summary, .support-answer { padding: 1rem; } }
+.support-answer .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
