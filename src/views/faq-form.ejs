@@ -9,5 +9,9 @@
 <label>回答<textarea name="answer" rows="8" required maxlength="10000"><%= item.answer || '' %></textarea></label>
 <label>関連URL（任意）<input type="url" name="relatedUrl" maxlength="2000" value="<%= item.relatedUrl || '' %>" placeholder="https://"></label>
 <label class="faq-publish-toggle"><span>FAQとして公開する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="published" <%= item.published ? 'checked' : '' %>></label>
+<% if (system) { %>
+<label class="faq-publish-toggle"><span>ログイン前にも表示する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="openToPublic" <%= item.openToPublic ? 'checked' : '' %>></label>
+<p class="help-text">オン：町内会一覧から開くQ&Aにも表示します。オフ：ログインユーザーにのみ表示します。「FAQとして公開する」がオンの場合に表示されます。</p>
+<% } %>
 <div class="form-actions"><button class="button button-primary"><%= item._id ? '保存' : '登録' %></button><a class="button button-quiet" href="<%= baseUrl %>">キャンセル</a></div>
 </form></main><%- include('partials/foot') %>

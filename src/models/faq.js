@@ -6,6 +6,7 @@ const schema = new mongoose.Schema({
   question: { type: String, required: true, trim: true, maxlength: 1000 },
   answer: { type: String, required: true, trim: true, maxlength: 10000 },
   relatedUrl: { type: String, default: '', maxlength: 2000 },
+  openToPublic: { type: Boolean, default: false },
   published: { type: Boolean, default: false },
   position: { type: Number, default: 0 }
 }, { timestamps: true });

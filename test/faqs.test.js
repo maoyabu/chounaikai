@@ -9,9 +9,9 @@ import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.j
 const associationId = new mongoose.Types.ObjectId().toString();
 const id = new mongoose.Types.ObjectId().toString();
 const query = value => ({ sort() { return this; }, populate() { return this; }, lean: async () => value });
-const request = (path, { method = 'get', admin = true, body = {}, csrf = true, queryParams = {}, locals = {} } = {}) => {
+const request = (path, { method = 'get', admin = true, body = {}, csrf = true, queryParams = {}, locals = {}, authenticated = true } = {}) => {
   const layer = faqsRouter.stack.find(layer => layer.route?.methods[method] && layer.match(path));
-  const req = { params: layer.params, originalUrl: path, user: { _id: id, isAdmin: admin }, isAuthenticated: () => true, body, query: queryParams, session: { csrfToken: 'token' }, get: () => csrf ? 'token' : '' };
+  const req = { params: layer.params, originalUrl: path, user: { _id: id, isAdmin: admin }, isAuthenticated: () => authenticated, body, query: queryParams, session: { csrfToken: 'token' }, get: () => csrf ? 'token' : '' };
   return new Promise(resolve => {
     const res = { locals, statusCode: 200, status(code) { this.statusCode = code; return this; }, render(view, data) { resolve({ status: this.statusCode, view, data }); }, json(data) { resolve({ status: this.statusCode, data }); }, redirect(url) { resolve({ status: 302, url }); } };
     let index = 0;
@@ -119,4 +119,35 @@ test('support contact uses only active memberships even when viewing another ass
   assert.equal(result.data.supportContactUrl, `/associations/${own}/questions`);
   const noMembership = await request(`/associations/${associationId}/support`);
   assert.equal(noMembership.data.supportContactUrl, null);
+});
+
+test('open display setting can only be set by the system management form', () => {
+  const input = { category: '一般', question: '質問', answer: '回答', openToPublic: 'on' };
+  assert.equal(faqInput(input, true).openToPublic, true);
+  assert.equal(faqInput({ ...input, openToPublic: undefined }, true).openToPublic, false);
+  assert.equal(faqInput(input, false).openToPublic, undefined);
+  assert.throws(() => faqInput({ ...input, openToPublic: [] }, true), { status: 400 });
+  assert.equal(new Faq().openToPublic, false);
+});
+test('directory always restricts both results and category names to open published system Q&As', async t => {
+  let filter, categories;
+  t.mock.method(Faq, 'find', value => { filter = value; return query([]); });
+  t.mock.method(Faq, 'distinct', async (_field, value) => { categories = value; return []; });
+  for (const authenticated of [false, true]) {
+    const result = await request('/faq', { authenticated });
+    assert.deepEqual(filter, { published: true, association: null, openToPublic: true });
+    assert.deepEqual(categories, filter);
+    assert.equal(result.data.directory, true);
+    assert.equal(result.data.faqUrl, '/faq');
+  }
+});
+test('anonymous association FAQ and support never disclose login-only Q&As', async t => {
+  t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: associationId }));
+  let filter;
+  t.mock.method(Faq, 'find', value => { filter = value; return { sort() { return this; }, limit() { return this; }, lean: async () => [] }; });
+  t.mock.method(Faq, 'distinct', async () => []);
+  for (const page of ['faq', 'support']) {
+    await request(`/associations/${associationId}/${page}`, { authenticated: false });
+    assert.deepEqual(filter, { published: true, association: null, openToPublic: true });
+  }
 });

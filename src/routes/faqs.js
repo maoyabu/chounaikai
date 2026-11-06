@@ -8,7 +8,7 @@ import { Faq } from '../models/faq.js';
 export const faqsRouter = express.Router();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const wrap = handler => async (req, res, next) => { try { await handler(req, res); } catch (error) { next(error); } };
-export const faqInput = body => {
+export const faqInput = (body, system = false) => {
   const result = {};
   for (const [key, max] of Object.entries({ category: 100, question: 1000, answer: 10000, relatedUrl: 2000 })) {
     if (body[key] !== undefined && typeof body[key] !== 'string') throw fail('入力内容を確認してください。');
@@ -23,6 +23,10 @@ export const faqInput = body => {
   }
   if (body.published !== undefined && body.published !== 'on') throw fail('公開設定を確認してください。');
   result.published = body.published === 'on';
+  if (system) {
+    if (body.openToPublic !== undefined && body.openToPublic !== 'on') throw fail('表示範囲を確認してください。');
+    result.openToPublic = body.openToPublic === 'on';
+  }
   return result;
 };
 const loadAssociation = async id => {
@@ -32,14 +36,17 @@ const loadAssociation = async id => {
   return association;
 };
 export const publishedFaqFilter = association => ({ published: true, association: { $in: [null, association] } });
-const publicPage = async (req, res, association, support) => {
+const publicPage = async (req, res, association, support, directory = false) => {
   const memberships = res.locals?.dangerMemberships || [];
   const contactAssociation = memberships.find(item => String(item.association._id) === String(association?._id))?.association
     || memberships[0]?.association;
   const supportContactUrl = contactAssociation ? `/associations/${contactAssociation._id}/questions` : null;
-  const baseFilter = association ? publishedFaqFilter(association._id) : { published: true, association: null };
+  const baseFilter = directory || !req.isAuthenticated?.()
+    ? { published: true, association: null, openToPublic: true }
+    : association ? publishedFaqFilter(association._id) : { published: true, association: null };
+  if (!directory) res.set?.('Cache-Control', 'private, no-store');
   const supportUrl = association ? `/associations/${association._id}/support` : '/support';
-  const faqUrl = association ? `/associations/${association._id}/faq` : '/support/faqs';
+  const faqUrl = directory ? '/faq' : association ? `/associations/${association._id}/faq` : '/support/faqs';
   const category = !support && typeof req.query?.category === 'string' ? req.query.category : '';
   const filter = category ? { ...baseFilter, category } : baseFilter;
   let query = Faq.find(filter).sort({ association: 1, position: 1, _id: 1 });
@@ -51,9 +58,10 @@ const publicPage = async (req, res, association, support) => {
   res.render(support ? 'support' : 'faq-public', {
     title: support ? 'サポートページ' : 'Q&A一覧', association, items,
     categories: categories.sort((a, b) => a.localeCompare(b, 'ja')), category,
-    supportUrl, faqUrl, supportContactUrl
+    supportUrl, faqUrl, supportContactUrl, directory
   });
 };
+faqsRouter.get('/faq', wrap(async (req, res) => publicPage(req, res, null, false, true)));
 for (const support of [true, false]) {
   faqsRouter.get(support ? '/support' : '/support/faqs', wrap(async (req, res) => {
     // Carry the current association through navigation; users with no association
@@ -93,19 +101,19 @@ for (const system of [false, true]) {
   faqsRouter.get(`${base}/:faqId/edit`, requireLogin, guard, wrap(async (req, res) => {
     const assoc = await association(req), item = await load(req);
     const categories = await Faq.distinct('category', scope(req));
-    res.render('faq-form', { title: 'Q&Aの編集', association: assoc, baseUrl: url(req), item, categories, error: null });
+    res.render('faq-form', { title: 'Q&Aの編集', association: assoc, system, baseUrl: url(req), item, categories, error: null });
   }));
   faqsRouter.get(`${base}/new`, requireLogin, guard, wrap(async (req, res) => {
     const assoc = await association(req), categories = await Faq.distinct('category', scope(req));
-    res.render('faq-form', { title: 'Q&Aの登録', association: assoc, baseUrl: url(req), item: {}, categories, error: null });
+    res.render('faq-form', { title: 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: {}, categories, error: null });
   }));
   for (const edit of [false, true]) faqsRouter.post(edit ? `${base}/:faqId/edit` : base, requireLogin, guard, verifyCsrfToken, wrap(async (req, res) => {
     const assoc = await association(req), original = edit ? await load(req) : {};
     let data;
-    try { data = faqInput(req.body); } catch (error) {
+    try { data = faqInput(req.body, system); } catch (error) {
       if (error.status !== 400) throw error;
-      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), published: req.body.published === 'on' };
-      return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, baseUrl: url(req), item, categories: await Faq.distinct('category', scope(req)), error: error.message });
+      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), published: req.body.published === 'on', openToPublic: system && req.body.openToPublic === 'on' };
+      return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
     if (edit) await Faq.updateOne({ _id: original._id, ...scope(req) }, { $set: data }, { runValidators: true });
     else {

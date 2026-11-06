@@ -1,7 +1,7 @@
 <%- include('partials/head') %><%- include('partials/header') %>
 <link rel="stylesheet" href="/assets/support.css?v=<%= assetVersion %>">
 <main class="page-shell support-page">
-  <a class="back-link" href="<%= supportUrl %>">← サポートページへ戻る</a>
+  <a class="back-link" href="<%= typeof directory !== 'undefined' && directory ? '/associations' : supportUrl %>">← <%= typeof directory !== 'undefined' && directory ? '町内会一覧へ戻る' : 'サポートページへ戻る' %></a>
   <section class="page-heading"><div><% if (association) { %><p class="eyebrow"><%= association.name %></p><% } %><h1>Q&A一覧</h1></div></section>
   <form class="support-filter" method="get" action="<%= faqUrl %>">
     <label for="support-category">カテゴリーで絞り込み：</label>
