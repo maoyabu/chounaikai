@@ -8,7 +8,7 @@
 <label>質問<textarea name="question" rows="3" required maxlength="1000"><%= item.question || '' %></textarea></label>
 <label>回答<textarea name="answer" rows="8" required maxlength="10000"><%= item.answer || '' %></textarea></label>
 <fieldset><legend>画像（最大3枚）</legend>
-<p class="help-text">1枚15MB以下。JPEG、PNG、WebP、GIF、HEIC形式。<%= system ? 'Cloudinary' : '町内会のGoogle Drive' %>に保存します。エラー時は画像を選び直してください。</p>
+<p class="help-text">画像1は回答の一番上、画像2・3は回答文の下に表示されます。1枚15MB以下。JPEG、PNG、WebP、GIF、HEIC形式。<%= system ? 'Cloudinary' : '町内会のGoogle Drive' %>に保存します。エラー時は画像を選び直してください。</p>
 <div class="faq-images"><% for (let slot = 0; slot < 3; slot++) { const image = (item.images || [])[slot]; %>
 <div><% if (image && image.url) { %><img src="<%= image.url %>" alt="登録済み画像<%= slot + 1 %>"><label><input type="checkbox" name="removePhoto<%= slot %>">この画像を削除</label><% } %>
 <label>画像<%= slot + 1 %><input type="file" name="photo<%= slot %>" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"></label></div>
