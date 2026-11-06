@@ -9,8 +9,9 @@
 <div class="faq-answer-field">
 <label for="faq-answer">回答</label>
 <div class="faq-editor-tools" role="toolbar" aria-label="回答の書式" hidden>
-<% for (const [command, label] of [['bold', '太字'], ['italic', '斜体'], ['underline', '下線'], ['strikeThrough', '取り消し線'], ['insertUnorderedList', '箇条書き'], ['insertOrderedList', '番号付きリスト'], ['createLink', 'リンク'], ['unlink', 'リンク解除'], ['removeFormat', '書式解除']]) { %><button type="button" data-command="<%= command %>"><%= label %></button><% } %>
-<select aria-label="段落の種類" data-block><option value="p">標準の段落</option><option value="h2">見出し（大）</option><option value="h3">見出し（小）</option><option value="blockquote">引用</option></select>
+<% for (const [command, label] of [['bold', '太字'], ['italic', '斜体'], ['underline', '下線'], ['strikeThrough', '取り消し線'], ['insertUnorderedList', '箇条書き'], ['insertOrderedList', '番号付きリスト'], ['createLink', 'リンク'], ['unlink', 'リンク解除'], ['insertHorizontalRule', '水平線'], ['justifyLeft', '左揃え'], ['justifyCenter', '中央揃え'], ['justifyRight', '右揃え'], ['removeFormat', '書式解除']]) { %><button type="button" data-command="<%= command %>"><%= label %></button><% } %>
+<label class="faq-tool-label">文字色<input type="color" value="#17231f" data-color aria-label="文字色"></label>
+<label class="faq-tool-label">見出し・段落<select aria-label="見出し・段落の種類" data-block><option value="p">標準の段落</option><% for (let level = 1; level <= 6; level++) { %><option value="h<%= level %>">見出し<%= level %></option><% } %><option value="blockquote">引用</option></select></label>
 </div>
 <div id="faq-answer-editor" class="faq-answer-editor" contenteditable="true" role="textbox" aria-label="回答" aria-multiline="true" aria-required="true" hidden><% if (typeof item.answerHtml === 'string') { %><%- item.answerHtml %><% } else { %><%= item.answer || '' %><% } %></div>
 <textarea id="faq-answer" name="answer" rows="8" required maxlength="10000"><%= item.answer || '' %></textarea>

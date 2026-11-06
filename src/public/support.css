@@ -38,3 +38,11 @@
 .faq-answer-content blockquote { margin: .8rem 0; padding-left: 1rem; border-left: 3px solid #d5dbe0; }
 .faq-answer-content h2 { font-size: 1.4rem; }
 .faq-answer-content h3 { font-size: 1.2rem; }
+
+.faq-answer-content h1 { font-size: 1.6rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content h2 { font-size: 1.4rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content h3 { font-size: 1.2rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content h4 { font-size: 1.1rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content h5 { font-size: 1rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content h6 { font-size: 0.9rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-content hr { border: 0; border-top: 1px solid #b8c2bd; margin: 1rem 0; }

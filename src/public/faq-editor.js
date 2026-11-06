@@ -54,6 +54,13 @@
       sync();
     });
   });
+  tools.querySelector('[data-color]').addEventListener('input', event => {
+    restore();
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, event.target.value);
+    document.execCommand('styleWithCSS', false, false);
+    sync();
+  });
   tools.querySelector('[data-block]').addEventListener('change', event => {
     restore();
     document.execCommand('formatBlock', false, event.target.value);

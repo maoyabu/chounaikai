@@ -214,3 +214,18 @@ test('public FAQ renders sanitized HTML for stored formatted answers', async t =
   const result = await request('/faq');
   assert.equal(result.data.items[0].answerHtml, '<p><b>回答</b></p>');
 });
+
+test('FAQ colors, horizontal rules, headings and paragraph alignment survive safe HTML rendering', async () => {
+  const { sanitizeFaqAnswer } = await import('../src/services/faqAnswerService.js');
+  const html = '<h1>見出し1</h1><h6>見出し6</h6><hr><p style="text-align:center;color:#ff0000;position:fixed" onclick="bad()"><span style="color:rgb(0, 128, 255);background-image:url(javascript:bad())">色付き</span></p><font color="#00ff00">緑</font>';
+  const safe = sanitizeFaqAnswer(html);
+  assert.ok(safe.includes('<h1>見出し1</h1>'));
+  assert.ok(safe.includes('<h6>見出し6</h6>'));
+  assert.match(safe, /<hr\s*\/?\s*>/);
+  assert.ok(safe.includes('text-align:center'));
+  assert.ok(safe.includes('color:#ff0000'));
+  assert.ok(safe.includes('color:rgb(0, 128, 255)'));
+  assert.ok(safe.includes('<span style="color:#00ff00">緑</span>'));
+  assert.ok(!/position|onclick|background-image|javascript/.test(safe));
+  assert.equal(sanitizeFaqAnswer(safe), safe);
+});

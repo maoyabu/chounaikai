@@ -41,3 +41,14 @@
 .faq-answer-editor p { margin: 0 0 .8rem; }
 .faq-answer-editor ul, .faq-answer-editor ol { padding-left: 2rem; }
 .faq-answer-editor blockquote { margin: .8rem 0; padding-left: 1rem; border-left: 3px solid var(--line); }
+
+.faq-answer-editor h1 { font-size: 1.6rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor h2 { font-size: 1.4rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor h3 { font-size: 1.2rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor h4 { font-size: 1.1rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor h5 { font-size: 1rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor h6 { font-size: 0.9rem; line-height: 1.4; margin: 1rem 0 .6rem; }
+.faq-answer-editor hr { border: 0; border-top: 1px solid #b8c2bd; margin: 1rem 0; }
+
+.form-stack .faq-editor-tools .faq-tool-label { display: inline-flex; align-items: center; gap: .4rem; width: auto; font-size: .9rem; }
+.form-stack .faq-editor-tools input[type="color"] { width: 44px; height: 40px; min-height: 40px; padding: .2rem; cursor: pointer; }
