@@ -1,4 +1,5 @@
 import express from 'express';
+import { sanitizeFaqAnswer, faqAnswerHtml, faqAnswerText } from '../services/faqAnswerService.js';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { acceptPublicPhotos } from '../services/publicPageImageService.js';
@@ -21,6 +22,11 @@ export const faqInput = (body, system = false) => {
     const value = (body[key] || '').trim();
     if ((!value && key !== 'relatedUrl') || value.length > max) throw fail('必須項目と文字数を確認してください。');
     result[key] = value;
+  }
+  result.answerFormat = body.answerFormat === 'html' ? 'html' : 'text';
+  if (result.answerFormat === 'html') {
+    result.answer = sanitizeFaqAnswer(result.answer);
+    if (!faqAnswerText(result).replace(/&nbsp;|&#160;/g, ' ').trim() || result.answer.length > 10000) throw fail('回答を入力し、文字数を確認してください。');
   }
   if (result.relatedUrl) {
     let url;
@@ -62,7 +68,7 @@ const publicPage = async (req, res, association, support, directory = false) => 
     support ? Promise.resolve([]) : Faq.distinct('category', baseFilter)
   ]);
   res.render(support ? 'support' : 'faq-public', {
-    title: support ? 'サポートページ' : 'Q&A一覧', association, items,
+    title: support ? 'サポートページ' : 'Q&A一覧', association, items: items.map(item => ({ ...item, answerHtml: faqAnswerHtml(item) })),
     categories: categories.sort((a, b) => a.localeCompare(b, 'ja')), category,
     supportUrl, faqUrl, supportContactUrl, directory
   });
@@ -102,12 +108,12 @@ for (const system of [false, true]) {
   faqsRouter.get(base, requireLogin, guard, wrap(async (req, res) => {
     const assoc = await association(req);
     const items = await Faq.find(scope(req)).sort({ position: 1, _id: 1 }).lean();
-    res.render('faq-manage', { title: 'Q&Aの管理', association: assoc, system, baseUrl: url(req), items });
+    res.render('faq-manage', { title: 'Q&Aの管理', association: assoc, system, baseUrl: url(req), items: items.map(item => ({ ...item, answer: faqAnswerText(item) })) });
   }));
   faqsRouter.get(`${base}/:faqId/edit`, requireLogin, guard, wrap(async (req, res) => {
     const assoc = await association(req), item = await load(req);
     const categories = await Faq.distinct('category', scope(req));
-    res.render('faq-form', { title: 'Q&Aの編集', association: assoc, system, baseUrl: url(req), item, categories, error: null });
+    res.render('faq-form', { title: 'Q&Aの編集', association: assoc, system, baseUrl: url(req), item: { ...item, answerHtml: faqAnswerHtml(item) }, categories, error: null });
   }));
   faqsRouter.get(`${base}/new`, requireLogin, guard, wrap(async (req, res) => {
     const assoc = await association(req), categories = await Faq.distinct('category', scope(req));
@@ -118,8 +124,8 @@ for (const system of [false, true]) {
     let data;
     try { data = faqInput(req.body, system); } catch (error) {
       if (error.status !== 400) throw error;
-      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), published: req.body.published === 'on', openToPublic: system && req.body.openToPublic === 'on' };
-      return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item, categories: await Faq.distinct('category', scope(req)), error: error.message });
+      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', openToPublic: system && req.body.openToPublic === 'on' };
+      return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: { ...item, answerHtml: faqAnswerHtml(item) }, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
     await persistFaqImages({ files: req.files, body: req.body, previous: original.images, association: system ? null : assoc._id,
       persist: async images => {

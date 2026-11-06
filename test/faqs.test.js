@@ -191,3 +191,26 @@ test('FAQ Drive images require a stored reference and protect unpublished images
   t.mock.method(RoleAssignment, 'findOne', () => query(null));
   assert.equal((await request(path, { admin: false })).status, 403);
 });
+
+test('HTML answers keep basic formatting and strip executable markup on write and read', async () => {
+  const { faqAnswerHtml } = await import('../src/services/faqAnswerService.js');
+  const answer = '<h2>見出し</h2><p><strong>強調</strong><a href="javascript:alert(1)" onclick="alert(1)">リンク</a></p><script>alert(1)</script><img src=x onerror=alert(1)><ul><li>項目</li></ul>';
+  const result = faqInput({ category: '一般', question: '質問', answer, answerFormat: 'html' });
+  assert.equal(result.answerFormat, 'html');
+  assert.equal(result.answer, '<h2>見出し</h2><p><strong>強調</strong><a>リンク</a></p><ul><li>項目</li></ul>');
+  assert.equal(faqAnswerHtml({ answer, answerFormat: 'html' }), result.answer);
+  assert.equal(faqAnswerHtml({ answer: '<b>文字</b>\n次の行' }), '&lt;b&gt;文字&lt;/b&gt;<br>次の行');
+  for (const blank of ['<p><br></p>', '<script>alert(1)</script>', '<p>&nbsp;</p>']) {
+    assert.throws(() => faqInput({ category: '一般', question: '質問', answer: blank, answerFormat: 'html' }), { status: 400 });
+  }
+  const html = await ejs.renderFile('src/views/partials/faq-accordion.ejs', { items: [{ question: '質問', answerHtml: result.answer }] });
+  assert.ok(html.includes('<h2>見出し</h2>'));
+  assert.ok(!html.includes('javascript:'));
+});
+
+test('public FAQ renders sanitized HTML for stored formatted answers', async t => {
+  t.mock.method(Faq, 'find', () => query([{ question: '質問', answer: '<p><b>回答</b></p><script>bad()</script>', answerFormat: 'html' }]));
+  t.mock.method(Faq, 'distinct', async () => []);
+  const result = await request('/faq');
+  assert.equal(result.data.items[0].answerHtml, '<p><b>回答</b></p>');
+});

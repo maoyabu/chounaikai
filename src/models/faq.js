@@ -5,6 +5,7 @@ const schema = new mongoose.Schema({
   category: { type: String, required: true, trim: true, maxlength: 100 },
   question: { type: String, required: true, trim: true, maxlength: 1000 },
   answer: { type: String, required: true, trim: true, maxlength: 10000 },
+  answerFormat: { type: String, enum: ['text', 'html'], default: 'text' },
   images: { type: [{ _id: false, url: String, publicId: String }], default: [], validate: value => value.length <= 3 },
   relatedUrl: { type: String, default: '', maxlength: 2000 },
   openToPublic: { type: Boolean, default: false },
