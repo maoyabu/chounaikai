@@ -220,3 +220,9 @@
 .profile-line-settings>summary .status-badge{margin-left:auto}
 .profile-line-settings>summary:focus-visible{outline:3px solid var(--green);outline-offset:4px;border-radius:4px}
 .profile-line-settings-content{margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}
+.association-list-heading{width:100%;min-width:0}
+.association-list-title-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.association-list-title-row h1{margin:.2rem 0 .5rem}
+.association-list-faq-button{flex-shrink:0;background:#173f75;color:#fff}
+.association-list-faq-button:hover{background:#102e57}
+.association-list-faq-button:focus-visible{outline:3px solid #173f75;outline-offset:3px}

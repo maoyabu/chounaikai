@@ -2,8 +2,7 @@
 <% if (currentUser) { %><%- include('partials/header') %><% } else { %><%- include('partials/guide-bar') %><% } %>
 <% const joinedAssociationIds = new Set((typeof dangerMemberships !== 'undefined' ? dangerMemberships : []).map(item => String(item.association._id))); %>
 <main class="page-shell association-list-shell">
-  <p><a class="button button-quiet" href="/faq">Q&Aを見る →</a></p>
-  <section class="page-heading"><div><p class="eyebrow">町内会を探す</p><h1>町内会一覧</h1><p>参加したい町内会があるか確認してください。</p></div></section>
+  <section class="page-heading"><div class="association-list-heading"><p class="eyebrow">町内会を探す</p><div class="association-list-title-row"><h1>町内会一覧</h1><a class="button association-list-faq-button" href="/faq">FAQ</a></div><p>参加したい町内会があるか確認してください。</p></div></section>
   <div class="association-list-layout">
   <div class="association-list-main">
   <form class="association-list-search content-card" method="get" action="/associations">
