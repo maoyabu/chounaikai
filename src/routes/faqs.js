@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import { requireLogin, requirePermission, requireSystemAdmin } from '../middleware/auth.js';
 import { verifyCsrfToken } from '../middleware/csrf.js';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
+import { AssociationMembership } from '../models/associationMembership.js';
 import { Faq } from '../models/faq.js';
 
 export const faqsRouter = express.Router();
@@ -35,8 +36,8 @@ export const faqInput = (body, system = false) => {
   }
   if (body.published !== undefined && body.published !== 'on') throw fail('公開設定を確認してください。');
   result.published = body.published === 'on';
-  if (body.hideAfterLogin !== undefined && body.hideAfterLogin !== 'on') throw fail('ログイン後の表示設定を確認してください。');
-  result.hideAfterLogin = body.hideAfterLogin === 'on';
+  if (system && body.hideAfterLogin !== undefined && body.hideAfterLogin !== 'on') throw fail('ログイン後の表示設定を確認してください。');
+  result.hideAfterLogin = system && body.hideAfterLogin === 'on';
   if (body.showOnSupport !== undefined && body.showOnSupport !== 'on') throw fail('サポートページの表示設定を確認してください。');
   result.showOnSupport = body.showOnSupport === 'on';
   if (system) {
@@ -50,6 +51,10 @@ const loadAssociation = async id => {
   const association = await NeighborhoodAssociation.findOne({ _id: id, status: 'active', deletedAt: { $exists: false } }).lean();
   if (!association) throw fail('町内会が見つかりません。', 404);
   return association;
+};
+const requireFaqMembership = async (req, associationId) => {
+  const membership = await AssociationMembership.findOne({ association: associationId, user: req.user._id, status: 'active' }).lean();
+  if (!membership) throw fail('この町内会の会員だけが閲覧できます。', 403);
 };
 export const publishedFaqFilter = association => ({ published: true, association: { $in: [null, association] } });
 const publicPage = async (req, res, association, support, directory = false) => {
@@ -93,8 +98,10 @@ for (const support of [true, false]) {
     }
     await publicPage(req, res, null, support);
   }));
-  faqsRouter.get(`/associations/:associationId/${support ? 'support' : 'faq'}`, wrap(async (req, res) => {
+  faqsRouter.get(`/associations/:associationId/${support ? 'support' : 'faq'}`, requireLogin, wrap(async (req, res) => {
     const association = await loadAssociation(req.params.associationId);
+    res.set('Cache-Control', 'private, no-store');
+    await requireFaqMembership(req, association._id);
     await publicPage(req, res, association, support);
   }));
 }
@@ -129,7 +136,7 @@ for (const system of [false, true]) {
     let data;
     try { data = faqInput(req.body, system); } catch (error) {
       if (error.status !== 400) throw error;
-      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', showOnSupport: req.body.showOnSupport === 'on', hideAfterLogin: req.body.hideAfterLogin === 'on', openToPublic: system && req.body.openToPublic === 'on' };
+      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', showOnSupport: req.body.showOnSupport === 'on', hideAfterLogin: system && req.body.hideAfterLogin === 'on', openToPublic: system && req.body.openToPublic === 'on' };
       return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: { ...item, answerHtml: faqAnswerHtml(item) }, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
     await persistFaqImages({ files: req.files, body: req.body, previous: original.images, association: system ? null : assoc._id,
@@ -184,6 +191,7 @@ faqsRouter.get('/faq-images/:associationId/:fileId/:token', wrap(async (req, res
       serveFaqImage(req, res, associationId, fileId).catch(error => res.sendStatus(error.status || 500));
     });
   }
+  await requireFaqMembership(req, associationId);
   await serveFaqImage(req, res, associationId, fileId);
 }));
 const serveFaqImage = async (req, res, associationId, fileId) => {

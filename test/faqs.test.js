@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { faqsRouter, faqInput, publishedFaqFilter } from '../src/routes/faqs.js';
 import { persistFaqImages, uploadFaqImage } from '../src/services/faqImageService.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { AssociationMembership } from '../src/models/associationMembership.js';
 import { Faq } from '../src/models/faq.js';
 import { RoleAssignment } from '../src/models/role.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
@@ -24,6 +25,8 @@ const request = (path, { method = 'get', admin = true, body = {}, csrf = true, q
     next();
   });
 };
+test.beforeEach(t => { t.mock.method(AssociationMembership, 'findOne', () => query({ _id: id })); });
+
 test('FAQ input validates required fields and safe URLs', () => {
   const valid = { category: ' 手続き ', question: '質問', answer: '回答', published: 'on', relatedUrl: 'https://example.com/' };
   assert.equal(faqInput(valid).category, '手続き');
@@ -149,8 +152,9 @@ test('anonymous association FAQ and support never disclose login-only Q&As', asy
   t.mock.method(Faq, 'find', value => { filter = value; return { sort() { return this; }, limit() { return this; }, lean: async () => [] }; });
   t.mock.method(Faq, 'distinct', async () => []);
   for (const page of ['faq', 'support']) {
-    await request(`/associations/${associationId}/${page}`, { authenticated: false });
-    assert.deepEqual(filter, { published: true, association: null, openToPublic: true, ...(page === 'support' ? { showOnSupport: { $ne: false } } : {}) });
+    const result = await request(`/associations/${associationId}/${page}`, { authenticated: false });
+    assert.equal(result.url, '/login');
+    assert.equal(filter, undefined);
   }
 });
 
@@ -230,17 +234,17 @@ test('FAQ colors, horizontal rules, headings and paragraph alignment survive saf
   assert.equal(sanitizeFaqAnswer(safe), safe);
 });
 
- test('display settings are independent and reject malformed values', () => {
+test('display settings are independent and reject malformed values', () => {
   const input = { category: '一般', question: '質問', answer: '回答' };
   assert.equal(faqInput(input).showOnSupport, false);
   assert.equal(faqInput(input).hideAfterLogin, false);
-  const selected = faqInput({ ...input, showOnSupport: 'on', hideAfterLogin: 'on' });
+  const selected = faqInput({ ...input, showOnSupport: 'on', hideAfterLogin: 'on' }, true);
   assert.equal(selected.showOnSupport, true);
   assert.equal(selected.hideAfterLogin, true);
   assert.equal(new Faq().showOnSupport, true);
   assert.equal(new Faq().hideAfterLogin, false);
   for (const key of ['showOnSupport', 'hideAfterLogin']) {
-    assert.throws(() => faqInput({ ...input, [key]: [] }), { status: 400 });
+    assert.throws(() => faqInput({ ...input, [key]: [] }, true), { status: 400 });
   }
 });
 
@@ -263,4 +267,44 @@ test('create, edit and validation errors preserve display selections', async t =
     assert.equal(saved.showOnSupport, false);
     assert.equal(saved.hideAfterLogin, false);
   }
+});
+
+
+test('only system administrators can enable hiding after login', async t => {
+  const body = { category: '一般', question: '質問', answer: '回答', hideAfterLogin: 'on' };
+  assert.equal(faqInput(body, true).hideAfterLogin, true);
+  assert.equal(faqInput(body, false).hideAfterLogin, false);
+  const locals = { title: 'Q&A登録', currentUser: null, assetVersion: 'test', csrfToken: 'token', error: null, categories: [], item: { hideAfterLogin: true }, association: { _id: associationId, name: '町内会' }, baseUrl: '/admin/faqs' };
+  for (const system of [true, false]) {
+    const html = await ejs.renderFile('src/views/faq-form.ejs', { ...locals, system });
+    assert.equal(html.includes('name="hideAfterLogin"'), system);
+  }
+  t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: associationId }));
+  t.mock.method(Faq, 'findOne', () => query({ _id: id, hideAfterLogin: true, images: [] }));
+  let saved;
+  t.mock.method(Faq, 'create', async value => { saved = value; });
+  t.mock.method(Faq, 'updateOne', async (_filter, update) => { saved = update.$set; });
+  for (const path of [`/associations/${associationId}/manage/faqs`, `/associations/${associationId}/manage/faqs/${id}/edit`]) {
+    assert.equal((await request(path, { method: 'post', body })).status, 302);
+    assert.equal(saved.hideAfterLogin, false);
+    assert.equal(saved.openToPublic, undefined);
+  }
+});
+
+
+test('association FAQ pages and published images reject nonmembers before reading content', async t => {
+  t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: associationId }));
+  let membershipFilter;
+  t.mock.method(AssociationMembership, 'findOne', filter => { membershipFilter = filter; return query(null); });
+  let reads = 0;
+  t.mock.method(Faq, 'find', () => { reads++; return query([]); });
+  for (const admin of [false, true]) {
+    for (const page of ['faq', 'support']) {
+      assert.equal((await request(`/associations/${associationId}/${page}`, { admin })).status, 403);
+      assert.deepEqual(membershipFilter, { association: associationId, user: id, status: 'active' });
+    }
+  }
+  assert.equal(reads, 0);
+  t.mock.method(Faq, 'findOne', () => query({ published: true }));
+  assert.equal((await request(`/faq-images/${associationId}/drive-file/${'a'.repeat(64)}`)).status, 403);
 });
