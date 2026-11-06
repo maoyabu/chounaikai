@@ -394,8 +394,14 @@ webRouter.post('/verification-email/resend', verifyCsrfToken, async (req, res, n
 const finishWebLogin = async (req, res, next) => {
   const user = req.user;
   try {
+    // Administrators do not participate in resident registration. Old choices
+    // or registration records must not send them to unavailable join pages.
+    if (user.isAdmin) {
+      delete req.session.householdInvitationId;
+      delete req.session.registrationChoice;
+      return res.redirect('/dashboard');
+    }
     if (req.session.householdInvitationId) {
-      if (user.isAdmin) return res.redirect('/resident-onboarding');
       let application;
       try {
         application = await acceptHouseholdInvitation({ invitationId: req.session.householdInvitationId, user });

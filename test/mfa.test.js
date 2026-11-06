@@ -230,7 +230,7 @@ import { AssociationMembership } from '../src/models/associationMembership.js';
 import { AssociationGroupMembership } from '../src/models/associationGroup.js';
 import { createApp } from '../src/app.js';
 
-async function withMfaApp(task, siteSecurityService = { async get() { return { mfaEnabled: true, revision: 'initial' }; } }) {
+async function withMfaApp(task, siteSecurityService = { async get() { return { mfaEnabled: true, revision: 'initial' }; } }, passkeyService) {
   const f = fixture();
   const admin = { ...user, username: 'test-admin', authenticate(password, callback) {
     const result = { user: password === 'test-password' ? this : false };
@@ -259,7 +259,7 @@ async function withMfaApp(task, siteSecurityService = { async get() { return { m
   ResidentRegistration.findOne = () => ({ async lean() { return null; } });
   const menuReads = [[RoleAssignment, 'find'], [AnnualLeaderAssignment, 'find'], [AnnualOfficer, 'find'], [AssociationMembership, 'findOne'], [AssociationMembership, 'find'], [AssociationGroupMembership, 'find']].map(([model, method]) => [model, method, model[method]]);
   for (const [model, method] of menuReads) model[method] = () => ({ populate() { return this; }, sort() { return this; }, async lean() { return method === 'findOne' ? null : []; } });
-  const app = createApp({ mongoUri: 'mongodb://127.0.0.1:27017/unused', sessionSecret: 'mfa-http-test', mfaService: f.service, siteSecurityService, privacyAuditWriter: async () => {}, rateLimitStore: { async increment() { return 1; } } });
+  const app = createApp({ mongoUri: 'mongodb://127.0.0.1:27017/unused', sessionSecret: 'mfa-http-test', mfaService: f.service, siteSecurityService, passkeyService, privacyAuditWriter: async () => {}, rateLimitStore: { async increment() { return 1; } } });
   const server = http.createServer(app);
   try {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
@@ -364,6 +364,42 @@ test('HTTP: recovery codes, password confirmation, and revision changes protect 
     assert.equal((await browser.request('/api/auth/me')).status, 401);
     assert.ok(f.rows.get(admin._id).enabledAt);
   });
+});
+
+test('HTTP: administrator passkey login ignores stale resident registration and clears registration choices', async () => {
+  let authenticatedUser;
+  const passkeys = {
+    enabled: true,
+    async startAuthentication() { return { options: {}, flowId: 'test-flow' }; },
+    async finishAuthentication() { return { user: authenticatedUser, credential: { _id: 'test-key' } }; },
+    async validSession() { return true; }
+  };
+  await withMfaApp(async ({ admin, resident, client }) => {
+    ResidentRegistration.findOne = () => ({ async lean() {
+      return { registrationPurpose: 'join', association: '507f1f77bcf86cd799439011' };
+    } });
+    authenticatedUser = admin;
+    for (const start of ['/login', '/associations/create/start']) {
+      const browser = client();
+      await browser.request(start);
+      const login = await browser.request('/login');
+      const csrf = login.text.match(/name="_csrf" value="([^"]+)"/)[1];
+      assert.equal((await browser.request('/api/passkeys/auth/options', { method: 'POST', body: { _csrf: csrf } })).status, 200);
+      const verified = await browser.request('/api/passkeys/auth/verify', { method: 'POST', body: { _csrf: csrf, flowId: 'test-flow' } });
+      assert.equal(verified.status, 200);
+      assert.equal(verified.json().next, '/login/complete');
+      assert.equal((await browser.request(verified.json().next)).location, '/dashboard');
+      assert.equal((await browser.request('/login')).location, '/dashboard');
+      // The old creation choice must not remain available after completion.
+      assert.equal((await browser.request('/associations/new')).location, '/associations');
+    }
+    authenticatedUser = resident;
+    const browser = client();
+    const login = await browser.request('/login');
+    const csrf = login.text.match(/name="_csrf" value="([^"]+)"/)[1];
+    await browser.request('/api/passkeys/auth/verify', { method: 'POST', body: { _csrf: csrf } });
+    assert.equal((await browser.request('/login/complete')).location, '/associations/507f1f77bcf86cd799439011/join');
+  }, { async get() { return { mfaEnabled: false, revision: 'disabled' }; } }, passkeys);
 });
 
 test('HTTP: browser enrollment renders recovery codes once and continues the original login flow', async () => {
