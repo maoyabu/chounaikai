@@ -35,6 +35,10 @@ export const faqInput = (body, system = false) => {
   }
   if (body.published !== undefined && body.published !== 'on') throw fail('公開設定を確認してください。');
   result.published = body.published === 'on';
+  if (body.hideAfterLogin !== undefined && body.hideAfterLogin !== 'on') throw fail('ログイン後の表示設定を確認してください。');
+  result.hideAfterLogin = body.hideAfterLogin === 'on';
+  if (body.showOnSupport !== undefined && body.showOnSupport !== 'on') throw fail('サポートページの表示設定を確認してください。');
+  result.showOnSupport = body.showOnSupport === 'on';
   if (system) {
     if (body.openToPublic !== undefined && body.openToPublic !== 'on') throw fail('表示範囲を確認してください。');
     result.openToPublic = body.openToPublic === 'on';
@@ -56,13 +60,14 @@ const publicPage = async (req, res, association, support, directory = false) => 
   const baseFilter = directory || !req.isAuthenticated?.()
     ? { published: true, association: null, openToPublic: true }
     : association ? publishedFaqFilter(association._id) : { published: true, association: null };
+  if (!directory && req.isAuthenticated?.()) baseFilter.hideAfterLogin = { $ne: true };
   if (!directory) res.set?.('Cache-Control', 'private, no-store');
   const supportUrl = association ? `/associations/${association._id}/support` : '/support';
   const faqUrl = directory ? '/faq' : association ? `/associations/${association._id}/faq` : '/support/faqs';
   const category = !support && typeof req.query?.category === 'string' ? req.query.category : '';
-  const filter = category ? { ...baseFilter, category } : baseFilter;
-  let query = Faq.find(filter).sort({ association: 1, position: 1, _id: 1 });
-  if (support) query = query.limit(10);
+  const filter = support ? { ...baseFilter, showOnSupport: { $ne: false } }
+    : category ? { ...baseFilter, category } : baseFilter;
+  const query = Faq.find(filter).sort({ association: 1, position: 1, _id: 1 });
   const [items, categories] = await Promise.all([
     query.lean(),
     support ? Promise.resolve([]) : Faq.distinct('category', baseFilter)
@@ -124,7 +129,7 @@ for (const system of [false, true]) {
     let data;
     try { data = faqInput(req.body, system); } catch (error) {
       if (error.status !== 400) throw error;
-      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', openToPublic: system && req.body.openToPublic === 'on' };
+      const item = { ...original, ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', showOnSupport: req.body.showOnSupport === 'on', hideAfterLogin: req.body.hideAfterLogin === 'on', openToPublic: system && req.body.openToPublic === 'on' };
       return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: { ...item, answerHtml: faqAnswerHtml(item) }, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
     await persistFaqImages({ files: req.files, body: req.body, previous: original.images, association: system ? null : assoc._id,

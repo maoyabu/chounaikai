@@ -26,6 +26,10 @@
 <% } %></div></fieldset>
 <label>関連URL（任意）<input type="url" name="relatedUrl" maxlength="2000" value="<%= item.relatedUrl || '' %>" placeholder="https://"></label>
 <label class="faq-publish-toggle"><span>FAQとして公開する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="published" <%= item.published ? 'checked' : '' %>></label>
+<label class="faq-publish-toggle"><span>サポートページの「よくあるご質問」に掲載する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="showOnSupport" <%= item.showOnSupport !== false ? 'checked' : '' %>></label>
+<p class="help-text">「FAQとして公開する」がオンの場合、選択したQ&Aをサポートページにも表示します。</p>
+<label class="faq-publish-toggle"><span>ログイン後のQ&A一覧に表示しない</span><input class="faq-publish-switch" type="checkbox" role="switch" name="hideAfterLogin" <%= item.hideAfterLogin ? 'checked' : '' %>></label>
+<p class="help-text">オンの場合、ログイン後のQ&A一覧とサポートページには表示しません。</p>
 <% if (system) { %>
 <label class="faq-publish-toggle"><span>ログイン前にも表示する</span><input class="faq-publish-switch" type="checkbox" role="switch" name="openToPublic" <%= item.openToPublic ? 'checked' : '' %>></label>
 <p class="help-text">オン：町内会一覧から開くQ&Aにも表示します。オフ：ログインユーザーにのみ表示します。「FAQとして公開する」がオンの場合に表示されます。</p>

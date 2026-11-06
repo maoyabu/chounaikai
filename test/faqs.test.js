@@ -70,7 +70,7 @@ test('Q&A templates render and escape user content', async () => {
   }
 });
 
-test('support shows at most ten published common and own Q&As in managed order', async t => {
+test('support shows selected published common and own Q&As without truncation in managed order', async t => {
   t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: associationId, name: '町内会' }));
   let criteria, sort, limit;
   t.mock.method(Faq, 'find', filter => {
@@ -79,9 +79,9 @@ test('support shows at most ten published common and own Q&As in managed order',
   });
   const result = await request(`/associations/${associationId}/support`, { locals: { dangerMemberships: [{ association: { _id: associationId } }] } });
   assert.equal(result.view, 'support');
-  assert.deepEqual(criteria, publishedFaqFilter(associationId));
+  assert.deepEqual(criteria, { ...publishedFaqFilter(associationId), hideAfterLogin: { $ne: true }, showOnSupport: { $ne: false } });
   assert.deepEqual(sort, { association: 1, position: 1, _id: 1 });
-  assert.equal(limit, 10);
+  assert.equal(limit, undefined);
   assert.equal(result.data.supportContactUrl, `/associations/${associationId}/questions`);
   assert.equal(result.data.faqUrl, `/associations/${associationId}/faq`);
 });
@@ -92,12 +92,12 @@ test('Q&A category filter restricts published results but preserves all availabl
   t.mock.method(Faq, 'distinct', async (field, filter) => { assert.equal(field, 'category'); categoryCriteria = filter; return ['手続き', '一般']; });
   const result = await request(`/associations/${associationId}/faq`, { queryParams: { category: '手続き' } });
   assert.equal(result.view, 'faq-public');
-  assert.deepEqual(criteria, { ...publishedFaqFilter(associationId), category: '手続き' });
-  assert.deepEqual(categoryCriteria, publishedFaqFilter(associationId));
+  assert.deepEqual(criteria, { ...publishedFaqFilter(associationId), hideAfterLogin: { $ne: true }, category: '手続き' });
+  assert.deepEqual(categoryCriteria, { ...publishedFaqFilter(associationId), hideAfterLogin: { $ne: true } });
   assert.equal(result.data.category, '手続き');
   assert.equal(result.data.categories.length, 2);
   await request(`/associations/${associationId}/faq`, { queryParams: { category: { $ne: '' } } });
-  assert.deepEqual(criteria, publishedFaqFilter(associationId));
+  assert.deepEqual(criteria, { ...publishedFaqFilter(associationId), hideAfterLogin: { $ne: true } });
 });
 test('support entry uses association context and provides common FAQs without membership', async t => {
   assert.equal((await request('/support', { locals: { dangerMemberships: [{ association: { _id: associationId } }] } })).url, `/associations/${associationId}/support`);
@@ -108,7 +108,7 @@ test('support entry uses association context and provides common FAQs without me
   });
   const result = await request('/support');
   assert.equal(result.view, 'support');
-  assert.deepEqual(criteria, { published: true, association: null });
+  assert.deepEqual(criteria, { published: true, association: null, hideAfterLogin: { $ne: true }, showOnSupport: { $ne: false } });
   assert.equal(result.data.faqUrl, '/support/faqs');
   assert.equal(result.data.supportContactUrl, null);
 });
@@ -150,7 +150,7 @@ test('anonymous association FAQ and support never disclose login-only Q&As', asy
   t.mock.method(Faq, 'distinct', async () => []);
   for (const page of ['faq', 'support']) {
     await request(`/associations/${associationId}/${page}`, { authenticated: false });
-    assert.deepEqual(filter, { published: true, association: null, openToPublic: true });
+    assert.deepEqual(filter, { published: true, association: null, openToPublic: true, ...(page === 'support' ? { showOnSupport: { $ne: false } } : {}) });
   }
 });
 
@@ -228,4 +228,39 @@ test('FAQ colors, horizontal rules, headings and paragraph alignment survive saf
   assert.ok(safe.includes('<span style="color:#00ff00">緑</span>'));
   assert.ok(!/position|onclick|background-image|javascript/.test(safe));
   assert.equal(sanitizeFaqAnswer(safe), safe);
+});
+
+ test('display settings are independent and reject malformed values', () => {
+  const input = { category: '一般', question: '質問', answer: '回答' };
+  assert.equal(faqInput(input).showOnSupport, false);
+  assert.equal(faqInput(input).hideAfterLogin, false);
+  const selected = faqInput({ ...input, showOnSupport: 'on', hideAfterLogin: 'on' });
+  assert.equal(selected.showOnSupport, true);
+  assert.equal(selected.hideAfterLogin, true);
+  assert.equal(new Faq().showOnSupport, true);
+  assert.equal(new Faq().hideAfterLogin, false);
+  for (const key of ['showOnSupport', 'hideAfterLogin']) {
+    assert.throws(() => faqInput({ ...input, [key]: [] }), { status: 400 });
+  }
+});
+
+test('create, edit and validation errors preserve display selections', async t => {
+  t.mock.method(Faq, 'findOne', () => query({ _id: id, images: [] }));
+  t.mock.method(Faq, 'distinct', async () => []);
+  let saved;
+  t.mock.method(Faq, 'create', async value => { saved = value; });
+  t.mock.method(Faq, 'updateOne', async (_filter, update) => { saved = update.$set; });
+  for (const path of ['/admin/faqs', `/admin/faqs/${id}/edit`]) {
+    const body = { category: '一般', question: '質問', answer: '回答', published: 'on', showOnSupport: 'on', hideAfterLogin: 'on' };
+    assert.equal((await request(path, { method: 'post', body })).status, 302);
+    assert.equal(saved.showOnSupport, true);
+    assert.equal(saved.hideAfterLogin, true);
+    const error = await request(path, { method: 'post', body: { ...body, question: '' } });
+    assert.equal(error.status, 400);
+    assert.equal(error.data.item.showOnSupport, true);
+    assert.equal(error.data.item.hideAfterLogin, true);
+    assert.equal((await request(path, { method: 'post', body: { ...body, showOnSupport: undefined, hideAfterLogin: undefined } })).status, 302);
+    assert.equal(saved.showOnSupport, false);
+    assert.equal(saved.hideAfterLogin, false);
+  }
 });

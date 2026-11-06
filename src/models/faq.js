@@ -9,6 +9,8 @@ const schema = new mongoose.Schema({
   images: { type: [{ _id: false, url: String, publicId: String }], default: [], validate: value => value.length <= 3 },
   relatedUrl: { type: String, default: '', maxlength: 2000 },
   openToPublic: { type: Boolean, default: false },
+  hideAfterLogin: { type: Boolean, default: false },
+  showOnSupport: { type: Boolean, default: true },
   published: { type: Boolean, default: false },
   position: { type: Number, default: 0 }
 }, { timestamps: true });
