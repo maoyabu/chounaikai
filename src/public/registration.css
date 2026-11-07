@@ -1967,3 +1967,9 @@ h1, h2, h3, h4, h5, h6,
   .notification-inbox > summary { gap: .5rem; flex-wrap: wrap; }
   .notification-summary-meta { gap: .5rem; margin-left: auto; }
 }
+
+.status-badge.notification-urgent-badge { background: #fee2e2; color: #991b1b; }
+
+.notification-item-heading.notification-heading-inline,
+.notification-detail-heading { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: .5rem; }
+.notification-detail-heading .status-badge { flex: 0 0 auto; }

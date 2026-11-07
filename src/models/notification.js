@@ -10,6 +10,7 @@ const notificationSchema = new mongoose.Schema({
   body: { type: String, required: true },
   relatedType: String,
   relatedId: mongoose.Schema.Types.ObjectId,
+  relatedLoan: mongoose.Schema.Types.ObjectId,
   readAt: Date,
   hiddenAt: Date,
   manuallyUnread: Boolean,

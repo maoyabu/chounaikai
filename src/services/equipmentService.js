@@ -115,7 +115,7 @@ export const requestEquipmentLoan = async ({ associationId, userId, equipmentId,
     await AssociationEquipment.updateOne({ _id: equipmentId, association: associationId }, { $pull: { reservations: { loanId } }, $inc: { reservationVersion: 1 } });
     throw error;
   }
-  await notifyResponsible({ association: associationId, officers: true, type: 'equipment_loan', title: `${item.name}の貸出申込み：${startDate} ${times.allDay ? '終日' : `${times.startTime}〜${times.endTime}`}`, relatedId: equipmentId });
+  await notifyResponsible({ association: associationId, officers: true, type: 'equipment_loan', title: `${item.name}の貸出申込み：${startDate} ${times.allDay ? '終日' : `${times.startTime}〜${times.endTime}`}`, relatedId: equipmentId, relatedLoan: loan._id });
   return loan;
 };
 export const decideEquipmentLoan = async ({ associationId, userId, loanId, action }) => {

@@ -5,7 +5,7 @@ export const notificationAction = (notification, context = {}) => {
   const base = `/associations/${association}`;
   const manager = (context.currentManagerAssociations || []).some(item => String(item._id) === association);
   const leader = (context.currentLeaderAssociations || []).some(item => String(item._id) === association);
-  const action = (path, label = '内容を確認') => ({ actionUrl: path, actionLabel: label });
+  const action = (path, label = '内容を確認') => ({ actionUrl: path, actionLabel: notification.type === 'join_application_received' ? (notification.actionCompleted ? '内容を確認' : '参加申請の対応') : notification.type === 'equipment_loan' && !notification.actionCompleted && /の貸出申込み：/.test(notification.title || '') ? '対応する' : '内容を確認' });
   if (!association) return action('/dashboard?notifications=open');
   switch (notification.type) {
     case 'alert_level': return action(`${base}/safety`, '世帯の安否情報を登録');

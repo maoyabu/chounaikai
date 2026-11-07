@@ -121,3 +121,28 @@ test('inbox and detail templates escape content and restrict hide actions to det
   assert.match(hiddenDetail, /再表示する/);
   assert.doesNotMatch(hiddenDetail, /\/delete/);
 });
+
+test('request completion is based on workflow state even after reading or another officer deciding', async t => {
+  const { enrichNotificationStates, notificationSortRank } = await import('../src/services/notificationInboxService.js');
+  const { EquipmentLoan } = await import('../src/models/equipment.js');
+  const { notificationAction } = await import('../src/services/notificationDestination.js');
+  const query = value => ({ select() { return this; }, lean: async () => value });
+  t.mock.method(JoinApplication, 'find', () => query([{ _id: 'join', status: 'rejected' }, { _id: 'pending', status: 'pending' }]));
+  t.mock.method(EquipmentLoan, 'find', () => query([
+    { _id: 'loan', association: 'association', equipment: 'equipment', status: 'approved' },
+    { _id: 'other', association: 'association', equipment: 'equipment', status: 'pending' }
+  ]));
+  const items = [
+    { type: 'join_application_received', relatedId: 'join', readAt: new Date() },
+    { type: 'join_application_received', relatedId: 'pending', readAt: new Date() },
+    { type: 'equipment_loan', title: 'テントの貸出申込み：', relatedId: 'equipment', relatedLoan: 'loan', association: 'association' },
+    { type: 'good_place' },
+    { type: 'alert_level', readAt: new Date() }
+  ];
+  await enrichNotificationStates(items, { recipient: 'officer' });
+  assert.deepEqual(items.map(item => item.actionCompleted), [true, false, true, false, false]);
+  assert.deepEqual(items.map(notificationSortRank), [3, 2, 3, 1, 0]);
+  assert.equal(notificationAction({ ...items[0], association: 'association' }).actionLabel, '内容を確認');
+  assert.equal(notificationAction({ ...items[1], association: 'association' }).actionLabel, '参加申請の対応');
+  assert.equal(notificationAction({ ...items[2], actionCompleted: false }).actionLabel, '対応する');
+});

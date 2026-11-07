@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { EquipmentLoan } from '../models/equipment.js';
+import { LocationLinkRequest } from '../models/locationLinkRequest.js';
 import { Notification } from '../models/notification.js';
 import { OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { QuestionThread } from '../models/questionThread.js';
@@ -63,6 +65,44 @@ export const updateNotificationState = async ({ notificationId, recipient, state
 
 export const notificationPriority = item => {
   if (item.priority === 'urgent' || ['alert_level', 'danger_report'].includes(item.type)) return 'urgent';
+  if (item.type === 'equipment_loan' && !/の貸出申込み：/.test(item.title || '')) return 'normal';
   if (item.priority === 'action' || ['question_created', 'question_reopened', 'location_link_requested', 'join_application_received', 'household_link_requested', 'withdrawal_head_requested', 'withdrawal_leader_requested', 'equipment_loan'].includes(item.type) || (item.type === 'group_request' && /申請が届きました/.test(item.title || ''))) return 'action';
   return 'normal';
 };
+
+// Reading a notice is independent of completing its underlying request.
+export const enrichNotificationStates = async (items, { recipient }) => {
+  const load = async (types, Model, fields) => {
+    const ids = items.filter(item => types.includes(item.type) && item.relatedId).map(item => item.relatedId);
+    return ids.length ? Model.find({ _id: { $in: ids } }).select(fields).lean() : [];
+  };
+  const [joins, withdrawals, questions, locations, loans] = await Promise.all([
+    load(['join_application_received', 'household_link_requested'], JoinApplication, '_id status leaderApprovedBy leaderApprovedAt'),
+    load(['withdrawal_head_requested', 'withdrawal_leader_requested'], WithdrawalApplication, '_id status'),
+    load(['question_created', 'question_reopened'], QuestionThread, '_id status'),
+    load(['location_link_requested'], LocationLinkRequest, '_id status'),
+    items.some(item => item.type === 'equipment_loan' && /の貸出申込み：/.test(item.title || ''))
+      ? EquipmentLoan.find({ equipment: { $in: items.filter(item => item.type === 'equipment_loan').map(item => item.relatedId).filter(Boolean) } }).select('_id association equipment status startDate startTime allDay createdAt').lean() : []
+  ]);
+  const lookup = rows => new Map(rows.map(row => [String(row._id), row]));
+  const j = lookup(joins), w = lookup(withdrawals), q = lookup(questions), l = lookup(locations);
+  for (const item of items) {
+    const id = String(item.relatedId);
+    item.priority = notificationPriority(item);
+    let completed = false;
+    if (item.type === 'join_application_received' && j.has(id)) completed = j.get(id).status !== 'pending' || Boolean(j.get(id).leaderApprovedAt && String(j.get(id).leaderApprovedBy) === String(recipient));
+    if (item.type === 'household_link_requested' && j.has(id)) completed = j.get(id).status !== 'awaiting_household';
+    if (item.type === 'withdrawal_head_requested' && w.has(id)) completed = w.get(id).status !== 'awaiting_household';
+    if (item.type === 'withdrawal_leader_requested' && w.has(id)) completed = !['pending', 'processing'].includes(w.get(id).status);
+    if (['question_created', 'question_reopened'].includes(item.type) && q.has(id)) completed = q.get(id).status !== 'unanswered';
+    if (item.type === 'location_link_requested' && l.has(id)) completed = l.get(id).status !== 'pending';
+    if (item.type === 'equipment_loan' && item.priority === 'action') {
+      const matching = loans.filter(loan => String(loan.equipment) === id && String(loan.association) === String(item.association?._id || item.association) && (item.relatedLoan ? String(loan._id) === String(item.relatedLoan) : (item.title || '').includes(`${loan.startDate} ${loan.allDay === false ? loan.startTime : '終日'}`)));
+      completed = matching.length > 0 && matching.every(loan => loan.status !== 'pending');
+    }
+    item.actionCompleted = completed || ['join_application_approved', 'join_application_rejected'].includes(item.type);
+  }
+  return items;
+};
+
+export const notificationSortRank = item => item.priority === 'urgent' ? 0 : item.actionCompleted ? 3 : !item.readAt ? 1 : item.priority === 'action' ? 2 : 3;

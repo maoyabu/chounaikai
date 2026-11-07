@@ -1,7 +1,9 @@
   <article class="form-card notification-detail notification-priority-<%= priority %>">
-    <h1><%= notification.title %></h1>
-    <p>確認済み<%= notification.hiddenAt ? ' · 非表示' : '' %></p>
-    <% if (priority !== 'normal') { %><p><%= priority === 'urgent' ? '緊急' : '対応が必要' %></p><% } %>
+    <h1 class="notification-detail-heading"><span><%= notification.title %></span>
+      <% if (notification.actionCompleted) { %><span class="status-badge">対応済</span><% } else if (priority === 'normal' && notification.readAt) { %><span class="status-badge">確認済み</span><% } %>
+      <% if (priority !== 'normal' && !notification.actionCompleted) { %><span class="status-badge <%= priority === 'urgent' ? 'notification-urgent-badge' : '' %>"><%= priority === 'urgent' ? '緊急' : '対応が必要' %></span><% } %>
+    </h1>
+    <% if (notification.hiddenAt) { %><p>非表示</p><% } %>
     <p class="notification-detail-body"><%= notification.body %></p>
     <a class="button button-primary" href="<%= action.actionUrl %>"><%= action.actionLabel %></a>
   </article>

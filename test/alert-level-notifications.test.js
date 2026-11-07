@@ -23,7 +23,7 @@ test('new and raised warning text calls for early household safety registration 
   assert.match(raised.body,/できるだけ早く.*世帯の安否情報を登録/);
   assert.match(raised.body,/既に登録済み.*更新/);
   assert.equal(notificationDestination(raised),`/associations/${aid}/safety`);
-  assert.equal(notificationAction(raised).actionLabel,'世帯の安否情報を登録');
+  assert.equal(notificationAction(raised).actionLabel,'内容を確認');
   const first=alertLevelNotificationRecord(event,{...change,noticePreviousLevel:0},'resident');
   assert.match(first.title,/警戒レベル3発生/);
   assert.match(first.body,/警戒レベル3が登録されました/);

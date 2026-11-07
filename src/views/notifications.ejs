@@ -4,15 +4,15 @@
   <h1>お知らせ一覧</h1>
   <form method="get" action="/notifications" class="form-card notification-filters">
     <label>絞り込み<select name="filter"><% [['all','すべて'],['unread','未読'],['read','確認済み'],['action','対応が必要'],['urgent','緊急']].forEach(([value,label]) => { %><option value="<%= value %>" <%= filter === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
-    <label>並び替え<select name="sort"><% [['unread','未読を上に'],['newest','新しい順'],['oldest','古い順']].forEach(([value,label]) => { %><option value="<%= value %>" <%= sort === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label>並び替え<select name="sort"><% [['unread','優先順（緊急・未確認・対応が必要）'],['newest','新しい順'],['oldest','古い順']].forEach(([value,label]) => { %><option value="<%= value %>" <%= sort === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
     <label class="notification-hidden-toggle"><input type="checkbox" name="view" value="hidden" <%= hidden ? 'checked' : '' %>>非表示のお知らせ</label>
   </form>
   <p><%= total %>件 · 濃い青：対応が必要 / 濃い赤：緊急</p>
   <section class="admin-section notification-list">
   <% notifications.forEach(item => { %>
     <article class="notification-card notification-priority-<%= item.priority %> <%= item.readAt ? '' : 'notification-item-unread' %>">
-      <div class="notification-item-heading"><strong><a class="notification-card-link" data-notification-modal href="/notifications/<%= item._id %>/open"><%= item.title %></a></strong><span class="status-badge"><%= item.readAt ? '確認済み' : '未読' %></span></div>
-      <% if (item.priority !== 'normal') { %><span class="status-badge"><%= item.priority === 'urgent' ? '緊急' : '対応が必要' %></span><% } %>
+      <div class="notification-item-heading notification-heading-inline"><strong><a class="notification-card-link" data-notification-modal href="/notifications/<%= item._id %>/open"><%= item.title %></a></strong><span class="status-badge"><%= item.actionCompleted ? '対応済' : item.priority === 'action' ? '対応が必要' : item.readAt ? '確認済み' : '未確認' %></span>
+      <% if (item.priority === 'urgent') { %><span class="status-badge notification-urgent-badge">緊急</span><% } %></div>
       <p><%= item.association?.name || '' %> · <%= new Date(item.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p>
       <p class="notification-body-preview"><%= item.body %></p>
     </article>
