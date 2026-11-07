@@ -9,6 +9,16 @@ const schema = new mongoose.Schema({
   kind: { type: String, trim: true, maxlength: 100, default: '' },
   dangerPoints: { type: String, maxlength: 2000, default: '' },
   photos: { type: [{ url: String, publicId: String }], default: [], validate: { validator: photos => photos.length <= 3, message: '写真は3枚まで登録できます。' } },
+  acceptance: {
+    type: new mongoose.Schema({
+      status: { type: String, enum: ['available', 'unavailable'], required: true },
+      comment: { type: String, maxlength: 2000, default: '' },
+      registeredAt: { type: Date, required: true },
+      registeredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      registeredByName: { type: String, default: '' }
+    }, { _id: false }),
+    default: undefined
+  },
   active: { type: Boolean, default: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }

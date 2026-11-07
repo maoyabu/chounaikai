@@ -195,3 +195,54 @@ test('public information fields appear only once on the management page and neve
   assert.doesNotMatch(modal,/informationUrl|informationName/);
   assert.equal(shelterValues(body).informationUrl,undefined);
 });
+
+test('acceptance records trusted actor and time only on changes and remains editable after alert clearance', async t => {
+  access(t);
+  let currentAssociation = { ...association, alertLevel: 3 };
+  NeighborhoodAssociation.findOne.mock.mockImplementation(() => query(currentAssociation));
+  const record = { ...shelter, save: async () => {} };
+  t.mock.method(Shelter, 'findOne', async () => record);
+  const save = extra => saveShelter({ associationId: aid, userId: uid, shelterId: sid, actorName: '防災担当', body: { ...body, version: '0', ...extra } });
+  await save({ acceptanceStatus: 'available', acceptanceComment: ' 体育館へ ', registeredBy: aid });
+  assert.equal(record.acceptance.status, 'available');
+  assert.equal(record.acceptance.comment, '体育館へ');
+  assert.equal(record.acceptance.registeredBy, uid);
+  assert.equal(record.acceptance.registeredByName, '防災担当');
+  assert.ok(record.acceptance.registeredAt instanceof Date);
+  const original = record.acceptance;
+  currentAssociation = { ...association, alertLevel: 0 };
+  await save({});
+  assert.equal(record.acceptance, original);
+  await save({ acceptanceStatus: 'available', acceptanceComment: '体育館へ' });
+  assert.equal(record.acceptance, original);
+  await save({ acceptanceStatus: 'unavailable', acceptanceComment: '閉鎖しました' });
+  assert.equal(record.acceptance.status, 'unavailable');
+  assert.notEqual(record.acceptance, original);
+});
+
+test('acceptance rejects invalid values and initial registration without an alert', async t => {
+  access(t);
+  const record = { ...shelter, save: async () => { throw new Error('must not save'); } };
+  t.mock.method(Shelter, 'findOne', async () => record);
+  const save = extra => saveShelter({ associationId: aid, userId: uid, shelterId: sid, body: { ...body, version: '0', ...extra } });
+  for (const extra of [
+    { acceptanceStatus: 'available' },
+    { acceptanceStatus: 'invalid' },
+    { acceptanceStatus: ['available'] },
+    { acceptanceStatus: '', acceptanceComment: 'コメントのみ' },
+    { acceptanceStatus: 'available', acceptanceComment: 'あ'.repeat(2001) }
+  ]) await assert.rejects(save(extra), { status: 400 });
+});
+
+test('acceptance appears in resident list and details with escaped comments and actor names', async () => {
+  const item = { ...shelter, acceptance: { status: 'unavailable', comment: '<script>満員</script>', registeredByName: '<担当者>', registeredAt: new Date('2026-11-07T00:00:00Z') } };
+  const html = await ejs.renderFile('src/views/shelters.ejs', { ...locals, association, shelters: [item], selected: item, canManage: false, informationLinks: [] });
+  assert.equal((html.match(/受け入れ状態：受け入れ不可/g) || []).length, 2);
+  assert.match(html, /&lt;script&gt;満員&lt;\/script&gt;/);
+  assert.match(html, /&lt;担当者&gt;/);
+  assert.match(html, /登録日時：/);
+  const edit = await ejs.renderFile('src/views/partials/shelter-form.ejs', { association, shelter: item, csrfToken: 'csrf' });
+  assert.match(edit, /name="acceptanceStatus"/);
+  const inactive = await ejs.renderFile('src/views/partials/shelter-form.ejs', { association, shelter, csrfToken: 'csrf' });
+  assert.doesNotMatch(inactive, /name="acceptanceStatus"/);
+});

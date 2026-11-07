@@ -5,6 +5,14 @@
   <div class="form-columns"><label>電話番号<input name="phone" type="tel" maxlength="50" value="<%= shelter?.phone || '' %>"></label><label>収容人数（人）<input name="capacity" type="number" min="0" max="1000000" step="1" value="<%= shelter?.capacity ?? '' %>"><small>不明な場合は空欄にしてください。</small></label></div>
   <label>種別<input name="kind" maxlength="100" value="<%= shelter?.kind || '' %>" placeholder="例：指定避難所、一時避難場所"></label>
   <label>注意すべき危険箇所<textarea name="dangerPoints" maxlength="2000" rows="3"><%= shelter?.dangerPoints || '' %></textarea></label>
+  <% if (association.alertLevel || shelter?.acceptance) { %>
+  <fieldset class="shelter-information-fields"><legend>受け入れ状態</legend>
+    <p class="help-text">住人向けの一覧・詳細に表示します。警戒レベルが解除されても自動では変更されません。</p>
+    <label>受け入れの可否<select name="acceptanceStatus"><% if (!shelter?.acceptance) { %><option value="">未登録</option><% } %><option value="available" <%= shelter?.acceptance?.status === 'available' ? 'selected' : '' %>>受け入れ可</option><option value="unavailable" <%= shelter?.acceptance?.status === 'unavailable' ? 'selected' : '' %>>受け入れ不可</option></select></label>
+    <label>コメント<textarea name="acceptanceComment" maxlength="2000" rows="3"><%= shelter?.acceptance?.comment || '' %></textarea></label>
+    <% if (shelter?.acceptance) { %><%- include('shelter-acceptance', { shelter, details: true }) %><% } %>
+  </fieldset>
+  <% } else { %><p class="help-text">受け入れ状態は警戒レベル発令中に登録できます。</p><% } %>
   <fieldset class="shelter-photo-fields"><legend>写真（3枚まで）</legend><p class="help-text">写真は町内会のGoogle Driveに保存します。1枚15MB以下で選択してください。</p><% for (let slot = 0; slot < 3; slot++) { const photo = shelter?.photos?.[slot]; %><div class="shelter-photo-field"><label>写真<%= slot + 1 %><input type="file" name="photo<%= slot %>" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"></label><% if (photo) { %><img src="<%= photo.url %>" alt="登録済みの写真<%= slot + 1 %>" loading="lazy"><label class="shelter-checkbox"><input type="checkbox" name="removePhoto<%= slot %>">この写真を削除する</label><% } %></div><% } %></fieldset>
   <div class="form-actions"><button type="button" class="button button-quiet" data-shelter-close>キャンセル</button><button class="button button-primary"><%= shelter ? '更新' : '登録' %></button></div>
 </form>

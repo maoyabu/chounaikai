@@ -55,13 +55,26 @@ export async function loadShelters(associationId, userId, selectedId) {
   return { association, canManage: canAnswer, shelters, selected: selected || null, informationLinks, informationPage };
 }
 
-export async function saveShelter({ associationId, userId, shelterId, body, files = {} }, dependencies = { uploadPublicPhoto, deletePublicPhoto }) {
-  await requireShelterOfficer(associationId, userId);
+export async function saveShelter({ associationId, userId, shelterId, body, files = {}, actorName = '' }, dependencies = { uploadPublicPhoto, deletePublicPhoto }) {
+  const association = await requireShelterOfficer(associationId, userId);
   const values = shelterValues(body);
   if (shelterId && !mongoose.isValidObjectId(shelterId)) throw fail('避難所を確認できません。', 404);
   const shelter = shelterId ? await Shelter.findOne({ _id: shelterId, association: associationId, active: true }) : new Shelter({ association: associationId, createdBy: userId });
   if (!shelter) throw fail('避難所を確認できません。', 404);
   if (shelterId && String(body.version) !== String(shelter.__v || 0)) throw fail('避難所が更新されています。画面を開き直してください。', 409);
+  let acceptance;
+  if (body.acceptanceStatus !== undefined || body.acceptanceComment !== undefined) {
+    const status = text(body.acceptanceStatus, 20, '受け入れの可否');
+    const comment = text(body.acceptanceComment, 2000, '受け入れ状態のコメント');
+    if (!['', 'available', 'unavailable'].includes(status)) throw fail('受け入れの可否を正しく選択してください。');
+    if (!status && comment) throw fail('コメントを登録する場合は受け入れの可否を選択してください。');
+    if (status && (status !== shelter.acceptance?.status || comment !== shelter.acceptance?.comment)) {
+      if (!association.alertLevel && !shelter.acceptance) throw fail('受け入れ状態は警戒レベル発令中に登録してください。');
+      acceptance = { status, comment, registeredAt: new Date(), registeredBy: userId, registeredByName: actorName };
+    } else if (!status && shelter.acceptance) {
+      throw fail('登録済みの受け入れ状態は「受け入れ可」または「受け入れ不可」に変更してください。');
+    }
+  }
   const oldPhotos = [...(shelter.photos || [])], photos = [...oldPhotos], uploaded = [];
   const fileEntries = Object.entries(files);
   if (fileEntries.some(([key, list]) => !['photo0', 'photo1', 'photo2'].includes(key) || !Array.isArray(list) || list.length > 1) || fileEntries.reduce((total, [, list]) => total + list.length, 0) > 3) throw fail('写真は3枚まで登録できます。');
@@ -75,6 +88,7 @@ export async function saveShelter({ associationId, userId, shelterId, body, file
       }
     }
     Object.assign(shelter, values, { updatedBy: userId, photos: photos.filter(Boolean) });
+    if (acceptance) shelter.acceptance = acceptance;
     await shelter.save();
   } catch (error) {
     await Promise.allSettled(uploaded.map(photo => dependencies.deletePublicPhoto(photo.publicId)));

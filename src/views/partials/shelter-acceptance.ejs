@@ -1,0 +1,7 @@
+<div class="shelter-acceptance">
+  <strong>受け入れ状態：<%= shelter.acceptance?.status === 'available' ? '受け入れ可' : shelter.acceptance?.status === 'unavailable' ? '受け入れ不可' : '未登録' %></strong>
+  <% if (details && shelter.acceptance) { %>
+    <p class="shelter-danger-points"><%= shelter.acceptance.comment || 'コメントなし' %></p>
+    <small>登録日時：<%= new Date(shelter.acceptance.registeredAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %> ／ 登録者：<%= shelter.acceptance.registeredByName || '登録者名未登録' %></small>
+  <% } %>
+</div>

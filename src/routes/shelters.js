@@ -30,7 +30,7 @@ sheltersRouter.post('/:associationId/shelters/information', verifyCsrfToken, asy
 for (const path of ['/:associationId/shelters', '/:associationId/shelters/:shelterId/update']) {
   sheltersRouter.post(path, officer, acceptPublicPhotos, verifyCsrfToken, async (req, res, next) => {
     try {
-      await saveShelter({ ...req.params, userId: req.user._id, body: req.body, files: req.files });
+      await saveShelter({ ...req.params, userId: req.user._id, body: req.body, files: req.files, actorName: req.user.displayname || req.user.username });
       req.session.notice = req.params.shelterId ? '避難所を更新しました。' : '避難所を登録しました。';
       return back(res, req.params.associationId);
     } catch (error) { return next(error); }
