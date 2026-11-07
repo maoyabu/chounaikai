@@ -1,0 +1,30 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell dashboard-shell">
+  <a class="back-link" href="/dashboard">← ホームへ戻る</a>
+  <h1>お知らせ一覧</h1>
+  <form method="get" action="/notifications" class="form-card notification-filters">
+    <label>絞り込み<select name="filter"><% [['all','すべて'],['unread','未読'],['read','確認済み'],['action','対応が必要'],['urgent','緊急']].forEach(([value,label]) => { %><option value="<%= value %>" <%= filter === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label>並び替え<select name="sort"><% [['unread','未読を上に'],['newest','新しい順'],['oldest','古い順']].forEach(([value,label]) => { %><option value="<%= value %>" <%= sort === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label class="notification-hidden-toggle"><input type="checkbox" name="view" value="hidden" <%= hidden ? 'checked' : '' %>>非表示のお知らせ</label>
+  </form>
+  <p><%= total %>件 · 濃い青：対応が必要 / 濃い赤：緊急</p>
+  <section class="admin-section notification-list">
+  <% notifications.forEach(item => { %>
+    <article class="notification-card notification-priority-<%= item.priority %> <%= item.readAt ? '' : 'notification-item-unread' %>">
+      <div class="notification-item-heading"><strong><a class="notification-card-link" data-notification-modal href="/notifications/<%= item._id %>/open"><%= item.title %></a></strong><span class="status-badge"><%= item.readAt ? '確認済み' : '未読' %></span></div>
+      <% if (item.priority !== 'normal') { %><span class="status-badge"><%= item.priority === 'urgent' ? '緊急' : '対応が必要' %></span><% } %>
+      <p><%= item.association?.name || '' %> · <%= new Date(item.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></p>
+      <p class="notification-body-preview"><%= item.body %></p>
+    </article>
+  <% }) %>
+  <% if (!total) { %><p class="admin-empty">該当するお知らせはありません。</p><% } %>
+  </section>
+  <nav class="notification-actions" aria-label="ページ切り替え">
+    <% const query = `view=${hidden ? 'hidden' : ''}&filter=${filter}&sort=${sort}`; if (page > 1) { %><a class="button button-quiet" href="/notifications?<%= query %>&page=<%= page - 1 %>">前へ</a><% } %>
+    <span><%= page %> / <%= Math.max(1, Math.ceil(total / 30)) %></span>
+    <% if (page * 30 < total) { %><a class="button button-quiet" href="/notifications?<%= query %>&page=<%= page + 1 %>">次へ</a><% } %>
+  </nav>
+</main>
+<script src="/assets/notification-filters.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/notification-modal') %>
+<%- include('partials/foot') %>

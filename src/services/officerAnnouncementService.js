@@ -254,7 +254,7 @@ export const loadAnnouncementPins = async ({ userId, associationIds }) => {
   return {
     excludedAnnouncementIds: receipts.filter(receipt => receipt.announcement).map(receipt => receipt.announcement._id),
     notifications: receipts.filter(receipt => receipt.pinnedAt && receipt.announcement).map(receipt => ({
-      _id: receipt._id, pinned: true, pinnedAt: receipt.pinnedAt, readAt: receipt.readAt,
+      _id: receipt._id, relatedId: receipt.announcement._id, pinned: true, pinnedAt: receipt.pinnedAt, readAt: receipt.readAt,
       title: receipt.announcement.title, body: receipt.announcement.body, association: receipt.association,
       actionUrl: `/associations/${receipt.association._id}/announcements/${receipt.announcement._id}`,
       actionLabel: 'メッセージを確認', pinUrl: `/associations/${receipt.association._id}/announcements/${receipt.announcement._id}/pin`

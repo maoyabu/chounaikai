@@ -16,7 +16,7 @@ test('saved announcement notifications dispatch push and persist delivery result
   let saved = false, payload, result;
   let settings = null;
   t.mock.method(Notification, 'countDocuments', async filter => {
-    assert.deepEqual(filter, { recipient: 'resident', readAt: null });
+    assert.deepEqual(filter, { recipient: 'resident', readAt: null, hiddenAt: null });
     return 3;
   });
   t.mock.method(Notification, 'findOneAndUpdate', async () => record);

@@ -50,7 +50,7 @@ const sendPush = async ({ notification, recipient }) => {
   const subscriptions = await PushSubscription.find({ user: recipient._id, disabledAt: null });
   if (!subscriptions.length) return { status: 'skipped' };
   // A count lookup must not prevent the actual notification from being sent.
-  const unreadCount = await Notification.countDocuments({ recipient: recipient._id, readAt: null }).catch(() => undefined);
+  const unreadCount = await Notification.countDocuments({ recipient: recipient._id, readAt: null, hiddenAt: null }).catch(() => undefined);
   const payload = JSON.stringify({
     title: notification.title,
     body: notification.body,

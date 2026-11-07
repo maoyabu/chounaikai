@@ -29,7 +29,7 @@ import { PendingUserRegistration } from '../models/pendingUserRegistration.js';
 import { visibleEvents, calendarWindow } from '../services/associationEventService.js';
 import { loadAssociationPageData } from '../services/associationPublicPageService.js';
 import { loadHouseholdInvitation, acceptHouseholdInvitation, countPendingLeaderApplications } from '../services/householdParticipationService.js';
-import { deleteNotification, markNotificationRead, syncCompletedNotifications } from '../services/notificationInboxService.js';
+import { deleteNotification, markNotificationRead, syncCompletedNotifications, updateNotificationState, notificationPriority } from '../services/notificationInboxService.js';
 import { requireLogin, requireSystemAdmin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { approveAssociation, hideAssociation, permanentlyDeleteAssociation, requestAssociation, restoreAssociation } from '../services/associationService.js';
@@ -590,13 +590,43 @@ const resolveNotificationAction = async (notification, req, res) => {
   return notificationAction(notification, context);
 };
 
+webRouter.get('/notifications', requireLogin, async (req, res, next) => {
+  try {
+    await syncCompletedNotifications({ recipient: req.user._id });
+    const hidden = req.query.view === 'hidden';
+    const filter = ['unread', 'read', 'urgent', 'action'].includes(req.query.filter) ? req.query.filter : 'all';
+    const sort = ['newest', 'oldest'].includes(req.query.sort) ? req.query.sort : 'unread';
+    const criteria = { recipient: req.user._id, hiddenAt: hidden ? { $ne: null } : null };
+    if (filter === 'unread') criteria.readAt = null;
+    if (filter === 'read') criteria.readAt = { $ne: null };
+    let notifications = await Notification.find(criteria).populate('association', 'name').lean();
+    notifications.forEach(item => { item.priority = notificationPriority(item); });
+    if (['urgent', 'action'].includes(filter)) notifications = notifications.filter(item => item.priority === filter);
+    notifications.sort((a, b) => (sort === 'unread' ? Number(Boolean(a.readAt)) - Number(Boolean(b.readAt)) : 0) || (sort === 'oldest' ? 1 : -1) * (new Date(a.createdAt) - new Date(b.createdAt)) || String(a._id).localeCompare(String(b._id)));
+    const total = notifications.length;
+    const page = Math.min(Math.max(1, parseInt(req.query.page, 10) || 1), Math.max(1, Math.ceil(total / 30)));
+    notifications = notifications.slice((page - 1) * 30, page * 30);
+    return res.render('notifications', { title: hidden ? '非表示のお知らせ' : 'お知らせ一覧', notifications, hidden, filter, sort, page, total });
+  } catch (error) { return next(error); }
+});
+
+webRouter.post('/notifications/:notificationId/state', requireLogin, verifyCsrfToken, async (req, res, next) => {
+  try {
+    await updateNotificationState({ notificationId: req.params.notificationId, recipient: req.user._id, state: req.body.state });
+    if (req.get('accept') === 'application/json') return res.status(204).end();
+    return res.redirect(req.body.state === 'restore' ? '/notifications?view=hidden' : '/notifications');
+  } catch (error) { return next(error); }
+});
+
 webRouter.get('/notifications/:notificationId/open', requireLogin, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.notificationId)) return res.sendStatus(404);
     const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).lean();
     if (!notification) return res.sendStatus(404);
     const action = await resolveNotificationAction(notification, req, res);
-    return res.redirect(action.actionUrl);
+    await markNotificationRead({ notificationId: req.params.notificationId, recipient: req.user._id });
+    notification.readAt = new Date();
+    return res.render(req.query?.modal === '1' ? 'partials/notification-detail-content' : 'notification-detail', { title: 'お知らせ詳細', notification, action, priority: notificationPriority(notification) });
   } catch (error) { return next(error); }
 });
 
@@ -641,17 +671,16 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const pendingJoins = await JoinApplication.find({ applicant: req.user._id, status: { $in: ['pending', 'awaiting_household'] } }).populate('association', 'name').select('association status source').lean();
     const excludedIds = [...visibleMemberships.map((item) => item.association._id), ...pendingJoins.map((item) => item.association)];
     const pins = await loadAnnouncementPins({ userId: req.user._id, associationIds: visibleMemberships.map(item => item.association._id) });
-    const visibleNotificationFilter = { recipient: req.user._id, $nor: [{ relatedType: 'OfficerAnnouncement', relatedId: { $in: pins.excludedAnnouncementIds } }] };
-    const [availableAssociations, unreadNotifications, readNotifications, unreadNotificationCount] = await Promise.all([
+    const visibleNotificationFilter = { recipient: req.user._id, hiddenAt: null, $nor: [{ relatedType: 'OfficerAnnouncement', relatedId: { $in: pins.notifications.map(item => item.relatedId) } }] };
+    const [availableAssociations, unreadNotifications, unreadNotificationCount] = await Promise.all([
       NeighborhoodAssociation.find({ status: 'active', deletedAt: { $exists: false }, _id: { $nin: excludedIds } }).sort('name').lean(),
       Notification.find({ ...visibleNotificationFilter, readAt: null }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
-      Notification.find({ ...visibleNotificationFilter, readAt: { $ne: null } }).populate('association', 'name').sort({ createdAt: -1 }).limit(20).lean(),
-      Notification.countDocuments({ ...visibleNotificationFilter, readAt: null })
+      Notification.countDocuments({ recipient: req.user._id, hiddenAt: null, readAt: null })
     ]);
-    const notifications = [...unreadNotifications, ...readNotifications].slice(0, 20);
+    const notifications = unreadNotifications;
     const residentRegistration = await ResidentRegistration.findOne({ user: req.user._id }).lean();
     for (const notification of notifications) {
-      Object.assign(notification, await resolveNotificationAction(notification, req, res));
+      Object.assign(notification, { actionUrl: `/notifications/${notification._id}/open`, priority: notificationPriority(notification) });
     }
     const privateEquipmentSettings = await EquipmentSettings.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, loanPublic: false }).select('association').lean();
     const privateEquipmentIds = new Set(privateEquipmentSettings.map(setting => String(setting.association)));
@@ -659,7 +688,9 @@ webRouter.get('/dashboard', requireLogin, async (req, res, next) => {
     const financeReports = visibleMemberships.filter((item) => item.association.financePublic && associationFeatureEnabled(item.association, 'finance')).map((item) => ({ association: item.association }));
     const eventWindow = calendarWindow(req.query.month);
     const associationEvents = await visibleEvents(visibleMemberships.map(item => item.association._id), { now: eventWindow.first });
-    notifications.unshift(...pins.notifications);
+    const hiddenAnnouncements = await Notification.find({ recipient: req.user._id, hiddenAt: { $ne: null }, relatedType: 'OfficerAnnouncement' }).select('relatedId').lean();
+    const hiddenAnnouncementIds = new Set(hiddenAnnouncements.map(item => String(item.relatedId)));
+    notifications.unshift(...pins.notifications.filter(item => !hiddenAnnouncementIds.has(String(item.relatedId))));
     const dangerReports = await DangerReport.find({ association: { $in: visibleMemberships.map(item => item.association._id) }, createdAt: dangerReportHomeWindow() }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).limit(6).lean();
     const goodPlaceGalleries = await Promise.all(visibleMemberships.filter(item => associationFeatureEnabled(item.association, 'goodPlaces')).map(async membership => ({
       association: membership.association,
@@ -682,7 +713,8 @@ webRouter.post('/notifications/:notificationId/read', requireLogin, verifyCsrfTo
 webRouter.post('/notifications/:notificationId/delete', requireLogin, verifyCsrfToken, async (req, res, next) => {
   try {
     await deleteNotification({ notificationId: req.params.notificationId, recipient: req.user._id });
-    return res.redirect('/dashboard?notifications=open');
+    if (req.get('accept') === 'application/json') return res.status(204).end();
+    return res.redirect('/notifications');
   } catch (error) { return next(error); }
 });
 

@@ -23,7 +23,7 @@ notificationsRouter.post('/permission-prompt/seen', verifyCsrfToken, (req, res) 
 notificationsRouter.get('/unread-count', async (req, res, next) => {
   res.set('Cache-Control', 'no-store');
   try {
-    const unreadCount = await Notification.countDocuments({ recipient: req.user._id, readAt: null });
+    const unreadCount = await Notification.countDocuments({ recipient: req.user._id, readAt: null, hiddenAt: null });
     res.json({ unreadCount });
   } catch (error) { next(error); }
 });

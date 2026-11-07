@@ -44,7 +44,7 @@ test('email and push use the same destinations and authenticated recipient links
   assert.equal(notificationDestination({ ...notice, type: 'officer_announcement' }), '/associations/a/announcements/g');
 });
 
-test('email/push entry rejects other recipients and redirects an owned request', async t => {
+test('email/push entry rejects other recipients and renders an owned request as read', async t => {
   const { webRouter } = await import('../src/routes/web.js');
   const { Notification } = await import('../src/models/notification.js');
   const layer = webRouter.stack.find(item => item.route?.path === '/notifications/:notificationId/open');
@@ -56,12 +56,18 @@ test('email/push entry rejects other recipients and redirects an owned request',
     return { lean: async () => record };
   });
   const req = { params: { notificationId: '507f1f77bcf86cd799439011' }, user: { _id: 'recipient' } };
-  const res = { locals: {}, sendStatus(status) { this.status = status; }, redirect(path) { this.path = path; } };
+  t.mock.method(Notification, 'updateOne', async (criteria, update) => { assert.equal(criteria.recipient, 'recipient'); assert.ok(update.$set.readAt instanceof Date); });
+  const res = { render(view, data) { this.view = view; this.data = data; }, locals: {}, sendStatus(status) { this.status = status; }, redirect(path) { this.path = path; } };
   const next = error => { throw error; };
   await handler(req, res, next);
   assert.equal(res.status, 404);
   assert.equal(filter.recipient, 'recipient');
   record = { ...notice, type: 'group_request', title: 'グループへの参加申請が届きました' };
   await handler(req, res, next);
-  assert.equal(res.path, '/associations/a/groups/g/manage');
+  assert.equal(res.view, 'notification-detail');
+  assert.equal(res.data.action.actionUrl, '/associations/a/groups/g/manage');
+  req.query = { modal: '1' };
+  await handler(req, res, next);
+  assert.equal(res.view, 'partials/notification-detail-content');
+  assert.ok(res.data.notification.readAt instanceof Date);
 });

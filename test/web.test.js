@@ -167,7 +167,7 @@ test('dashboard heading links the association with district and member attribute
   assert.doesNotMatch(html, /class="association-grid"/);
 });
 
-test('dashboard notifications start collapsed with unread count and confirmed status', async () => {
+test('dashboard notifications show unread counts and an inbox link without destructive actions', async () => {
   const id = '507f1f77bcf86cd799439011';
   const html = await renderView(path.join(dirname, '../src/views/dashboard.ejs'), {
     title: '町内会ホーム', csrfToken: 'token', notice: null, currentPath: '/dashboard', currentUser: { username: 'member', email: 'member@example.test' }, currentRoleTags: [],
@@ -179,9 +179,9 @@ test('dashboard notifications start collapsed with unread count and confirmed st
   });
   assert.match(html, /<details class="admin-section application-section notification-inbox" >/);
   assert.match(html, /未読 1件/);
-  assert.match(html, new RegExp(`/notifications/${id}/read`));
-  assert.match(html, new RegExp(`/notifications/${id}/delete`));
-  assert.match(html, /class="status-badge">確認済み<\/span>/);
+  assert.match(html, /href="\/notifications"/);
+  assert.doesNotMatch(html, /notifications\/[^" ]+\/(delete|read)/);
+
   assert.doesNotMatch(html, /notifications\/507f1f77bcf86cd799439012\/read/);
 });
 

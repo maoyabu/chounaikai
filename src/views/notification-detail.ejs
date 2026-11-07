@@ -1,0 +1,5 @@
+<%- include('partials/head') %><%- include('partials/header') %>
+<main class="page-shell page-narrow">
+  <a class="back-link" href="/notifications<%= notification.hiddenAt ? '?view=hidden' : '' %>">← お知らせ一覧へ戻る</a>
+  <%- include('partials/notification-detail-content') %>
+</main><%- include('partials/foot') %>

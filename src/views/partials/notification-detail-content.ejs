@@ -1,0 +1,15 @@
+  <article class="form-card notification-detail notification-priority-<%= priority %>">
+    <h1><%= notification.title %></h1>
+    <p>確認済み<%= notification.hiddenAt ? ' · 非表示' : '' %></p>
+    <% if (priority !== 'normal') { %><p><%= priority === 'urgent' ? '緊急' : '対応が必要' %></p><% } %>
+    <p class="notification-detail-body"><%= notification.body %></p>
+    <a class="button button-primary" href="<%= action.actionUrl %>"><%= action.actionLabel %></a>
+  </article>
+  <div class="notification-actions">
+    <form method="post" action="/notifications/<%= notification._id %>/state"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="state" value="unread"><button class="button button-quiet">未読に戻す</button></form>
+    <% if (notification.hiddenAt) { %>
+    <form method="post" action="/notifications/<%= notification._id %>/state"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="state" value="restore"><button class="button button-quiet">再表示する</button></form>
+    <% } else { %>
+    <form method="post" action="/notifications/<%= notification._id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-danger-outline">非表示にする</button></form>
+    <% } %>
+  </div>

@@ -15,14 +15,14 @@ export const markNotificationRead = async ({ notificationId, recipient }) => {
 
 export const deleteNotification = async ({ notificationId, recipient }) => {
   validateId(notificationId);
-  return Notification.deleteOne({ _id: notificationId, recipient });
+  return Notification.updateOne({ _id: notificationId, recipient }, { $set: { hiddenAt: new Date() } });
 };
 
 const announcementTypes = ['officer_announcement', 'officer_announcement_reminder', 'officer_network', 'officer_network_reminder', 'district_message', 'district_message_reminder', 'group_message', 'group_message_reminder'];
 const actionableTypes = [...announcementTypes, 'question_answered', 'join_application_received', 'household_link_requested', 'withdrawal_head_requested', 'withdrawal_leader_requested'];
 
 export const syncCompletedNotifications = async ({ recipient }) => {
-  const unread = await Notification.find({ recipient, readAt: null, type: { $in: actionableTypes } }).select('_id type relatedId').lean();
+  const unread = await Notification.find({ recipient, readAt: null, manuallyUnread: { $ne: true }, type: { $in: actionableTypes } }).select('_id type relatedId').lean();
   if (!unread.length) return 0;
   const relatedIds = types => [...new Set(unread.filter(item => types.includes(item.type) && item.relatedId).map(item => String(item.relatedId)))];
   const [receipts, threads, joins, withdrawals] = await Promise.all([
@@ -47,6 +47,22 @@ export const syncCompletedNotifications = async ({ recipient }) => {
     return false;
   });
   if (!completed.length) return 0;
-  await Notification.updateMany({ _id: { $in: completed.map(item => item._id) }, recipient, readAt: null }, { $set: { readAt: new Date() } });
+  await Notification.updateMany({ _id: { $in: completed.map(item => item._id) }, recipient, readAt: null, manuallyUnread: { $ne: true } }, { $set: { readAt: new Date() } });
   return completed.length;
+};
+
+export const updateNotificationState = async ({ notificationId, recipient, state }) => {
+  validateId(notificationId);
+  const changes = {
+    unread: { readAt: null, manuallyUnread: true },
+    restore: { hiddenAt: null }
+  };
+  if (!changes[state]) throw Object.assign(new Error('操作を確認してください。'), { status: 400 });
+  return Notification.updateOne({ _id: notificationId, recipient }, { $set: changes[state] });
+};
+
+export const notificationPriority = item => {
+  if (item.priority === 'urgent' || ['alert_level', 'danger_report'].includes(item.type)) return 'urgent';
+  if (item.priority === 'action' || ['question_created', 'question_reopened', 'location_link_requested', 'join_application_received', 'household_link_requested', 'withdrawal_head_requested', 'withdrawal_leader_requested', 'equipment_loan'].includes(item.type) || (item.type === 'group_request' && /申請が届きました/.test(item.title || ''))) return 'action';
+  return 'normal';
 };

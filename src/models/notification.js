@@ -11,6 +11,9 @@ const notificationSchema = new mongoose.Schema({
   relatedType: String,
   relatedId: mongoose.Schema.Types.ObjectId,
   readAt: Date,
+  hiddenAt: Date,
+  manuallyUnread: Boolean,
+  priority: { type: String, enum: ['normal', 'action', 'urgent'] },
   queuedAt: { type: Date, default: Date.now },
   deliveryClaimedAt: Date,
   delivery: {

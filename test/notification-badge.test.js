@@ -10,7 +10,7 @@ test('badge count API requires login and counts only the current recipient', asy
   assert.ok(notificationsRouter.stack.some(layer => layer.handle === requireLogin));
   const route = notificationsRouter.stack.find(layer => layer.route?.path === '/unread-count').route;
   t.mock.method(Notification, 'countDocuments', async filter => {
-    assert.deepEqual(filter, { recipient: 'current-user', readAt: null });
+    assert.deepEqual(filter, { recipient: 'current-user', readAt: null, hiddenAt: null });
     return 4;
   });
   await route.stack[0].handle({ user: { _id: 'current-user' } }, {

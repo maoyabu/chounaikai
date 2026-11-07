@@ -1937,3 +1937,33 @@ h1, h2, h3, h4, h5, h6,
 
 .survey-export-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1rem 0 .5rem; }
 .survey-export-password { display: inline-block; padding: .25rem .5rem; background: #edf2f7; color: #183b56; border-radius: .3rem; user-select: all; overflow-wrap: anywhere; }
+
+.notification-filters { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; align-items: center; margin-top: .75rem; padding: .65rem 1rem; }
+.notification-filters label { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; }
+.notification-filters select { min-height: 2.5rem; max-width: 100%; padding: .4rem .65rem; border: 1px solid #bdcac3; border-radius: .55rem; background: var(--surface); color: var(--ink); font: inherit; }
+.notification-filters select:focus-visible, .notification-filters input:focus-visible { outline: 3px solid rgba(23,107,77,.25); outline-offset: 2px; }
+.notification-filters .notification-hidden-toggle { margin-left: auto; min-height: 2.5rem; cursor: pointer; }
+.notification-hidden-toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--green); }
+@media (max-width: 600px) {
+  .notification-filters { gap: .5rem 1rem; }
+  .notification-filters .notification-hidden-toggle { margin-left: 0; }
+}
+.notification-list article.notification-priority-action, .notification-detail.notification-priority-action { border-left: 5px solid #154a8a; }
+.notification-list article.notification-priority-urgent, .notification-detail.notification-priority-urgent { border-left: 5px solid #991b1b; }
+.notification-detail-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notification-list .notification-body-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notification-inbox[open] .notification-unread-tag { display: inline-flex; }
+
+.notification-modal { width: min(760px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.25rem; border: 1px solid var(--line); border-radius: 1rem; color: var(--ink); background: var(--surface); box-shadow: var(--shadow); overflow-y: auto; }
+.notification-modal::backdrop { background: rgba(15,35,27,.55); }
+.notification-modal > .dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.notification-modal > .dialog-heading h2 { margin: 0; font-size: 1.15rem; }
+.notification-modal h1 { font-size: 1.4rem; overflow-wrap: anywhere; }
+.notification-modal .notification-detail { padding: 1rem; box-shadow: none; }
+
+.notification-summary-meta { flex-wrap: wrap; justify-content: flex-end; }
+.notification-inbox-link { background: var(--surface); white-space: nowrap; }
+@media (max-width: 600px) {
+  .notification-inbox > summary { gap: .5rem; flex-wrap: wrap; }
+  .notification-summary-meta { gap: .5rem; margin-left: auto; }
+}
