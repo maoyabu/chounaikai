@@ -159,7 +159,7 @@ test('anonymous association FAQ and support never disclose login-only Q&As', asy
 });
 
 test('FAQ image slots replace and remove only after persistence, rolling back uploads on failure', async () => {
-  const old = { url: '/old', publicId: 'old' }, added = { url: '/new', publicId: 'new' };
+  const old = { url: '/old', publicId: 'old' }, added = { url: '/new', publicId: 'new', size: 'large' };
   const deleted = [];
   let saved;
   await persistFaqImages({ previous: [old, old], files: { photo0: [{}] }, body: { removePhoto1: 'on' }, association: associationId,
@@ -307,4 +307,20 @@ test('association FAQ pages and published images reject nonmembers before readin
   assert.equal(reads, 0);
   t.mock.method(Faq, 'findOne', () => query({ published: true }));
   assert.equal((await request(`/faq-images/${associationId}/drive-file/${'a'.repeat(64)}`)).status, 403);
+});
+
+
+test('FAQ image sizes persist per slot without reuploading and reject invalid input', async () => {
+  const previous = ['large', 'medium', 'small'].map((size, slot) => ({ url: `/image${slot}`, publicId: `id${slot}`, size }));
+  let saved;
+  await persistFaqImages({ previous, body: { photoSize0: 'small', photoSize1: 'large', photoSize2: 'medium' },
+    upload: async () => assert.fail('size changes must not upload'), remove: async () => assert.fail('size changes must not delete'),
+    persist: async images => { saved = images; } });
+  assert.deepEqual(saved.map(image => image.size), ['small', 'large', 'medium']);
+  assert.deepEqual(saved.map(image => image.url), previous.map(image => image.url));
+  const body = { category: '一般', question: '質問', answer: '回答' };
+  for (const size of ['large', 'medium', 'small']) assert.doesNotThrow(() => faqInput({ ...body, photoSize0: size }));
+  for (const size of ['huge', [], { size: 'small' }]) assert.throws(() => faqInput({ ...body, photoSize0: size }), { status: 400 });
+  const html = await ejs.renderFile('src/views/partials/faq-accordion.ejs', { items: [{ question: '質問', answer: '回答', images: previous }] });
+  for (const size of ['large', 'medium', 'small']) assert.ok(html.includes(`faq-image-${size}`));
 });
