@@ -51,3 +51,11 @@
 .support-answer .faq-image-large { width: 100%; }
 .support-answer .faq-image-medium { width: calc(100% * 2 / 3); }
 .support-answer .faq-image-small { width: 50%; }
+
+.support-answer .faq-image-tiny { width: 25%; }
+@media (max-width: 600px) {
+  .support-answer .faq-image-mobile-large { width: 100%; }
+  .support-answer .faq-image-mobile-medium { width: calc(100% * 2 / 3); }
+  .support-answer .faq-image-mobile-small { width: 50%; }
+  .support-answer .faq-image-mobile-tiny { width: 25%; }
+}

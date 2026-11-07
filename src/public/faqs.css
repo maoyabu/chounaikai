@@ -6,6 +6,8 @@
 .faq-table th, .faq-table td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .faq-table td:first-child { width: 64px; white-space: nowrap; }
 .faq-table th:last-child, .faq-table td:last-child { white-space: nowrap; }
+.faq-table .faq-publication { width: 1%; padding-right: .4rem; padding-left: .4rem; font-size: .75rem; line-height: 1.5; }
+.faq-publication-state, .faq-publication-targets { display: block; }
 .faq-copy { min-width: 180px; max-width: 450px; }
 .faq-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; max-height: 3.2em; }
 .faq-table [data-drag] { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: .5rem; background: transparent; color: var(--muted); cursor: grab; touch-action: none; }

@@ -6,7 +6,7 @@ const schema = new mongoose.Schema({
   question: { type: String, required: true, trim: true, maxlength: 1000 },
   answer: { type: String, required: true, trim: true, maxlength: 10000 },
   answerFormat: { type: String, enum: ['text', 'html'], default: 'text' },
-  images: { type: [{ _id: false, url: String, publicId: String, size: { type: String, enum: ['large', 'medium', 'small'], default: 'large' } }], default: [], validate: value => value.length <= 3 },
+  images: { type: [{ _id: false, url: String, publicId: String, size: { type: String, enum: ['large', 'medium', 'small', 'tiny'], default: 'large' }, mobileSize: { type: String, enum: ['large', 'medium', 'small', 'tiny'] } }], default: [], validate: value => value.length <= 3 },
   relatedUrl: { type: String, default: '', maxlength: 2000 },
   openToPublic: { type: Boolean, default: false },
   hideAfterLogin: { type: Boolean, default: false },

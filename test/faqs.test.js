@@ -324,3 +324,25 @@ test('FAQ image sizes persist per slot without reuploading and reject invalid in
   const html = await ejs.renderFile('src/views/partials/faq-accordion.ejs', { items: [{ question: '質問', answer: '回答', images: previous }] });
   for (const size of ['large', 'medium', 'small']) assert.ok(html.includes(`faq-image-${size}`));
 });
+
+test('PC and mobile image sizes save independently, including tiny, and retain legacy sizes', async () => {
+  const previous = [{ url: '/one', publicId: 'one', size: 'medium' }, { url: '/two', publicId: 'two', size: 'small', mobileSize: 'large' }];
+  let saved;
+  await persistFaqImages({ previous, body: { photoSize0: 'large', photoMobileSize0: 'tiny', photoMobileSize1: 'medium' }, persist: async images => { saved = images; } });
+  assert.equal(saved[0].size, 'large');
+  assert.equal(saved[0].mobileSize, 'tiny');
+  assert.equal(saved[1].size, 'small');
+  assert.equal(saved[1].mobileSize, 'medium');
+  await persistFaqImages({ previous, body: {}, persist: async images => { saved = images; } });
+  assert.deepEqual(saved, previous);
+  await persistFaqImages({ previous, files: { photo0: [{}] }, body: { photoSize0: 'tiny', photoMobileSize0: 'large' }, upload: async () => ({ url: '/new', publicId: 'new' }), remove: async () => {}, persist: async images => { saved = images; } });
+  assert.equal(saved[0].size, 'tiny');
+  assert.equal(saved[0].mobileSize, 'large');
+  const input = { category: '一般', question: '質問', answer: '回答', photoSize0: 'tiny', photoMobileSize0: 'tiny' };
+  assert.doesNotThrow(() => faqInput(input));
+  for (const invalid of ['huge', [], {}]) assert.throws(() => faqInput({ ...input, photoMobileSize0: invalid }), { status: 400 });
+  const html = await ejs.renderFile('src/views/partials/faq-accordion.ejs', { items: [{ question: '質問', answer: '回答', images: saved }] });
+  assert.ok(html.includes('faq-image-tiny faq-image-mobile-large'));
+  const legacyHtml = await ejs.renderFile('src/views/partials/faq-accordion.ejs', { items: [{ question: '質問', answer: '回答', images: previous }] });
+  assert.ok(legacyHtml.includes('faq-image-medium faq-image-mobile-medium'));
+});

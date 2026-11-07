@@ -20,28 +20,31 @@ export const uploadFaqImage = async (file, association) => {
     stream.end(file.buffer);
   });
 };
-export const faqImageSizes = body => Array.from({ length: 3 }, (_, slot) => {
-  const size = body[`photoSize${slot}`];
-  if (size !== undefined && !['large', 'medium', 'small'].includes(size)) {
-    throw Object.assign(new Error('画像サイズは大・中・小から選択してください。'), { status: 400 });
+export const faqImageSizes = (body, prefix = 'photoSize') => Array.from({ length: 3 }, (_, slot) => {
+  const size = body[`${prefix}${slot}`];
+  if (size !== undefined && !['large', 'medium', 'small', 'tiny'].includes(size)) {
+    throw Object.assign(new Error('画像サイズは大・中・小・極小から選択してください。'), { status: 400 });
   }
   return size;
 });
 export const deleteFaqImage = image => deletePublicPhoto(image?.publicId);
 export const persistFaqImages = async ({ files = {}, body, previous = [], association, persist, upload = uploadFaqImage, remove = deleteFaqImage }) => {
   const sizes = faqImageSizes(body);
+  const mobileSizes = faqImageSizes(body, 'photoMobileSize');
   const images = [...previous], added = [], removed = [];
   try {
     for (let slot = 0; slot < 3; slot++) {
       const file = files[`photo${slot}`]?.[0];
       if (!file && body[`removePhoto${slot}`] !== 'on') {
         if (images[slot] && sizes[slot]) images[slot] = { ...images[slot], size: sizes[slot] };
+        if (images[slot] && mobileSizes[slot]) images[slot] = { ...images[slot], mobileSize: mobileSizes[slot] };
         continue;
       }
       if (images[slot]?.publicId) removed.push(images[slot]);
       images[slot] = file ? await upload(file, association) : null;
       if (images[slot]) {
         images[slot] = { ...images[slot], size: sizes[slot] || previous[slot]?.size || 'large' };
+        if (mobileSizes[slot] || previous[slot]?.mobileSize) images[slot].mobileSize = mobileSizes[slot] || previous[slot].mobileSize;
         added.push(images[slot]);
       }
     }

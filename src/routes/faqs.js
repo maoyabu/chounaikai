@@ -19,6 +19,7 @@ const wrap = handler => async (req, res, next) => { try { await handler(req, res
 export const faqInput = (body, system = false) => {
   const result = {};
   faqImageSizes(body);
+  faqImageSizes(body, 'photoMobileSize');
   for (const [key, max] of Object.entries({ category: 100, question: 1000, answer: 10000, relatedUrl: 2000 })) {
     if (body[key] !== undefined && typeof body[key] !== 'string') throw fail('入力内容を確認してください。');
     const value = (body[key] || '').trim();
@@ -137,7 +138,7 @@ for (const system of [false, true]) {
     let data;
     try { data = faqInput(req.body, system); } catch (error) {
       if (error.status !== 400) throw error;
-      const item = { ...original, imageSizes: Array.from({ length: 3 }, (_, slot) => ['large', 'medium', 'small'].includes(req.body[`photoSize${slot}`]) ? req.body[`photoSize${slot}`] : original.images?.[slot]?.size || 'large'), ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', showOnSupport: req.body.showOnSupport === 'on', hideAfterLogin: system && req.body.hideAfterLogin === 'on', openToPublic: system && req.body.openToPublic === 'on' };
+      const item = { ...original, mobileImageSizes: Array.from({ length: 3 }, (_, slot) => ['large', 'medium', 'small', 'tiny'].includes(req.body[`photoMobileSize${slot}`]) ? req.body[`photoMobileSize${slot}`] : original.images?.[slot]?.mobileSize || original.images?.[slot]?.size || 'large'), imageSizes: Array.from({ length: 3 }, (_, slot) => ['large', 'medium', 'small', 'tiny'].includes(req.body[`photoSize${slot}`]) ? req.body[`photoSize${slot}`] : original.images?.[slot]?.size || 'large'), ...Object.fromEntries(['category', 'question', 'answer', 'relatedUrl'].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), answerFormat: req.body.answerFormat === 'html' ? 'html' : 'text', published: req.body.published === 'on', showOnSupport: req.body.showOnSupport === 'on', hideAfterLogin: system && req.body.hideAfterLogin === 'on', openToPublic: system && req.body.openToPublic === 'on' };
       return res.status(400).render('faq-form', { title: edit ? 'Q&Aの編集' : 'Q&Aの登録', association: assoc, system, baseUrl: url(req), item: { ...item, answerHtml: faqAnswerHtml(item) }, categories: await Faq.distinct('category', scope(req)), error: error.message });
     }
     await persistFaqImages({ files: req.files, body: req.body, previous: original.images, association: system ? null : assoc._id,
