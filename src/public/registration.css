@@ -1973,3 +1973,14 @@ h1, h2, h3, h4, h5, h6,
 .notification-item-heading.notification-heading-inline,
 .notification-detail-heading { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: .5rem; }
 .notification-detail-heading .status-badge { flex: 0 0 auto; }
+.login-panel .passkey-login-button {
+  margin-top: 1.5rem;
+  background: #2f6fab;
+  border-color: #2f6fab;
+  color: #fff;
+}
+
+.login-panel .passkey-login-button:hover {
+  background: #245a8d;
+  border-color: #245a8d;
+}
