@@ -387,8 +387,10 @@ test('HTTP: administrator passkey login ignores stale resident registration and 
       assert.equal((await browser.request('/api/passkeys/auth/options', { method: 'POST', body: { _csrf: csrf } })).status, 200);
       const verified = await browser.request('/api/passkeys/auth/verify', { method: 'POST', body: { _csrf: csrf, flowId: 'test-flow' } });
       assert.equal(verified.status, 200);
-      assert.equal(verified.json().next, '/login/complete');
-      assert.equal((await browser.request(verified.json().next)).location, '/dashboard');
+      assert.equal(verified.json().next, '/dashboard');
+      const account = await browser.request('/api/auth/me');
+      assert.equal(account.status, 200);
+      assert.equal(account.json().user.isAdmin, true);
       assert.equal((await browser.request('/login')).location, '/dashboard');
       // The old creation choice must not remain available after completion.
       assert.equal((await browser.request('/associations/new')).location, '/associations');
@@ -400,6 +402,33 @@ test('HTTP: administrator passkey login ignores stale resident registration and 
     await browser.request('/api/passkeys/auth/verify', { method: 'POST', body: { _csrf: csrf } });
     assert.equal((await browser.request('/login/complete')).location, '/associations/507f1f77bcf86cd799439011/join');
   }, { async get() { return { mfaEnabled: false, revision: 'disabled' }; } }, passkeys);
+});
+
+test('HTTP: administrator passkey MFA continues directly to the dashboard', async () => {
+  let authenticatedUser;
+  const passkeys = {
+    enabled: true,
+    async finishAuthentication() { return { user: authenticatedUser, credential: { _id: 'test-key' } }; },
+    async validSession() { return true; }
+  };
+  await withMfaApp(async ({ f, admin, client }) => {
+    authenticatedUser = admin;
+    const browser = client();
+    await browser.request('/associations/create/start');
+    const login = await browser.request('/login');
+    const csrf = login.text.match(/name="_csrf" value="([^"]+)"/)[1];
+    const verified = await browser.request('/api/passkeys/auth/verify', { method: 'POST', body: { _csrf: csrf } });
+    assert.equal(verified.json().next, '/mfa/setup');
+    assert.equal((await browser.request('/api/auth/me')).status, 403);
+    const setup = (await browser.request('/api/auth/mfa/setup')).json();
+    const code = await generate({ secret: setup.secret, epoch: Math.floor(f.now() / 1000) });
+    const enrolled = await browser.request('/api/auth/mfa/setup', { method: 'POST', body: { _csrf: setup.csrfToken, code } });
+    assert.equal(enrolled.status, 200);
+    const continuation = await browser.request('/mfa/continue', { method: 'POST', body: { _csrf: enrolled.json().csrfToken } });
+    assert.equal(continuation.location, '/dashboard');
+    assert.equal((await browser.request('/api/auth/me')).json().user.isAdmin, true);
+    assert.equal((await browser.request('/associations/new')).location, '/associations');
+  }, undefined, passkeys);
 });
 
 test('HTTP: browser enrollment renders recovery codes once and continues the original login flow', async () => {

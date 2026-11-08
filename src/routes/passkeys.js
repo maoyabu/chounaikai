@@ -60,13 +60,19 @@ export const createPasskeyRouter = service => {
         flowId: req.body.flowId, response: req.body.response });
       delete req.session.passkeyBinding;
       const context = {};
-      for (const key of ['householdInvitationId', 'registrationChoice']) if (req.session[key] !== undefined) context[key] = req.session[key];
+      if (!user.isAdmin) {
+        for (const key of ['householdInvitationId', 'registrationChoice']) if (req.session[key] !== undefined) context[key] = req.session[key];
+      }
       await new Promise((resolve, reject) => req.logIn(user, error => error ? reject(error) : resolve()));
       Object.assign(req.session, context);
       req.session.passkeyLogin = { credentialId: String(credential._id), fingerprint: passwordFingerprint(user) };
       req.session.notificationPromptPending = true;
-      const state = await recordPrimaryAuth(req, user, '/login/complete');
-      const nextUrl = state.required || state.credential?.enabledAt ? (state.credential?.enabledAt ? '/mfa/verify' : '/mfa/setup') : '/login/complete';
+      // System administrators have no resident onboarding to complete. Resolve
+      // their destination here, including the return path after MFA.
+      const destination = user.isAdmin ? '/dashboard' : '/login/complete';
+      const state = await recordPrimaryAuth(req, user, destination);
+      const nextUrl = state.required || state.credential?.enabledAt ? (state.credential?.enabledAt ? '/mfa/verify' : '/mfa/setup') : destination;
+      await save(req);
       res.json({ next: nextUrl });
     } catch (error) { next(error); }
   });
