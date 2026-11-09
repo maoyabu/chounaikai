@@ -4,6 +4,7 @@ import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { requireLogin, requireSystemAdmin } from '../middleware/auth.js';
 import { approveAssociation, hideAssociation, permanentlyDeleteAssociation, restoreAssociation } from '../services/associationService.js';
+import { loadMobileHome } from '../services/mobileHomeService.js';
 
 export const associationsRouter = express.Router();
 
@@ -12,6 +13,16 @@ const associationResponse = association => {
   const { officerDisclosureHistory, ...record } = association.toObject?.() || association;
   return record;
 };
+
+associationsRouter.get('/home', async (req, res, next) => {
+  try {
+    const home = await loadMobileHome({ userId: req.user._id });
+    await req.auditPersonalData?.({ category: 'registration', resource: 'api-mobile-home', data: home });
+    return res.json(home);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 associationsRouter.get('/', async (req, res, next) => {
   try {
