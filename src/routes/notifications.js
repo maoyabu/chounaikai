@@ -87,7 +87,7 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     const hidden = req.query.view === 'hidden';
     const filter = ['unread', 'read', 'urgent', 'action'].includes(req.query.filter) ? req.query.filter : 'all';
     const category = ['announcement', 'emergency', 'request'].includes(req.query.category) ? req.query.category : null;
-    const sort = ['newest', 'oldest'].includes(req.query.sort) ? req.query.sort : 'priority';
+    const sort = ['unread', 'pinned'].includes(req.query.sort) ? req.query.sort : 'unread';
     const criteria = { recipient: req.user._id, hiddenAt: hidden ? { $ne: null } : null };
     if (filter === 'unread') criteria.readAt = null;
     if (filter === 'read') criteria.readAt = { $ne: null };
@@ -97,10 +97,11 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     if (category) notifications = notifications.filter(item => notificationCategory(item) === category);
     if (filter === 'urgent') notifications = notifications.filter(item => item.priority === 'urgent');
     if (filter === 'action') notifications = notifications.filter(item => item.priority === 'action' && !item.actionCompleted);
-    notifications.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))
-      || Number(Boolean(a.readAt)) - Number(Boolean(b.readAt))
-      || (sort === 'priority' ? notificationSortRank(a) - notificationSortRank(b) : 0)
-      || (sort === 'oldest' ? 1 : -1) * (new Date(a.createdAt) - new Date(b.createdAt))
+    notifications.sort((a, b) => (sort === 'pinned'
+      ? Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(Boolean(a.readAt)) - Number(Boolean(b.readAt))
+      : Number(Boolean(a.readAt)) - Number(Boolean(b.readAt)) || Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
+      || notificationSortRank(a) - notificationSortRank(b)
+      || new Date(b.createdAt) - new Date(a.createdAt)
       || String(a._id).localeCompare(String(b._id)));
     const total = notifications.length;
     const totalPages = Math.max(1, Math.ceil(total / 30));
