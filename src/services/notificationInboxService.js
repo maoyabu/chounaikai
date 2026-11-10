@@ -57,6 +57,7 @@ export const updateNotificationState = async ({ notificationId, recipient, state
   validateId(notificationId);
   const changes = {
     unread: { readAt: null, manuallyUnread: true },
+    hide: { hiddenAt: new Date() },
     restore: { hiddenAt: null }
   };
   if (!changes[state]) throw Object.assign(new Error('操作を確認してください。'), { status: 400 });

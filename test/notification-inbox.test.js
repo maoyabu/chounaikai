@@ -63,13 +63,17 @@ test('leader confirmation reads the leader notice while the manager notice remai
   assert.equal(update.mock.callCount(), 1);
 });
 
-test('manual unread and restore preserve recipient isolation', async t => {
+test('manual unread, hide, and restore preserve recipient isolation', async t => {
   const notificationId = new mongoose.Types.ObjectId(), recipient = new mongoose.Types.ObjectId();
   const changes = [];
   t.mock.method(Notification, 'updateOne', async (filter, change) => { assert.deepEqual(filter, { _id: notificationId, recipient }); changes.push(change.$set); });
   await updateNotificationState({ notificationId, recipient, state: 'unread' });
+  await updateNotificationState({ notificationId, recipient, state: 'hide' });
   await updateNotificationState({ notificationId, recipient, state: 'restore' });
-  assert.deepEqual(changes, [{ readAt: null, manuallyUnread: true }, { hiddenAt: null }]);
+  assert.equal(changes.length, 3);
+  assert.deepEqual(changes[0], { readAt: null, manuallyUnread: true });
+  assert.ok(changes[1].hiddenAt instanceof Date);
+  assert.deepEqual(changes[2], { hiddenAt: null });
   await assert.rejects(updateNotificationState({ notificationId, recipient, state: 'invalid' }), { status: 400 });
 });
 test('urgent takes precedence over actions and ordinary messages', () => {
