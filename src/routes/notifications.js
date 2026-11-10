@@ -98,6 +98,7 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     if (filter === 'urgent') notifications = notifications.filter(item => item.priority === 'urgent');
     if (filter === 'action') notifications = notifications.filter(item => item.priority === 'action' && !item.actionCompleted);
     notifications.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))
+      || Number(Boolean(a.readAt)) - Number(Boolean(b.readAt))
       || (sort === 'priority' ? notificationSortRank(a) - notificationSortRank(b) : 0)
       || (sort === 'oldest' ? 1 : -1) * (new Date(a.createdAt) - new Date(b.createdAt))
       || String(a._id).localeCompare(String(b._id)));
