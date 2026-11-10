@@ -15,7 +15,7 @@ authRouter.post('/login', (req, res, next) => {
         const state = await recordPrimaryAuth(req, user, '/dashboard');
         if (state.required || state.credential?.enabledAt) return res.status(202).json({ mfaRequired: true, setupRequired: !state.credential?.enabledAt, next: state.credential?.enabledAt ? '/mfa/verify' : '/mfa/setup' });
       } catch (error) { return next(error); }
-      return res.json({ user: { id: String(user._id), username: user.username, email: user.email, displayname: user.displayname || null } });
+      return res.json({ user: { id: String(user._id), username: user.username, email: user.email, displayname: user.displayname || null, avatar: user.avatar || null } });
     });
   })(req, res, next);
 });
@@ -34,6 +34,6 @@ authRouter.post('/logout', requireLogin, (req, res, next) => {
 authRouter.get('/me', requireLogin, async (req, res, next) => {
   try {
     await req.auditPersonalData?.({ category: 'residents', resource: 'api-auth-me', data: { user: req.user } });
-    res.json({ user: { id: String(req.user._id), username: req.user.username, email: req.user.email, displayname: req.user.displayname || null, isAdmin: Boolean(req.user.isAdmin) } });
+    res.json({ user: { id: String(req.user._id), username: req.user.username, email: req.user.email, displayname: req.user.displayname || null, avatar: req.user.avatar || null, isAdmin: Boolean(req.user.isAdmin) } });
   } catch (error) { next(error); }
 });
