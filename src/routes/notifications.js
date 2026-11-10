@@ -55,17 +55,26 @@ const mobileNotificationContexts = async (notifications, user) => {
   });
 };
 
+const notificationCategory = notification => {
+  const priority = notificationPriority(notification);
+  if (priority === 'urgent') return 'emergency';
+  if (priority === 'action') return 'request';
+  return 'announcement';
+};
+
 notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
   try {
     await syncCompletedNotifications({ recipient: req.user._id });
     const hidden = req.query.view === 'hidden';
     const filter = ['unread', 'read', 'urgent', 'action'].includes(req.query.filter) ? req.query.filter : 'all';
+    const category = ['announcement', 'emergency', 'request'].includes(req.query.category) ? req.query.category : null;
     const sort = ['newest', 'oldest'].includes(req.query.sort) ? req.query.sort : 'priority';
     const criteria = { recipient: req.user._id, hiddenAt: hidden ? { $ne: null } : null };
     if (filter === 'unread') criteria.readAt = null;
     if (filter === 'read') criteria.readAt = { $ne: null };
     let notifications = await Notification.find(criteria).populate('association', 'name').lean();
     await enrichNotificationStates(notifications, { recipient: req.user._id });
+    if (category) notifications = notifications.filter(item => notificationCategory(item) === category);
     if (filter === 'urgent') notifications = notifications.filter(item => item.priority === 'urgent');
     if (filter === 'action') notifications = notifications.filter(item => item.priority === 'action' && !item.actionCompleted);
     notifications.sort((a, b) => (sort === 'priority' ? notificationSortRank(a) - notificationSortRank(b) : 0)
