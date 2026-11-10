@@ -5,6 +5,11 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { requireLogin, requireSystemAdmin } from '../middleware/auth.js';
 import { approveAssociation, hideAssociation, permanentlyDeleteAssociation, restoreAssociation } from '../services/associationService.js';
 import { loadMobileHome } from '../services/mobileHomeService.js';
+import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
+import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
+import { confirmAnnouncement, loadRecipientAnnouncement } from '../services/officerAnnouncementService.js';
+import { communicationCategory, mobileCommunication } from '../services/mobileCommunicationService.js';
+import { User } from '../models/user.js';
 
 export const associationsRouter = express.Router();
 
@@ -22,6 +27,54 @@ associationsRouter.get('/home', async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+});
+
+associationsRouter.get('/:associationId/communications', provideCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.associationId)) return res.status(400).json({ error: 'invalid_association_id' });
+    const membership = await AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }).lean();
+    if (!membership) return res.status(403).json({ error: 'active_membership_required' });
+    if (!['emergency', 'announcement'].includes(req.query.category)) return res.status(400).json({ error: 'invalid_category' });
+
+    const receipts = await OfficerAnnouncementReceipt.find({ association: req.params.associationId, recipient: req.user._id })
+      .sort({ createdAt: -1 }).limit(100).lean();
+    const announcements = await OfficerAnnouncement.find({
+      _id: { $in: receipts.map(item => item.announcement) },
+      mutedAt: { $exists: false },
+      $or: [{ channel: 'resident' }, { channel: { $exists: false } }]
+    }).populate('sender', 'displayname username').lean();
+    const byId = new Map(announcements.map(item => [String(item._id), item]));
+    const communications = receipts.map(receipt => ({ announcement: byId.get(String(receipt.announcement)), receipt }))
+      .filter(item => item.announcement && communicationCategory(item.announcement) === req.query.category)
+      .map(mobileCommunication);
+    res.set('Cache-Control', 'private, no-store');
+    return res.json({ communications, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.get('/:associationId/communications/:announcementId', provideCsrfToken, async (req, res, next) => {
+  try {
+    const { announcement, receipt } = await loadRecipientAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, channel: 'resident' });
+    const sender = await User.findById(announcement.sender).select('displayname username').lean();
+    announcement.sender = sender;
+    res.set('Cache-Control', 'private, no-store');
+    return res.json({ communication: mobileCommunication({ announcement, receipt }), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/communications/:announcementId/read', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const { receipt } = await loadRecipientAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, channel: 'resident' });
+    await OfficerAnnouncementReceipt.updateOne({ _id: receipt._id, recipient: req.user._id, readAt: null }, { $set: { readAt: new Date() } });
+    return res.status(204).end();
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/communications/:announcementId/answer', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    await confirmAnnouncement({ associationId: req.params.associationId, announcementId: req.params.announcementId, userId: req.user._id, selectedOptions: req.body.selectedOptions, channel: 'resident' });
+    return res.json({ ok: true });
+  } catch (error) { return next(error); }
 });
 
 associationsRouter.get('/', async (req, res, next) => {
