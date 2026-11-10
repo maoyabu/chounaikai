@@ -7,8 +7,9 @@ import { Notification } from '../models/notification.js';
 import { enrichNotificationStates, markNotificationRead, notificationPriority, notificationSortRank, syncCompletedNotifications, updateNotificationState } from '../services/notificationInboxService.js';
 import { notificationAction } from '../services/notificationDestination.js';
 import { loadMobileHome } from '../services/mobileHomeService.js';
-import { OfficerAnnouncement } from '../models/officerAnnouncement.js';
+import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { AssociationEvent } from '../models/associationEvent.js';
+import { setAnnouncementPin } from '../services/officerAnnouncementService.js';
 
 export const notificationsRouter = express.Router();
 notificationsRouter.use(requireLogin);
@@ -27,9 +28,27 @@ const mobileNotification = (notification, context = {}) => {
     hiddenAt: notification.hiddenAt || null,
     priority: notificationPriority(notification),
     actionCompleted: Boolean(notification.actionCompleted),
+    pinned: Boolean(notification.pinned),
+    pinnedAt: notification.pinnedAt || null,
     actionUrl: action.actionUrl,
     actionLabel: action.actionLabel
   };
+};
+
+const attachAnnouncementPins = async (notifications, userId) => {
+  const announcementIds = notifications
+    .filter(item => ['officer_announcement', 'officer_announcement_reminder'].includes(item.type) && item.relatedId)
+    .map(item => item.relatedId);
+  if (!announcementIds.length) return notifications;
+  const receipts = await OfficerAnnouncementReceipt.find({ recipient: userId, announcement: { $in: announcementIds } })
+    .select('announcement pinnedAt').lean();
+  const pinnedByAnnouncement = new Map(receipts.map(receipt => [String(receipt.announcement), receipt.pinnedAt || null]));
+  for (const notification of notifications) {
+    const pinnedAt = pinnedByAnnouncement.get(String(notification.relatedId));
+    notification.pinned = Boolean(pinnedAt);
+    notification.pinnedAt = pinnedAt;
+  }
+  return notifications;
 };
 
 const mobileNotificationContexts = async (notifications, user) => {
@@ -74,10 +93,12 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     if (filter === 'read') criteria.readAt = { $ne: null };
     let notifications = await Notification.find(criteria).populate('association', 'name').lean();
     await enrichNotificationStates(notifications, { recipient: req.user._id });
+    await attachAnnouncementPins(notifications, req.user._id);
     if (category) notifications = notifications.filter(item => notificationCategory(item) === category);
     if (filter === 'urgent') notifications = notifications.filter(item => item.priority === 'urgent');
     if (filter === 'action') notifications = notifications.filter(item => item.priority === 'action' && !item.actionCompleted);
-    notifications.sort((a, b) => (sort === 'priority' ? notificationSortRank(a) - notificationSortRank(b) : 0)
+    notifications.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))
+      || (sort === 'priority' ? notificationSortRank(a) - notificationSortRank(b) : 0)
       || (sort === 'oldest' ? 1 : -1) * (new Date(a.createdAt) - new Date(b.createdAt))
       || String(a._id).localeCompare(String(b._id)));
     const total = notifications.length;
@@ -139,11 +160,31 @@ notificationsRouter.get('/:notificationId', provideCsrfToken, async (req, res, n
     const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).populate('association', 'name').lean();
     if (!notification) return res.status(404).json({ error: 'notification_not_found' });
     await enrichNotificationStates([notification], { recipient: req.user._id });
+    await attachAnnouncementPins([notification], req.user._id);
     await markNotificationRead({ notificationId: notification._id, recipient: req.user._id });
     notification.readAt ||= new Date();
     res.set('Cache-Control', 'private, no-store');
     const contextFor = await mobileNotificationContexts([notification], req.user);
     return res.json({ notification: mobileNotification(notification, contextFor(notification)), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.post('/:notificationId/pin', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({
+      _id: req.params.notificationId,
+      recipient: req.user._id,
+      type: { $in: ['officer_announcement', 'officer_announcement_reminder'] }
+    }).select('association relatedId').lean();
+    if (!notification?.relatedId) return res.status(404).json({ error: 'notification_not_found' });
+    await setAnnouncementPin({
+      associationId: notification.association,
+      announcementId: notification.relatedId,
+      userId: req.user._id,
+      pinned: req.body.pinned === true
+    });
+    return res.status(204).end();
   } catch (error) { return next(error); }
 });
 
