@@ -194,6 +194,7 @@ associationsRouter.get('/:associationId/officer-chat', provideCsrfToken, async (
         hidden: Boolean(ownReceipt?.chatHiddenAt),
         audienceLabel: isAll ? '全員' : matchingGroup?.name || '選択メンバー',
         isAll,
+        canDelete: String(topic.sender?._id || topic.sender) === String(req.user._id),
         participantCount: participantIds.size
       };
       })
@@ -279,6 +280,17 @@ associationsRouter.post('/:associationId/officer-chat/topics/:topicId/visibility
     );
     if (!result.matchedCount && !result.upsertedCount) throw chatFail('トピックの表示状態を変更できません。', 403);
     return res.json({ ok: true, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.delete('/:associationId/officer-chat/topics/:topicId', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await chatMember(req.params.associationId, req.params.topicId, req.user._id);
+    if (String(topic.sender) !== String(req.user._id)) throw chatFail('トピックを削除できるのは作成者だけです。', 403);
+    topic.mutedAt = new Date();
+    topic.mutedBy = req.user._id;
+    await topic.save();
+    return res.status(204).end();
   } catch (error) { return next(error); }
 });
 
