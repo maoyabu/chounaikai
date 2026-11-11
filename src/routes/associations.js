@@ -184,13 +184,20 @@ associationsRouter.get('/:associationId/officer-chat', provideCsrfToken, async (
         const matchingGroup = groups.find(group => sameMembers(targetIds, new Set(group.members.map(member => String(member._id)))));
         const isAll = sameMembers(participantIds, allOfficerIds);
         const ownReceipt = receiptByTopic.get(String(topic._id));
+        const lastReadAt = ownReceipt?.chatLastReadAt || ownReceipt?.readAt;
+        const unreadMessageCount = [
+          { sender: topic.sender, createdAt: topic.createdAt },
+          ...(topic.conversationMessages || [])
+        ].filter(message => String(message.sender?._id || message.sender) !== String(req.user._id)
+          && (!lastReadAt || new Date(message.createdAt) > new Date(lastReadAt))).length;
         return {
         id: String(topic._id),
         title: topic.title,
         preview: topic.conversationMessages?.at(-1)?.body || topic.body,
         senderName: topic.sender?.displayname || topic.sender?.username || '役員',
         updatedAt: topic.conversationMessages?.at(-1)?.createdAt || topic.createdAt,
-        unread: Boolean(ownReceipt && !ownReceipt.readAt),
+        unread: unreadMessageCount > 0,
+        unreadCount: unreadMessageCount,
         hidden: Boolean(ownReceipt?.chatHiddenAt),
         audienceLabel: isAll ? '全員' : matchingGroup?.name || '選択メンバー',
         isAll,
@@ -199,7 +206,7 @@ associationsRouter.get('/:associationId/officer-chat', provideCsrfToken, async (
       };
       })
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    return res.json({ association: { id: String(association._id), name: association.name }, officers: [...officersById.values()], groups: groups.map(group => ({ id: String(group._id), name: group.name, members: group.members.map(member => ({ id: String(member._id), name: member.displayname || member.username })) })), topics, csrfToken: req.session.csrfToken });
+    return res.json({ association: { id: String(association._id), name: association.name }, officers: [...officersById.values()], groups: groups.map(group => ({ id: String(group._id), name: group.name, members: group.members.map(member => ({ id: String(member._id), name: member.displayname || member.username })) })), topics, unreadCount: topics.reduce((sum, topic) => sum + topic.unreadCount, 0), csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
 
@@ -211,7 +218,7 @@ associationsRouter.post('/:associationId/officer-chat/topics', provideCsrfToken,
     const result = await publishAnnouncement({ files: req.files, attachmentRetentionDays: 365, associationId: req.params.associationId, userId: req.user._id, channel: 'officer', audience: 'officer_individual', targetOfficerIds: participantIds, urgency: 1, title: req.body.title, body: req.body.body, responseMode: poll.mode, options: poll.options });
     await OfficerAnnouncementReceipt.updateOne(
       { announcement: result.announcement._id, association: req.params.associationId, recipient: req.user._id },
-      { $set: { readAt: new Date() } },
+      { $set: { readAt: new Date(), chatLastReadAt: new Date() } },
       { upsert: true }
     );
     return res.status(201).json({ id: String(result.announcement._id), csrfToken: req.session.csrfToken });
@@ -224,7 +231,13 @@ associationsRouter.get('/:associationId/officer-chat/topics/:topicId', provideCs
     const populated = await OfficerAnnouncement.findById(topic._id).populate('sender', 'displayname username').populate('conversationMessages.sender', 'displayname username').lean();
     const receipts = await OfficerAnnouncementReceipt.find({ announcement: topic._id }).populate('recipient', 'displayname username').lean();
     const ownReceipt = receipts.find(item => String(item.recipient?._id || item.recipient) === String(req.user._id));
-    if (ownReceipt && !ownReceipt.readAt) await OfficerAnnouncementReceipt.updateOne({ _id: ownReceipt._id }, { $set: { readAt: new Date() } });
+    const readAt = new Date();
+    if (ownReceipt) await OfficerAnnouncementReceipt.updateOne({ _id: ownReceipt._id }, { $set: { readAt, chatLastReadAt: readAt } });
+    else if (String(topic.sender) === String(req.user._id)) await OfficerAnnouncementReceipt.updateOne(
+      { announcement: topic._id, association: req.params.associationId, recipient: req.user._id },
+      { $set: { readAt, chatLastReadAt: readAt } },
+      { upsert: true }
+    );
     const initial = { _id: populated._id, sender: populated.sender, body: populated.body, attachments: populated.attachments, createdAt: populated.createdAt, pollMode: populated.responseMode, pollOptions: populated.options, pollResponses: receipts.filter(item => item.respondedAt).map(item => ({ user: item.recipient, selectedOptions: item.selectedOptions, respondedAt: item.respondedAt })) };
     const participants = [...new Map([populated.sender, ...receipts.map(item => item.recipient)].filter(Boolean).map(user => [String(user._id), { id: String(user._id), name: user.displayname || user.username }])).values()];
     return res.json({ topic: { id: String(populated._id), title: populated.title, participants, messages: [mobileChatMessage(initial, req.user._id), ...(populated.conversationMessages || []).map(message => mobileChatMessage(message, req.user._id))] }, csrfToken: req.session.csrfToken });
@@ -241,7 +254,10 @@ associationsRouter.post('/:associationId/officer-chat/topics/:topicId/messages',
     for (const file of req.files || []) attachments.push({ ...(await uploadAnnouncementAttachment(file, req.params.associationId)), expiresAt });
     topic.conversationMessages.push({ sender: req.user._id, body, attachments, pollMode: poll.mode, pollOptions: poll.options });
     await topic.save();
-    await OfficerAnnouncementReceipt.updateMany({ announcement: topic._id, recipient: { $ne: req.user._id } }, { $set: { readAt: null } });
+    await OfficerAnnouncementReceipt.updateMany(
+      { announcement: topic._id, recipient: { $ne: req.user._id } },
+      { $set: { readAt: null }, $unset: { chatHiddenAt: 1 } }
+    );
     const recipients = await OfficerAnnouncementReceipt.find({ announcement: topic._id, recipient: { $ne: req.user._id } }).distinct('recipient');
     try {
       await createNotifications(recipients.map(recipient => ({ association: req.params.associationId, recipient, type: 'officer_network', title: `役員間の会話：${topic.title}`, body: `${req.user.displayname || req.user.username}さんから新しいメッセージが届きました。`, relatedType: 'OfficerAnnouncement', relatedId: topic._id })));

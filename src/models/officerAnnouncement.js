@@ -57,6 +57,7 @@ const receiptSchema = new mongoose.Schema({
   pinnedAt: Date,
   pinDismissedAt: Date,
   chatHiddenAt: Date,
+  chatLastReadAt: Date,
   readAt: Date,
   selectedOptions: [{ type: Number, min: 0, max: 4 }],
   respondedAt: Date,
