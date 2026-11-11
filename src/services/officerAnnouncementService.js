@@ -10,6 +10,7 @@ import { createNotifications } from './notificationService.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { loadQuestionBoxAccess } from './questionBoxService.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
+import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { uploadAnnouncementAttachment, deleteAnnouncementAttachment } from './announcementAttachmentService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -98,6 +99,10 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
     }
   } else if (channel === 'officer') {
     const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null }).select('user department').lean();
+    const managerRoles = await RoleDefinition.find({ association: associationId, active: true, permissions: 'association.manage' }).distinct('_id');
+    const managers = managerRoles.length ? await RoleAssignment.find({ association: associationId, role: { $in: managerRoles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).select('user').lean() : [];
+    const officerIds = new Set(officers.map(item => String(item.user)));
+    for (const manager of managers) if (!officerIds.has(String(manager.user))) officers.push({ user: manager.user, department: null });
     if (audience === 'officers_all') recipientIds = officers.map(item => item.user);
     else {
       if (audience === 'officer_individual') {

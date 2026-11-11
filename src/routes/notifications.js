@@ -92,6 +92,27 @@ const notificationCategory = notification => {
   return 'announcement';
 };
 
+const chatNotificationTypes = new Set([
+  'officer_network',
+  'officer_network_reminder',
+  'district_message',
+  'district_message_reminder',
+  'group_message',
+  'group_message_reminder'
+]);
+
+const filterMobileNotificationsByRole = async (notifications, userId) => {
+  const home = await loadMobileHome({ userId });
+  const requestAssociationIds = new Set(home.associations
+    .filter(profile => profile.roles.some(role => ['management', 'officer', 'district_leader'].includes(role.kind)))
+    .map(profile => profile.association.id));
+  return notifications.filter(notification => {
+    if (chatNotificationTypes.has(notification.type)) return false;
+    if (notificationCategory(notification) !== 'request') return true;
+    return requestAssociationIds.has(String(notification.association?._id || notification.association || ''));
+  });
+};
+
 notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
   try {
     await syncCompletedNotifications({ recipient: req.user._id });
@@ -105,6 +126,7 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     let notifications = await Notification.find(criteria).populate('association', 'name').lean();
     await enrichNotificationStates(notifications, { recipient: req.user._id });
     await attachAnnouncementPins(notifications, req.user._id);
+    notifications = await filterMobileNotificationsByRole(notifications, req.user._id);
     if (category) notifications = notifications.filter(item => notificationCategory(item) === category);
     if (filter === 'urgent') notifications = notifications.filter(item => item.priority === 'urgent');
     if (filter === 'action') notifications = notifications.filter(item => item.priority === 'action' && !item.actionCompleted);
@@ -255,8 +277,10 @@ notificationsRouter.post('/permission-prompt/seen', verifyCsrfToken, (req, res) 
 notificationsRouter.get('/unread-count', async (req, res, next) => {
   res.set('Cache-Control', 'no-store');
   try {
-    const unreadCount = await Notification.countDocuments({ recipient: req.user._id, readAt: null, hiddenAt: null });
-    res.json({ unreadCount });
+    let notifications = await Notification.find({ recipient: req.user._id, readAt: null, hiddenAt: null }).lean();
+    await enrichNotificationStates(notifications, { recipient: req.user._id });
+    notifications = await filterMobileNotificationsByRole(notifications, req.user._id);
+    res.json({ unreadCount: notifications.length });
   } catch (error) { next(error); }
 });
 

@@ -22,6 +22,7 @@ import { createNotifications } from '../services/notificationService.js';
 import { DistrictGroup } from '../models/organization.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
 import { ConversationContactGroup } from '../models/conversationContactGroup.js';
+import { RoleAssignment, RoleDefinition } from '../models/role.js';
 
 export const associationsRouter = express.Router();
 
@@ -169,9 +170,13 @@ associationsRouter.get('/:associationId/officer-chat', provideCsrfToken, async (
   try {
     const association = await requireAnnouncementOfficer(req.params.associationId, req.user._id);
     const assignments = await AnnualOfficer.find({ association: association._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).populate('user', 'displayname username').populate('department', 'name').lean();
+    const managerRoles = await RoleDefinition.find({ association: association._id, active: true, permissions: 'association.manage' }).distinct('_id');
+    const now = new Date();
+    const managers = managerRoles.length ? await RoleAssignment.find({ association: association._id, role: { $in: managerRoles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).populate('user', 'displayname username').lean() : [];
     const activeIds = new Set((await AssociationMembership.find({ association: association._id, status: 'active' }).distinct('user')).map(String));
     const officersById = new Map();
     for (const assignment of assignments) if (assignment.user && activeIds.has(String(assignment.user._id))) officersById.set(String(assignment.user._id), { id: String(assignment.user._id), name: assignment.user.displayname || assignment.user.username, role: assignment.department?.name || '役員' });
+    for (const manager of managers) if (manager.user && activeIds.has(String(manager.user._id)) && !officersById.has(String(manager.user._id))) officersById.set(String(manager.user._id), { id: String(manager.user._id), name: manager.user.displayname || manager.user.username, role: '町内会管理者' });
     const [groups, receipts, sent] = await Promise.all([
       OfficerContactGroup.find({ association: association._id }).populate('members', 'displayname username').sort('name').lean(),
       OfficerAnnouncementReceipt.find({ association: association._id, recipient: req.user._id }).populate({ path: 'announcement', match: { channel: 'officer', mutedAt: { $exists: false } }, populate: { path: 'sender', select: 'displayname username' } }).lean(),

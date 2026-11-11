@@ -26,12 +26,13 @@ const uniqueRoles = roles => [...new Map(roles.map(role => [
   role
 ])).values()];
 
-export const mobileAssociationProfile = ({ membership, assignments, officers, leaders, groupManagers }) => {
+export const mobileAssociationProfile = ({ membership, assignments, officers, leaders, groupMemberships = [], groupManagers = [] }) => {
+  const activeGroupMemberships = groupMemberships.length ? groupMemberships : groupManagers;
   const districtGroup = membership.districtGroup;
   const district = districtGroup?.parentDistrict || (districtGroup ? districtGroup : null);
   const group = districtGroup?.parentDistrict ? districtGroup : null;
   const roles = uniqueRoles([
-    ...assignments.filter(item => item.role).map(item => ({
+    ...assignments.filter(item => item.role && (!item.role.permissions || item.role.permissions.includes('association.manage'))).map(item => ({
       kind: 'management',
       name: roleLabel(item, '町内会管理者')
     })),
@@ -40,7 +41,7 @@ export const mobileAssociationProfile = ({ membership, assignments, officers, le
       name: roleLabel(item, '一般役員')
     })),
     ...leaders.map(() => ({ kind: 'district_leader', name: '班長' })),
-    ...groupManagers.filter(item => item.group).map(item => ({
+    ...activeGroupMemberships.filter(item => (!item.role || item.role === 'manager') && item.group).map(item => ({
       kind: 'group_manager',
       name: `${item.group.name} 管理者`,
       groupId: id(item.group)
@@ -54,7 +55,8 @@ export const mobileAssociationProfile = ({ membership, assignments, officers, le
     },
     district: district ? { id: id(district), name: district.name } : null,
     group: group ? { id: id(group), name: group.name } : null,
-    roles
+    roles,
+    groupIds: activeGroupMemberships.filter(item => item.group).map(item => id(item.group))
   };
 };
 
@@ -66,9 +68,9 @@ export const loadMobileHome = async ({ userId, now = new Date() }) => {
   const associationIds = memberships.map(item => item.association?._id).filter(Boolean);
   if (!associationIds.length) return { associations: [] };
 
-  const [assignments, officers, leaders, groupManagers] = await Promise.all([
+  const [assignments, officers, leaders, groupMemberships] = await Promise.all([
     RoleAssignment.find({ association: { $in: associationIds }, user: userId, ...activeAssignmentFilter(now) })
-      .populate({ path: 'role', match: { active: true }, select: 'name' })
+      .populate({ path: 'role', match: { active: true }, select: 'name permissions' })
       .populate('department', 'name')
       .lean(),
     AnnualOfficer.find({ association: { $in: associationIds }, user: userId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
@@ -78,7 +80,7 @@ export const loadMobileHome = async ({ userId, now = new Date() }) => {
     AnnualLeaderAssignment.find({ association: { $in: associationIds }, representative: userId, fiscalYear: annualRoleYearFilter(now), cancelledAt: null })
       .select('association districtGroup')
       .lean(),
-    AssociationGroupMembership.find({ association: { $in: associationIds }, user: userId, role: 'manager', status: 'active' })
+    AssociationGroupMembership.find({ association: { $in: associationIds }, user: userId, status: 'active' })
       .populate({ path: 'group', match: { status: 'active' }, select: 'name' })
       .lean()
   ]);
@@ -92,7 +94,7 @@ export const loadMobileHome = async ({ userId, now = new Date() }) => {
         assignments: forAssociation(assignments, associationId),
         officers: forAssociation(officers, associationId),
         leaders: forAssociation(leaders, associationId),
-        groupManagers: forAssociation(groupManagers, associationId)
+        groupMemberships: forAssociation(groupMemberships, associationId)
       });
     })
   };

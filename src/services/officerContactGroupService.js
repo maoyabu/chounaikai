@@ -3,13 +3,17 @@ import mongoose from 'mongoose';
 import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AssociationMembership } from '../models/associationMembership.js';
 import { OfficerContactGroup } from '../models/officerContactGroup.js';
+import { RoleAssignment, RoleDefinition } from '../models/role.js';
 import { requireAnnouncementOfficer } from './officerAnnouncementService.js';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
 export const currentOfficerIds = async associationId => {
   const officers = await AnnualOfficer.find({ association: associationId, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('user').lean();
-  const memberships = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: officers.map(item => item.user) } }).select('user').lean();
+  const managerRoles = await RoleDefinition.find({ association: associationId, active: true, permissions: 'association.manage' }).distinct('_id');
+  const now = new Date();
+  const managers = managerRoles.length ? await RoleAssignment.find({ association: associationId, role: { $in: managerRoles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }).select('user').lean() : [];
+  const memberships = await AssociationMembership.find({ association: associationId, status: 'active', user: { $in: [...officers, ...managers].map(item => item.user) } }).select('user').lean();
   return new Set(memberships.map(item => String(item.user)));
 };
 
