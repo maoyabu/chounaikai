@@ -1,5 +1,18 @@
 import mongoose from 'mongoose';
 
+const conversationAttachmentSchema = new mongoose.Schema({
+  storage: String, fileId: String, url: String, publicId: String, originalName: String,
+  mimeType: String, bytes: Number, resourceType: String, expiresAt: Date
+}, { _id: false });
+const conversationMessageSchema = new mongoose.Schema({
+  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  body: { type: String, trim: true, maxlength: 5000 },
+  attachments: { type: [conversationAttachmentSchema], default: [] },
+  pollMode: { type: String, enum: ['none', 'single', 'multiple'], default: 'none' },
+  pollOptions: { type: [String], default: [] },
+  pollResponses: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, selectedOptions: [{ type: Number, min: 0, max: 4 }], respondedAt: Date }]
+}, { timestamps: true });
+
 const announcementSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -32,7 +45,8 @@ const announcementSchema = new mongoose.Schema({
   options: { type: [String], default: [] },
   mutedAt: Date,
   mutedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  editedAt: Date
+  editedAt: Date,
+  conversationMessages: { type: [conversationMessageSchema], default: [] }
 }, { timestamps: true, collection: 'officer_announcements' });
 announcementSchema.index({ association: 1, createdAt: -1 });
 

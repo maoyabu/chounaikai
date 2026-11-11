@@ -29,8 +29,8 @@ export const canReadMessageAttachment = async (announcement, user) => {
   if (channel === 'association_group' && !await AssociationGroupMembership.exists({ association: announcement.association, group: announcement.associationGroup, user: user._id, status: 'active' })) return false;
   if (channel === 'district' && announcement.districtGroup && String(membership?.districtGroup) !== String(announcement.districtGroup)) return false;
   if (channel === 'officer') {
-    const access = await loadQuestionBoxAccess({ associationId: announcement.association, userId: user._id });
-    if (!access.canAnswer) return false;
+    if (String(announcement.sender) === String(user._id)) return true;
+    return Boolean(await OfficerAnnouncementReceipt.exists({ announcement: announcement._id, recipient: user._id }));
   }
   if (String(announcement.sender) === String(user._id)) return true;
   const receipt = await OfficerAnnouncementReceipt.exists({ announcement: announcement._id, recipient: user._id });
@@ -59,9 +59,9 @@ export const streamFile = async (req, res, file, inline = true) => {
 messageAttachmentsRouter.get('/:associationId/message-attachments/:fileId', requireLogin, wrap(async (req, res) => {
   await validAssociation(req);
   const id = driveId(req.params.fileId);
-  const announcement = await OfficerAnnouncement.findOne({ association: req.params.associationId, 'attachments.fileId': id }).lean();
+  const announcement = await OfficerAnnouncement.findOne({ association: req.params.associationId, $or: [{ 'attachments.fileId': id }, { 'conversationMessages.attachments.fileId': id }] }).lean();
   if (!announcement) throw fail(404);
-  const file = announcement.attachments.find(file => file.fileId === id);
+  const file = [...(announcement.attachments || []), ...(announcement.conversationMessages || []).flatMap(message => message.attachments || [])].find(file => file.fileId === id);
   if (file.expiresAt && new Date(file.expiresAt) <= new Date()) throw fail(404);
   if (!await canReadMessageAttachment(announcement, req.user)) throw fail();
   await streamFile(req, res, file);
