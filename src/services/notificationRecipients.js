@@ -6,7 +6,7 @@ import { AssociationMembership } from '../models/associationMembership.js';
 import { Notification } from '../models/notification.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
 
-export const notifyResponsible = async ({ association, districtGroup, officers = false, exclude = [], type, title, relatedId, relatedLoan }) => {
+export const notifyResponsible = async ({ association, districtGroup, officers = false, exclude = [], type, title, relatedId, relatedLoan, relatedRequest }) => {
   try {
     const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
     const roles = await RoleDefinition.find({ association, active: true, permissions: 'association.manage' }).distinct('_id');
@@ -14,14 +14,14 @@ export const notifyResponsible = async ({ association, districtGroup, officers =
     const others = officers ? await AnnualOfficer.find({ association, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).distinct('user') : districtGroup ? await AnnualLeaderAssignment.find({ association, districtGroup, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).distinct('representative') : [];
     const recipients = await AssociationMembership.find({ association, status: 'active', user: { $in: [...managers, ...others].filter(Boolean) } }).distinct('user');
     const excluded = new Set(exclude.filter(Boolean).map(String));
-    await queueNotice({ association, recipients: recipients.filter(id => !excluded.has(String(id))), type, title, relatedId, relatedLoan });
+    await queueNotice({ association, recipients: recipients.filter(id => !excluded.has(String(id))), type, title, relatedId, relatedLoan, relatedRequest });
   } catch (error) { console.error('Responsible notification failed:', error.name); }
 };
 
-export const queueNotice = async ({ association, recipients, type, title, relatedId, relatedLoan }) => {
+export const queueNotice = async ({ association, recipients, type, title, relatedId, relatedLoan, relatedRequest }) => {
   try {
     const ids = [...new Set(recipients.filter(Boolean).map(String))];
-    if (ids.length) await Notification.insertMany(ids.map(recipient => ({ association, recipient, type, title, body: '町内会のページで内容を確認してください。', relatedId, relatedLoan })));
+    if (ids.length) await Notification.insertMany(ids.map(recipient => ({ association, recipient, type, title, body: '町内会のページで内容を確認してください。', relatedId, relatedLoan, relatedRequest })));
   } catch (error) { console.error('Notification queue failed:', error.name); }
 };
 

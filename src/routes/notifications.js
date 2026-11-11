@@ -12,6 +12,12 @@ import { AssociationEvent } from '../models/associationEvent.js';
 import { setAnnouncementPin } from '../services/officerAnnouncementService.js';
 import { AssociationEquipment, EquipmentLoan } from '../models/equipment.js';
 import { decideEquipmentLoan, equipmentAccess } from '../services/equipmentService.js';
+import { AssociationGroupRequest, AssociationGroup, AssociationGroupMembership, AssociationGroupJoinRequest } from '../models/associationGroup.js';
+import { RoleAssignment, RoleDefinition } from '../models/role.js';
+import { queueNotice } from '../services/notificationRecipients.js';
+import { JoinApplication, WithdrawalApplication } from '../models/workflow.js';
+import { decideJoinApplication, loadLeaderDistrictIds } from '../services/householdParticipationService.js';
+import { confirmWithdrawal, decideWithdrawal } from '../services/withdrawalService.js';
 
 export const notificationsRouter = express.Router();
 notificationsRouter.use(requireLogin);
@@ -34,6 +40,7 @@ const mobileNotification = (notification, context = {}) => {
     pinnedAt: notification.pinnedAt || null,
     relatedId: notification.relatedId ? String(notification.relatedId) : null,
     relatedLoan: notification.relatedLoan ? String(notification.relatedLoan) : null,
+    relatedRequest: notification.relatedRequest ? String(notification.relatedRequest) : null,
     actionUrl: action.actionUrl,
     actionLabel: action.actionLabel
   };
@@ -146,6 +153,86 @@ const equipmentLoanPayload = async ({ notification, userId }) => {
   };
 };
 
+const groupManager = async (associationId, groupId, userId) => AssociationGroupMembership.exists({ association: associationId, group: groupId, user: userId, role: 'manager', status: 'active' });
+const associationManager = async (associationId, user) => {
+  if (user.isAdmin) return true;
+  const roles = await RoleDefinition.find({ association: associationId, active: true, permissions: 'association.manage' }).distinct('_id');
+  const now = new Date();
+  return Boolean(await RoleAssignment.exists({ association: associationId, user: user._id, role: { $in: roles }, startsAt: { $lte: now }, $or: [{ endsAt: null }, { endsAt: { $exists: false } }, { endsAt: { $gte: now } }] }));
+};
+
+const groupRequestPayload = async ({ notification, user }) => {
+  if (notification.type !== 'group_request' || !/申請が届きました/.test(notification.title || '')) throw Object.assign(new Error('グループ申請を確認できません。'), { status: 404 });
+  const associationId = notification.association;
+  const relatedRequest = notification.relatedRequest;
+  if (/グループ作成/.test(notification.title)) {
+    if (!await associationManager(associationId, user)) throw Object.assign(new Error('この申請を操作する権限がありません。'), { status: 403 });
+    const request = relatedRequest
+      ? await AssociationGroupRequest.findOne({ _id: relatedRequest, association: associationId }).populate('requestedBy', 'displayname username').lean()
+      : await AssociationGroupRequest.findOne({ association: associationId, createdAt: { $lte: new Date(new Date(notification.createdAt).getTime() + 60000) } }).populate('requestedBy', 'displayname username').sort({ createdAt: -1 }).lean();
+    if (!request) throw Object.assign(new Error('グループ作成申請を確認できません。'), { status: 404 });
+    return { id: String(request._id), kind: 'creation', groupId: null, groupName: request.name, applicantName: request.requestedBy?.displayname || request.requestedBy?.username || '利用者', purpose: request.purpose || '', status: request.status, canDecide: request.status === 'pending', createdAt: request.createdAt };
+  }
+  if (!notification.relatedId || !await groupManager(associationId, notification.relatedId, user._id)) throw Object.assign(new Error('この申請を操作する権限がありません。'), { status: 403 });
+  const group = await AssociationGroup.findOne({ _id: notification.relatedId, association: associationId }).select('name').lean();
+  if (!group) throw Object.assign(new Error('グループを確認できません。'), { status: 404 });
+  if (/参加申請/.test(notification.title)) {
+    const request = relatedRequest
+      ? await AssociationGroupJoinRequest.findOne({ _id: relatedRequest, association: associationId, group: group._id }).populate('applicant', 'displayname username').lean()
+      : await AssociationGroupJoinRequest.findOne({ association: associationId, group: group._id, createdAt: { $lte: new Date(new Date(notification.createdAt).getTime() + 60000) } }).populate('applicant', 'displayname username').sort({ createdAt: -1 }).lean();
+    if (!request) throw Object.assign(new Error('グループ参加申請を確認できません。'), { status: 404 });
+    return { id: String(request._id), kind: 'join', groupId: String(group._id), groupName: group.name, applicantName: request.applicant?.displayname || request.applicant?.username || '利用者', purpose: '', status: request.status, canDecide: request.status === 'pending', createdAt: request.createdAt };
+  }
+  const membership = relatedRequest
+    ? await AssociationGroupMembership.findOne({ _id: relatedRequest, association: associationId, group: group._id }).populate('user', 'displayname username').lean()
+    : await AssociationGroupMembership.findOne({ association: associationId, group: group._id, withdrawalRequestedAt: { $ne: null, $lte: new Date(new Date(notification.createdAt).getTime() + 60000) } }).populate('user', 'displayname username').sort({ withdrawalRequestedAt: -1 }).lean();
+  if (!membership) throw Object.assign(new Error('グループ退会申請を確認できません。'), { status: 404 });
+  return { id: String(membership._id), kind: 'withdrawal', groupId: String(group._id), groupName: group.name, applicantName: membership.user?.displayname || membership.user?.username || '利用者', purpose: '', status: membership.withdrawalRequestedAt ? 'pending' : membership.status === 'rejected' ? 'approved' : 'rejected', canDecide: Boolean(membership.withdrawalRequestedAt), createdAt: membership.withdrawalRequestedAt || membership.updatedAt };
+};
+
+const residentRequestPayload = async ({ notification, user }) => {
+  const associationId = notification.association;
+  if (notification.type === 'join_application_received') {
+    const application = await JoinApplication.findOne({ _id: notification.relatedId, association: associationId })
+      .populate('applicant', 'displayname username email')
+      .populate('districtGroup', 'name')
+      .populate('household', 'displayName')
+      .lean();
+    if (!application) throw Object.assign(new Error('参加申請を確認できません。'), { status: 404 });
+    const manager = await associationManager(associationId, user);
+    const leaderDistricts = manager ? [] : await loadLeaderDistrictIds(associationId, user._id);
+    const leader = leaderDistricts.some(id => String(id) === String(application.districtGroup?._id || application.districtGroup));
+    if (!manager && !leader) throw Object.assign(new Error('この申請を操作する権限がありません。'), { status: 403 });
+    const canDecide = manager
+      ? ['pending', 'awaiting_household'].includes(application.status)
+      : application.status === 'pending' && !application.leaderApprovedAt;
+    return {
+      id: String(application._id), kind: 'join', applicantName: application.applicant?.displayname || application.applicant?.username || '利用者',
+      householdName: application.household?.displayName || '', districtName: application.districtGroup?.name || '', scope: '', reason: application.applicantNote || '',
+      status: application.status, step: manager ? 'manager' : 'leader', leaderApproved: Boolean(application.leaderApprovedAt), canDecide,
+      canApprove: canDecide, canReject: canDecide && application.status === 'pending', createdAt: application.createdAt
+    };
+  }
+  if (!['withdrawal_head_requested', 'withdrawal_leader_requested'].includes(notification.type)) throw Object.assign(new Error('申請を確認できません。'), { status: 404 });
+  const application = await WithdrawalApplication.findOne({ _id: notification.relatedId, association: associationId })
+    .populate('requestedBy', 'displayname username email')
+    .populate('household', 'displayName')
+    .populate('districtGroup', 'name')
+    .populate('successor', 'displayname username')
+    .lean();
+  if (!application) throw Object.assign(new Error('退会申請を確認できません。'), { status: 404 });
+  const step = notification.type === 'withdrawal_head_requested' ? 'householdHead' : 'leader';
+  return {
+    id: String(application._id), kind: 'withdrawal', applicantName: application.requestedBy?.displayname || application.requestedBy?.username || '利用者',
+    householdName: application.household?.displayName || '', districtName: application.districtGroup?.name || '', scope: application.scope,
+    reason: application.reason || '', successorName: application.successor?.displayname || application.successor?.username || null,
+    status: application.status, step, leaderApproved: false,
+    canDecide: step === 'householdHead' ? application.status === 'awaiting_household' : application.status === 'pending',
+    canApprove: step === 'householdHead' ? application.status === 'awaiting_household' : application.status === 'pending',
+    canReject: step === 'householdHead' ? application.status === 'awaiting_household' : application.status === 'pending', createdAt: application.createdAt
+  };
+};
+
 notificationsRouter.get('/push/status', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const endpoint = String(req.query.endpoint || '');
@@ -221,6 +308,90 @@ notificationsRouter.post('/:notificationId/equipment-loan', provideCsrfToken, ve
     await equipmentLoanPayload({ notification, userId: req.user._id });
     await decideEquipmentLoan({ associationId: notification.association, userId: req.user._id, loanId: notification.relatedLoan, action: req.body.action });
     return res.json({ loan: await equipmentLoanPayload({ notification, userId: req.user._id }), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.get('/:notificationId/group-request', provideCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type title relatedId relatedRequest createdAt').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    const request = await groupRequestPayload({ notification, user: req.user });
+    if (!notification.relatedRequest) await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { relatedRequest: request.id } });
+    return res.json({ request, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.post('/:notificationId/group-request', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    if (!['approved', 'rejected'].includes(req.body.action)) return res.status(400).json({ error: 'invalid_group_request_action' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type title relatedId relatedRequest createdAt').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    const request = await groupRequestPayload({ notification, user: req.user });
+    if (!notification.relatedRequest) await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { relatedRequest: request.id } });
+    if (!request.canDecide) throw Object.assign(new Error('申請の状態が変更されています。'), { status: 409 });
+    const approved = req.body.action === 'approved';
+    if (request.kind === 'creation') {
+      const source = await AssociationGroupRequest.findOne({ _id: request.id, association: notification.association, status: 'pending' });
+      if (!source) throw Object.assign(new Error('申請の状態が変更されています。'), { status: 409 });
+      if (approved) {
+        const group = await AssociationGroup.create({ association: notification.association, name: source.name, purpose: source.purpose, createdBy: req.user._id });
+        await AssociationGroupMembership.create({ association: notification.association, group: group._id, user: source.requestedBy, role: 'manager', status: 'active', approvedBy: req.user._id, joinedAt: new Date() });
+        await queueNotice({ association: notification.association, recipients: [source.requestedBy], type: 'group_request', title: 'グループ作成が承認されました', relatedId: group._id });
+      } else {
+        await queueNotice({ association: notification.association, recipients: [source.requestedBy], type: 'group_request', title: 'グループ作成申請が承認されませんでした' });
+      }
+      source.status = req.body.action; source.decidedBy = req.user._id; source.decidedAt = new Date(); source.rejectionReason = approved ? '' : String(req.body.reason || '').trim(); await source.save();
+    } else if (request.kind === 'join') {
+      const source = await AssociationGroupJoinRequest.findOne({ _id: request.id, association: notification.association, group: request.groupId, status: 'pending' });
+      if (!source) throw Object.assign(new Error('申請の状態が変更されています。'), { status: 409 });
+      if (approved) await AssociationGroupMembership.findOneAndUpdate({ association: source.association, group: source.group, user: source.applicant }, { $set: { status: 'active', role: 'member', approvedBy: req.user._id, joinedAt: new Date() }, $unset: { withdrawalRequestedAt: 1 } }, { upsert: true, new: true, setDefaultsOnInsert: true });
+      source.status = req.body.action; source.decidedBy = req.user._id; source.decidedAt = new Date(); await source.save();
+      await queueNotice({ association: source.association, recipients: [source.applicant], type: 'group_request', title: approved ? 'グループ参加が承認されました' : 'グループ参加申請が承認されませんでした', relatedId: source.group });
+    } else {
+      const source = await AssociationGroupMembership.findOne({ _id: request.id, association: notification.association, group: request.groupId, status: 'active', withdrawalRequestedAt: { $ne: null } });
+      if (!source) throw Object.assign(new Error('申請の状態が変更されています。'), { status: 409 });
+      if (approved && source.role === 'manager' && await AssociationGroupMembership.countDocuments({ association: notification.association, group: request.groupId, role: 'manager', status: 'active' }) <= 1) throw Object.assign(new Error('最後の責任者は退会できません。先に別のメンバーを責任者に指定してください。'), { status: 400 });
+      await AssociationGroupMembership.updateOne({ _id: source._id, withdrawalRequestedAt: { $ne: null } }, { ...(approved ? { $set: { status: 'rejected', role: 'member' } } : {}), $unset: { withdrawalRequestedAt: 1 } });
+      await queueNotice({ association: notification.association, recipients: [source.user], type: 'group_request', title: approved ? 'グループからの退会が承認されました' : 'グループからの退会申請が却下されました', relatedId: request.groupId });
+    }
+    await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { readAt: new Date() } });
+    return res.json({ request: await groupRequestPayload({ notification, user: req.user }), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.get('/:notificationId/resident-request', provideCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedId').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    return res.json({ request: await residentRequestPayload({ notification, user: req.user }), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.post('/:notificationId/resident-request', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    if (!['approved', 'rejected'].includes(req.body.action)) return res.status(400).json({ error: 'invalid_resident_request_action' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedId').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    const context = await residentRequestPayload({ notification, user: req.user });
+    if (!context.canDecide) throw Object.assign(new Error('申請の状態が変更されています。'), { status: 409 });
+    const approve = req.body.action === 'approved';
+    if (notification.type === 'join_application_received') {
+      const application = await JoinApplication.findOne({ _id: notification.relatedId, association: notification.association, status: context.step === 'manager' && approve ? { $in: ['pending', 'awaiting_household'] } : 'pending' }).populate('districtGroup', 'name');
+      if (!application) throw Object.assign(new Error('承認できる参加申請がありません。'), { status: 409 });
+      await decideJoinApplication({ application, actor: req.user, approve, rejectionReason: req.body.reason, managerOverride: context.step === 'manager', leaderApproval: context.step === 'leader' });
+    } else if (notification.type === 'withdrawal_head_requested') {
+      await confirmWithdrawal({ associationId: notification.association, applicationId: notification.relatedId, actorId: req.user._id, approve });
+    } else if (notification.type === 'withdrawal_leader_requested') {
+      await decideWithdrawal({ associationId: notification.association, applicationId: notification.relatedId, actorId: req.user._id, approve });
+    } else {
+      throw Object.assign(new Error('申請を確認できません。'), { status: 404 });
+    }
+    await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { readAt: new Date() } });
+    return res.json({ request: await residentRequestPayload({ notification, user: req.user }), csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
 

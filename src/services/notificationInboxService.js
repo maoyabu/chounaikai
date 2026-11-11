@@ -5,6 +5,7 @@ import { Notification } from '../models/notification.js';
 import { OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { QuestionThread } from '../models/questionThread.js';
 import { JoinApplication, WithdrawalApplication } from '../models/workflow.js';
+import { AssociationGroupRequest, AssociationGroupJoinRequest, AssociationGroupMembership } from '../models/associationGroup.js';
 
 const validateId = (notificationId) => {
   if (!mongoose.isValidObjectId(notificationId)) throw Object.assign(new Error('お知らせを確認できません。'), { status: 404 });
@@ -77,16 +78,25 @@ export const enrichNotificationStates = async (items, { recipient }) => {
     const ids = items.filter(item => types.includes(item.type) && item.relatedId).map(item => item.relatedId);
     return ids.length ? Model.find({ _id: { $in: ids } }).select(fields).lean() : [];
   };
-  const [joins, withdrawals, questions, locations, loans] = await Promise.all([
+  const groupItems = items.filter(item => item.type === 'group_request' && item.relatedRequest && /申請が届きました/.test(item.title || ''));
+  const groupRequestIds = kind => groupItems.filter(item => kind.test(item.title || '')).map(item => item.relatedRequest);
+  const groupLoad = (kind, Model, fields) => {
+    const ids = groupRequestIds(kind);
+    return ids.length ? Model.find({ _id: { $in: ids } }).select(fields).lean() : [];
+  };
+  const [joins, withdrawals, questions, locations, loans, groupCreations, groupJoins, groupWithdrawals] = await Promise.all([
     load(['join_application_received', 'household_link_requested'], JoinApplication, '_id status leaderApprovedBy leaderApprovedAt'),
     load(['withdrawal_head_requested', 'withdrawal_leader_requested'], WithdrawalApplication, '_id status'),
     load(['question_created', 'question_reopened'], QuestionThread, '_id status'),
     load(['location_link_requested'], LocationLinkRequest, '_id status'),
     items.some(item => item.type === 'equipment_loan' && /の貸出申込み：/.test(item.title || ''))
-      ? EquipmentLoan.find({ equipment: { $in: items.filter(item => item.type === 'equipment_loan').map(item => item.relatedId).filter(Boolean) } }).select('_id association equipment status startDate startTime allDay createdAt').lean() : []
+      ? EquipmentLoan.find({ equipment: { $in: items.filter(item => item.type === 'equipment_loan').map(item => item.relatedId).filter(Boolean) } }).select('_id association equipment status startDate startTime allDay createdAt').lean() : [],
+    groupLoad(/グループ作成/, AssociationGroupRequest, '_id status'),
+    groupLoad(/参加申請/, AssociationGroupJoinRequest, '_id status'),
+    groupLoad(/退会申請/, AssociationGroupMembership, '_id status withdrawalRequestedAt')
   ]);
   const lookup = rows => new Map(rows.map(row => [String(row._id), row]));
-  const j = lookup(joins), w = lookup(withdrawals), q = lookup(questions), l = lookup(locations);
+  const j = lookup(joins), w = lookup(withdrawals), q = lookup(questions), l = lookup(locations), gc = lookup(groupCreations), gj = lookup(groupJoins), gw = lookup(groupWithdrawals);
   for (const item of items) {
     const id = String(item.relatedId);
     item.priority = notificationPriority(item);
@@ -100,6 +110,12 @@ export const enrichNotificationStates = async (items, { recipient }) => {
     if (item.type === 'equipment_loan' && item.priority === 'action') {
       const matching = loans.filter(loan => String(loan.equipment) === id && String(loan.association) === String(item.association?._id || item.association) && (item.relatedLoan ? String(loan._id) === String(item.relatedLoan) : (item.title || '').includes(`${loan.startDate} ${loan.allDay === false ? loan.startTime : '終日'}`)));
       completed = matching.length > 0 && matching.every(loan => loan.status !== 'pending');
+    }
+    if (item.type === 'group_request' && item.relatedRequest) {
+      const requestId = String(item.relatedRequest);
+      if (/グループ作成/.test(item.title || '') && gc.has(requestId)) completed = gc.get(requestId).status !== 'pending';
+      if (/参加申請/.test(item.title || '') && gj.has(requestId)) completed = gj.get(requestId).status !== 'pending';
+      if (/退会申請/.test(item.title || '') && gw.has(requestId)) completed = !gw.get(requestId).withdrawalRequestedAt;
     }
     item.actionCompleted = completed || ['join_application_approved', 'join_application_rejected'].includes(item.type);
   }

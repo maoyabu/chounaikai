@@ -11,6 +11,7 @@ const notificationSchema = new mongoose.Schema({
   relatedType: String,
   relatedId: mongoose.Schema.Types.ObjectId,
   relatedLoan: mongoose.Schema.Types.ObjectId,
+  relatedRequest: mongoose.Schema.Types.ObjectId,
   readAt: Date,
   hiddenAt: Date,
   manuallyUnread: Boolean,
