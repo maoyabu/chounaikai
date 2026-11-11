@@ -18,6 +18,9 @@ import { queueNotice } from '../services/notificationRecipients.js';
 import { JoinApplication, WithdrawalApplication } from '../models/workflow.js';
 import { decideJoinApplication, loadLeaderDistrictIds } from '../services/householdParticipationService.js';
 import { confirmWithdrawal, decideWithdrawal } from '../services/withdrawalService.js';
+import { QuestionThread } from '../models/questionThread.js';
+import { addQuestionMessage, loadQuestionBoxAccess } from '../services/questionBoxService.js';
+import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 
 export const notificationsRouter = express.Router();
 notificationsRouter.use(requireLogin);
@@ -261,6 +264,39 @@ const residentRequestPayload = async ({ notification, user }) => {
   };
 };
 
+const questionThreadPayload = async ({ notification, user }) => {
+  if (!['question_created', 'question_reopened'].includes(notification.type) || !notification.relatedId) throw Object.assign(new Error('質問・ご意見を確認できません。'), { status: 404 });
+  const access = await loadQuestionBoxAccess({ associationId: notification.association, userId: user._id });
+  if (!access.canAnswer) throw Object.assign(new Error('質問・ご意見に回答する権限がありません。'), { status: 403 });
+  const thread = await QuestionThread.findOne({ _id: notification.relatedId, association: notification.association })
+    .populate('author', 'displayname username')
+    .populate('districtGroup', 'name')
+    .populate('messages.sender', 'displayname username')
+    .lean();
+  if (!thread) throw Object.assign(new Error('質問・ご意見を確認できません。'), { status: 404 });
+  return {
+    id: String(thread._id),
+    associationId: String(thread.association),
+    title: thread.title,
+    authorName: thread.author?.displayname || thread.author?.username || '住人',
+    districtName: thread.districtGroup?.name || '',
+    status: thread.status,
+    canReply: thread.status === 'unanswered',
+    messages: (thread.messages || []).filter(message => !message.mutedAt).map(message => ({
+      id: String(message._id),
+      senderName: message.sender?.displayname || message.sender?.username || (message.kind === 'officer' ? '役員' : '住人'),
+      kind: message.kind,
+      body: message.body,
+      createdAt: message.createdAt,
+      attachments: (message.attachments || []).map(file => ({
+        name: file.originalName,
+        mimeType: file.mimeType || 'application/octet-stream',
+        url: `/associations/${thread.association}/question-attachments/${encodeURIComponent(file.fileId)}`
+      }))
+    }))
+  };
+};
+
 notificationsRouter.get('/push/status', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const endpoint = String(req.query.endpoint || '');
@@ -328,6 +364,29 @@ notificationsRouter.get('/:notificationId/equipment-loan', provideCsrfToken, asy
     const loan = await equipmentLoanPayload({ notification, userId: req.user._id });
     if (!notification.relatedLoan) await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { relatedLoan: loan.id } });
     return res.json({ loan, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.get('/:notificationId/question-thread', provideCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedId').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    const thread = await questionThreadPayload({ notification, user: req.user });
+    return res.json({ thread, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.post('/:notificationId/question-thread', provideCsrfToken, acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedId').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    await questionThreadPayload({ notification, user: req.user });
+    await addQuestionMessage({ associationId: notification.association, threadId: notification.relatedId, userId: req.user._id, body: req.body.body, files: req.files });
+    await markNotificationRead({ notificationId: notification._id, recipient: req.user._id });
+    const thread = await questionThreadPayload({ notification, user: req.user });
+    return res.json({ thread, csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
 
