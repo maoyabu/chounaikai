@@ -126,10 +126,16 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
 });
 
 const equipmentLoanPayload = async ({ notification, userId }) => {
-  if (notification.type !== 'equipment_loan' || !notification.relatedLoan) throw Object.assign(new Error('貸出申込みを確認できません。'), { status: 404 });
+  if (notification.type !== 'equipment_loan' || !/の貸出申込み：/.test(notification.title || '')) throw Object.assign(new Error('貸出申込みを確認できません。'), { status: 404 });
   await equipmentAccess(notification.association, userId, true);
-  const loan = await EquipmentLoan.findOne({ _id: notification.relatedLoan, association: notification.association })
-    .populate('borrower', 'displayname username').lean();
+  let loan;
+  if (notification.relatedLoan) {
+    loan = await EquipmentLoan.findOne({ _id: notification.relatedLoan, association: notification.association }).populate('borrower', 'displayname username').lean();
+  } else if (notification.relatedId) {
+    const candidates = await EquipmentLoan.find({ association: notification.association, equipment: notification.relatedId, createdAt: { $lte: new Date(new Date(notification.createdAt).getTime() + 60000) } })
+      .populate('borrower', 'displayname username').sort({ createdAt: -1 }).lean();
+    loan = candidates.find(item => (notification.title || '').includes(`${item.startDate} ${item.allDay === false ? item.startTime : '終日'}`)) || null;
+  }
   if (!loan) throw Object.assign(new Error('貸出申込みを確認できません。'), { status: 404 });
   const equipment = await AssociationEquipment.findOne({ _id: loan.equipment, association: notification.association })
     .select('name place unit').lean();
@@ -293,20 +299,24 @@ notificationsRouter.get('/:notificationId', provideCsrfToken, async (req, res, n
 notificationsRouter.get('/:notificationId/equipment-loan', provideCsrfToken, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
-    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedLoan').lean();
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type title relatedId relatedLoan createdAt').lean();
     if (!notification) return res.status(404).json({ error: 'notification_not_found' });
-    return res.json({ loan: await equipmentLoanPayload({ notification, userId: req.user._id }), csrfToken: req.session.csrfToken });
+    const loan = await equipmentLoanPayload({ notification, userId: req.user._id });
+    if (!notification.relatedLoan) await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { relatedLoan: loan.id } });
+    return res.json({ loan, csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
 
 notificationsRouter.post('/:notificationId/equipment-loan', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
-    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedLoan').lean();
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type title relatedId relatedLoan createdAt').lean();
     if (!notification) return res.status(404).json({ error: 'notification_not_found' });
     if (!['approved', 'rejected'].includes(req.body.action)) return res.status(400).json({ error: 'invalid_equipment_loan_action' });
-    await equipmentLoanPayload({ notification, userId: req.user._id });
-    await decideEquipmentLoan({ associationId: notification.association, userId: req.user._id, loanId: notification.relatedLoan, action: req.body.action });
+    const current = await equipmentLoanPayload({ notification, userId: req.user._id });
+    if (!notification.relatedLoan) await Notification.updateOne({ _id: notification._id, recipient: req.user._id }, { $set: { relatedLoan: current.id } });
+    await decideEquipmentLoan({ associationId: notification.association, userId: req.user._id, loanId: current.id, action: req.body.action });
+    notification.relatedLoan = current.id;
     return res.json({ loan: await equipmentLoanPayload({ notification, userId: req.user._id }), csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
