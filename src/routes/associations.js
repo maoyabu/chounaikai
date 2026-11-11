@@ -175,16 +175,28 @@ associationsRouter.get('/:associationId/officer-chat', provideCsrfToken, async (
       OfficerAnnouncement.find({ association: association._id, channel: 'officer', sender: req.user._id, mutedAt: { $exists: false } }).populate('sender', 'displayname username').lean()
     ]);
     const receiptByTopic = new Map(receipts.filter(item => item.announcement).map(item => [String(item.announcement._id), item]));
+    const sameMembers = (first, second) => first.size === second.size && [...first].every(id => second.has(id));
+    const allOfficerIds = new Set(officersById.keys());
     const topics = [...new Map([...receipts.filter(item => item.announcement).map(item => [String(item.announcement._id), item.announcement]), ...sent.map(item => [String(item._id), item])]).values()]
-      .map(topic => ({
+      .map(topic => {
+        const targetIds = new Set((topic.targetOfficers || []).map(String));
+        const participantIds = new Set([...targetIds, String(topic.sender?._id || topic.sender)]);
+        const matchingGroup = groups.find(group => sameMembers(targetIds, new Set(group.members.map(member => String(member._id)))));
+        const isAll = sameMembers(participantIds, allOfficerIds);
+        const ownReceipt = receiptByTopic.get(String(topic._id));
+        return {
         id: String(topic._id),
         title: topic.title,
         preview: topic.conversationMessages?.at(-1)?.body || topic.body,
         senderName: topic.sender?.displayname || topic.sender?.username || '役員',
         updatedAt: topic.conversationMessages?.at(-1)?.createdAt || topic.createdAt,
-        unread: Boolean(receiptByTopic.get(String(topic._id)) && !receiptByTopic.get(String(topic._id)).readAt),
-        participantCount: new Set([String(topic.sender?._id || topic.sender), ...(topic.targetOfficers || []).map(String)]).size
-      }))
+        unread: Boolean(ownReceipt && !ownReceipt.readAt),
+        hidden: Boolean(ownReceipt?.chatHiddenAt),
+        audienceLabel: isAll ? '全員' : matchingGroup?.name || '選択メンバー',
+        isAll,
+        participantCount: participantIds.size
+      };
+      })
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     return res.json({ association: { id: String(association._id), name: association.name }, officers: [...officersById.values()], groups: groups.map(group => ({ id: String(group._id), name: group.name, members: group.members.map(member => ({ id: String(member._id), name: member.displayname || member.username })) })), topics, csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
@@ -252,6 +264,20 @@ associationsRouter.post('/:associationId/officer-chat/topics/:topicId/messages/:
       message.pollResponses.push({ user: req.user._id, selectedOptions: [...new Set(selected)], respondedAt: new Date() });
       await topic.save();
     }
+    return res.json({ ok: true, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/officer-chat/topics/:topicId/visibility', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await chatMember(req.params.associationId, req.params.topicId, req.user._id);
+    const hidden = req.body.hidden === true;
+    const result = await OfficerAnnouncementReceipt.updateOne(
+      { announcement: topic._id, association: req.params.associationId, recipient: req.user._id },
+      hidden ? { $set: { chatHiddenAt: new Date() } } : { $unset: { chatHiddenAt: 1 } },
+      { upsert: String(topic.sender) === String(req.user._id) }
+    );
+    if (!result.matchedCount && !result.upsertedCount) throw chatFail('トピックの表示状態を変更できません。', 403);
     return res.json({ ok: true, csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
