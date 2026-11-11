@@ -45,7 +45,7 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
   const districtMembership = channel === 'district' ? await requireDistrictMember(associationId, userId) : null;
   const groupMembership = channel === 'association_group' ? await AssociationGroupMembership.findOne({ association: associationId, group: associationGroupId, user: userId, status: 'active' }) : null;
   if (!districtMembership && !groupMembership) await requireAnnouncementOfficer(associationId, userId);
-  if (channel === 'resident' ? !['leaders', 'all'].includes(audience) : channel === 'officer' ? !['officers_all', 'department', 'officer_individual', 'officer_group'].includes(audience) : channel === 'district' ? !['district_all', 'district_individual'].includes(audience) : channel === 'association_group' ? audience !== 'group_all' : true) throw fail('送信先を選択してください。');
+  if (channel === 'resident' ? !['leaders', 'all'].includes(audience) : channel === 'officer' ? !['officers_all', 'department', 'officer_individual', 'officer_group'].includes(audience) : channel === 'district' ? !['district_all', 'district_individual'].includes(audience) : channel === 'association_group' ? !['group_all', 'group_individual'].includes(audience) : true) throw fail('送信先を選択してください。');
   const level = Number(urgency);
   if (!Number.isInteger(level) || level < 1 || level > 5) throw fail('緊急度は★1〜★5から選択してください。');
   if (!['none', 'single', 'multiple'].includes(responseMode)) throw fail('回答方法を選択してください。');
@@ -72,7 +72,16 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
   let recipientIds, targetDepartment, targetOfficer, targetOfficers, targetGroup;
   if (channel === 'association_group') {
     if (!groupMembership) throw fail('グループメンバーだけが送信できます。', 403);
-    recipientIds = (await AssociationGroupMembership.find({ association: associationId, group: associationGroupId, status: 'active' }).select('user').lean()).map(item => item.user);
+    const groupMemberIds = (await AssociationGroupMembership.find({ association: associationId, group: associationGroupId, status: 'active' }).select('user').lean()).map(item => item.user);
+    if (audience === 'group_all') recipientIds = groupMemberIds;
+    else {
+      const selected = Array.isArray(targetOfficerIds) ? targetOfficerIds : [targetOfficerIds];
+      const unique = [...new Set(selected.map(String))];
+      const eligibleIds = new Set(groupMemberIds.map(String));
+      if (!unique.length || unique.some(value => !mongoose.isValidObjectId(value) || !eligibleIds.has(value))) throw fail('同じグループのメンバーから送信先を選択してください。');
+      targetOfficers = unique;
+      recipientIds = unique;
+    }
   } else if (channel === 'district') {
     const members = await AssociationMembership.find({ association: associationId, districtGroup: districtMembership.districtGroup, status: 'active' }).select('user').lean();
     if (audience === 'district_all') {
@@ -125,6 +134,7 @@ const prepareAnnouncement = async ({ associationId, userId, channel = 'resident'
   const recipients = [...new Map(active.map(item => [String(item.user), item.user])).values()];
   if (audience === 'officer_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の役員から送信先を選択してください。');
   if (audience === 'district_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中の班員から送信先を選択してください。');
+  if (audience === 'group_individual' && recipients.length !== targetOfficers.length) throw fail('現在参加中のグループメンバーから送信先を選択してください。');
   if (!recipients.length) throw fail('送信できる対象者がいません。');
   return { recipients, retentionDays, data: { association: associationId, sender: userId, channel, audience, targetDistrictGroups: selectedDistrictGroupIds, resolvedDistrictGroups: resolvedDistrictGroupIds, districtGroup: districtMembership?.districtGroup, associationGroup: associationGroupId, targetDepartment, targetOfficer, targetOfficers, targetGroup, urgency: level,
     title: requiredText(title, 120, 'タイトル'), body: requiredText(body, 5000, '内容'), responseMode, options: choices } };

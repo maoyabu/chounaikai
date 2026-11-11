@@ -17,7 +17,7 @@ const announcementSchema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   channel: { type: String, enum: ['resident', 'officer', 'district', 'association_group'], required: true, default: 'resident' },
-  audience: { type: String, enum: ['leaders', 'all', 'officers_all', 'department', 'officer_individual', 'officer_group', 'district_all', 'district_individual', 'group_all'], required: true },
+  audience: { type: String, enum: ['leaders', 'all', 'officers_all', 'department', 'officer_individual', 'officer_group', 'district_all', 'district_individual', 'group_all', 'group_individual'], required: true },
   targetDistrictGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' }],
   resolvedDistrictGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' }],
   districtGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'DistrictGroup' },

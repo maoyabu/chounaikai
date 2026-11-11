@@ -19,6 +19,9 @@ import { requireAnnouncementOfficer, publishAnnouncement } from '../services/off
 import { saveOfficerContactGroup, deleteOfficerContactGroup } from '../services/officerContactGroupService.js';
 import { acceptAnnouncementAttachments, uploadAnnouncementAttachment } from '../services/announcementAttachmentService.js';
 import { createNotifications } from '../services/notificationService.js';
+import { DistrictGroup } from '../models/organization.js';
+import { AssociationGroupMembership } from '../models/associationGroup.js';
+import { ConversationContactGroup } from '../models/conversationContactGroup.js';
 
 export const associationsRouter = express.Router();
 
@@ -318,6 +321,167 @@ associationsRouter.post('/:associationId/officer-chat/groups/:groupId', provideC
 });
 associationsRouter.delete('/:associationId/officer-chat/groups/:groupId', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
   try { await deleteOfficerContactGroup({ associationId: req.params.associationId, userId: req.user._id, groupId: req.params.groupId }); return res.status(204).end(); } catch (error) { return next(error); }
+});
+
+const memberChatAccess = async (associationId, scope, userId, requestedContextId) => {
+  const membership = await AssociationMembership.findOne({ association: associationId, user: userId, status: 'active' }).lean();
+  if (!membership) throw chatFail('参加中の町内会を確認できません。', 403);
+  if (scope === 'district') {
+    if (!membership.districtGroup) throw chatFail('所属している班を確認できません。', 403);
+    const space = await DistrictGroup.findOne({ _id: membership.districtGroup, association: associationId, active: true }).lean();
+    if (!space) throw chatFail('所属している班を確認できません。', 403);
+    return { channel: 'district', contextId: space._id, spaces: [{ id: String(space._id), name: space.name }] };
+  }
+  if (scope !== 'group') throw chatFail('コミュニケーションの種類を確認できません。', 404);
+  const memberships = await AssociationGroupMembership.find({ association: associationId, user: userId, status: 'active' }).populate({ path: 'group', match: { status: 'active' }, select: 'name' }).lean();
+  const spaces = memberships.filter(item => item.group).map(item => ({ id: String(item.group._id), name: item.group.name }));
+  if (!spaces.length) throw chatFail('参加中のグループを確認できません。', 403);
+  const selected = requestedContextId
+    ? spaces.find(space => space.id === String(requestedContextId))
+    : spaces[0];
+  if (!selected) throw chatFail('参加中のグループを確認できません。', 403);
+  return { channel: 'association_group', contextId: selected.id, spaces };
+};
+
+const memberChatDirectory = async (associationId, access) => {
+  if (access.channel === 'district') {
+    const memberships = await AssociationMembership.find({ association: associationId, districtGroup: access.contextId, status: 'active' }).populate('user', 'displayname username').lean();
+    return memberships.filter(item => item.user).map(item => ({ id: String(item.user._id), name: item.user.displayname || item.user.username, role: '班員' }));
+  }
+  const memberships = await AssociationGroupMembership.find({ association: associationId, group: access.contextId, status: 'active' }).populate('user', 'displayname username').lean();
+  return memberships.filter(item => item.user).map(item => ({ id: String(item.user._id), name: item.user.displayname || item.user.username, role: item.role === 'manager' ? '管理者' : 'メンバー' }));
+};
+
+const memberChatTopic = async (associationId, scope, topicId, userId) => {
+  const access = await memberChatAccess(associationId, scope, userId);
+  if (!mongoose.isValidObjectId(topicId)) throw chatFail('トピックを確認できません。', 404);
+  const contextFilter = access.channel === 'district' ? { districtGroup: access.contextId } : { associationGroup: { $in: access.spaces.map(space => space.id) } };
+  const topic = await OfficerAnnouncement.findOne({ _id: topicId, association: associationId, channel: access.channel, ...contextFilter, mutedAt: { $exists: false } });
+  if (!topic) throw chatFail('トピックを確認できません。', 404);
+  const receipt = await OfficerAnnouncementReceipt.exists({ announcement: topic._id, association: associationId, recipient: userId });
+  if (String(topic.sender) !== String(userId) && !receipt) throw chatFail('このトピックの参加者ではありません。', 403);
+  return topic;
+};
+
+associationsRouter.get('/:associationId/member-chat/:scope', provideCsrfToken, async (req, res, next) => {
+  try {
+    const access = await memberChatAccess(req.params.associationId, req.params.scope, req.user._id, req.query.contextId);
+    const members = await memberChatDirectory(req.params.associationId, access);
+    const contextFilter = access.channel === 'district' ? { districtGroup: access.contextId } : { associationGroup: access.contextId };
+    const [groups, receipts, sent] = await Promise.all([
+      ConversationContactGroup.find({ association: req.params.associationId, channel: access.channel, context: access.contextId }).populate('members', 'displayname username').sort('name').lean(),
+      OfficerAnnouncementReceipt.find({ association: req.params.associationId, recipient: req.user._id }).populate({ path: 'announcement', match: { channel: access.channel, ...contextFilter, mutedAt: { $exists: false } }, populate: { path: 'sender', select: 'displayname username' } }).lean(),
+      OfficerAnnouncement.find({ association: req.params.associationId, channel: access.channel, ...contextFilter, sender: req.user._id, mutedAt: { $exists: false } }).populate('sender', 'displayname username').lean()
+    ]);
+    const receiptByTopic = new Map(receipts.filter(item => item.announcement).map(item => [String(item.announcement._id), item]));
+    const allMemberIds = new Set(members.map(member => member.id));
+    const same = (a, b) => a.size === b.size && [...a].every(id => b.has(id));
+    const topics = [...new Map([...receipts.filter(item => item.announcement).map(item => [String(item.announcement._id), item.announcement]), ...sent.map(item => [String(item._id), item])]).values()].map(topic => {
+      const targetIds = new Set((topic.targetOfficers || []).map(String));
+      const participantIds = new Set([...targetIds, String(topic.sender?._id || topic.sender)]);
+      const ownReceipt = receiptByTopic.get(String(topic._id));
+      const lastReadAt = ownReceipt?.chatLastReadAt || ownReceipt?.readAt;
+      const unreadCount = [{ sender: topic.sender, createdAt: topic.createdAt }, ...(topic.conversationMessages || [])].filter(message => String(message.sender?._id || message.sender) !== String(req.user._id) && (!lastReadAt || new Date(message.createdAt) > new Date(lastReadAt))).length;
+      const matched = groups.find(group => same(targetIds, new Set(group.members.map(member => String(member._id)))));
+      const isAll = same(participantIds, allMemberIds);
+      return { id: String(topic._id), title: topic.title, preview: topic.conversationMessages?.at(-1)?.body || topic.body, senderName: topic.sender?.displayname || topic.sender?.username || 'メンバー', updatedAt: topic.conversationMessages?.at(-1)?.createdAt || topic.createdAt, unread: unreadCount > 0, unreadCount, hidden: Boolean(ownReceipt?.chatHiddenAt), audienceLabel: isAll ? '全員' : matched?.name || '選択メンバー', isAll, canDelete: String(topic.sender?._id || topic.sender) === String(req.user._id), participantCount: participantIds.size };
+    }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    return res.json({ association: { id: req.params.associationId, name: access.spaces.find(space => space.id === String(access.contextId))?.name || '' }, officers: members, groups: groups.map(group => ({ id: String(group._id), name: group.name, members: group.members.map(member => ({ id: String(member._id), name: member.displayname || member.username })) })), topics, unreadCount: topics.reduce((sum, topic) => sum + topic.unreadCount, 0), spaces: access.spaces, currentSpaceId: String(access.contextId), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/member-chat/:scope/topics', provideCsrfToken, acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const access = await memberChatAccess(req.params.associationId, req.params.scope, req.user._id, req.body.contextId);
+    let participantIds = []; try { participantIds = JSON.parse(req.body.participantIds || '[]'); } catch { participantIds = []; }
+    const poll = chatOptions(req.body);
+    const result = await publishAnnouncement({ files: req.files, attachmentRetentionDays: 365, associationId: req.params.associationId, associationGroupId: access.channel === 'association_group' ? access.contextId : undefined, userId: req.user._id, channel: access.channel, audience: access.channel === 'district' ? 'district_individual' : 'group_individual', targetOfficerIds: participantIds, urgency: 1, title: req.body.title, body: req.body.body, responseMode: poll.mode, options: poll.options });
+    const now = new Date();
+    await OfficerAnnouncementReceipt.updateOne({ announcement: result.announcement._id, association: req.params.associationId, recipient: req.user._id }, { $set: { readAt: now, chatLastReadAt: now } }, { upsert: true });
+    return res.status(201).json({ id: String(result.announcement._id), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.get('/:associationId/member-chat/:scope/topics/:topicId', provideCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await memberChatTopic(req.params.associationId, req.params.scope, req.params.topicId, req.user._id);
+    const populated = await OfficerAnnouncement.findById(topic._id).populate('sender', 'displayname username').populate('conversationMessages.sender', 'displayname username').lean();
+    const receipts = await OfficerAnnouncementReceipt.find({ announcement: topic._id }).populate('recipient', 'displayname username').lean();
+    const now = new Date();
+    await OfficerAnnouncementReceipt.updateOne({ announcement: topic._id, association: req.params.associationId, recipient: req.user._id }, { $set: { readAt: now, chatLastReadAt: now } }, { upsert: String(topic.sender) === String(req.user._id) });
+    const initial = { _id: populated._id, sender: populated.sender, body: populated.body, attachments: populated.attachments, createdAt: populated.createdAt, pollMode: populated.responseMode, pollOptions: populated.options, pollResponses: receipts.filter(item => item.respondedAt).map(item => ({ user: item.recipient, selectedOptions: item.selectedOptions, respondedAt: item.respondedAt })) };
+    const participants = [...new Map([populated.sender, ...receipts.map(item => item.recipient)].filter(Boolean).map(user => [String(user._id), { id: String(user._id), name: user.displayname || user.username }])).values()];
+    return res.json({ topic: { id: String(populated._id), title: populated.title, participants, messages: [mobileChatMessage(initial, req.user._id), ...(populated.conversationMessages || []).map(message => mobileChatMessage(message, req.user._id))] }, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/member-chat/:scope/topics/:topicId/messages', provideCsrfToken, acceptAnnouncementAttachments, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await memberChatTopic(req.params.associationId, req.params.scope, req.params.topicId, req.user._id);
+    const body = String(req.body.body || '').trim(), poll = chatOptions(req.body);
+    if (!body && !req.files?.length && poll.mode === 'none') throw chatFail('メッセージ、添付ファイル、またはアンケートを入力してください。');
+    const expiresAt = new Date(Date.now() + 365 * 86400000), attachments = [];
+    for (const file of req.files || []) attachments.push({ ...(await uploadAnnouncementAttachment(file, req.params.associationId)), expiresAt });
+    topic.conversationMessages.push({ sender: req.user._id, body, attachments, pollMode: poll.mode, pollOptions: poll.options });
+    await topic.save();
+    await OfficerAnnouncementReceipt.updateMany({ announcement: topic._id, recipient: { $ne: req.user._id } }, { $set: { readAt: null }, $unset: { chatHiddenAt: 1 } });
+    const recipients = await OfficerAnnouncementReceipt.find({ announcement: topic._id, recipient: { $ne: req.user._id } }).distinct('recipient');
+    try { await createNotifications(recipients.map(recipient => ({ association: req.params.associationId, recipient, type: topic.channel === 'district' ? 'district_message' : 'group_message', title: `${topic.channel === 'district' ? '班内' : 'グループ内'}の会話：${topic.title}`, body: `${req.user.displayname || req.user.username}さんから新しいメッセージが届きました。`, relatedType: 'OfficerAnnouncement', relatedId: topic._id }))); } catch (error) { console.error('Member chat notification failed:', error); }
+    return res.status(201).json({ ok: true, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/member-chat/:scope/topics/:topicId/messages/:messageId/poll', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await memberChatTopic(req.params.associationId, req.params.scope, req.params.topicId, req.user._id);
+    const selected = (Array.isArray(req.body.selectedOptions) ? req.body.selectedOptions : []).map(Number);
+    if (req.params.messageId === String(topic._id)) await confirmAnnouncement({ associationId: req.params.associationId, announcementId: topic._id, userId: req.user._id, selectedOptions: selected, channel: topic.channel });
+    else {
+      const message = topic.conversationMessages.id(req.params.messageId);
+      if (!message || message.pollMode === 'none' || !selected.length || (message.pollMode === 'single' && selected.length !== 1) || selected.some(index => !Number.isInteger(index) || index < 0 || index >= message.pollOptions.length)) throw chatFail('アンケートの回答を確認してください。');
+      message.pollResponses = (message.pollResponses || []).filter(response => String(response.user) !== String(req.user._id));
+      message.pollResponses.push({ user: req.user._id, selectedOptions: [...new Set(selected)], respondedAt: new Date() });
+      await topic.save();
+    }
+    return res.json({ ok: true, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/member-chat/:scope/topics/:topicId/visibility', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await memberChatTopic(req.params.associationId, req.params.scope, req.params.topicId, req.user._id);
+    await OfficerAnnouncementReceipt.updateOne({ announcement: topic._id, association: req.params.associationId, recipient: req.user._id }, req.body.hidden === true ? { $set: { chatHiddenAt: new Date() } } : { $unset: { chatHiddenAt: 1 } }, { upsert: String(topic.sender) === String(req.user._id) });
+    return res.json({ ok: true, csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.delete('/:associationId/member-chat/:scope/topics/:topicId', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const topic = await memberChatTopic(req.params.associationId, req.params.scope, req.params.topicId, req.user._id);
+    if (String(topic.sender) !== String(req.user._id)) throw chatFail('トピックを削除できるのは作成者だけです。', 403);
+    topic.mutedAt = new Date(); topic.mutedBy = req.user._id; await topic.save();
+    return res.status(204).end();
+  } catch (error) { return next(error); }
+});
+
+const saveMemberChatGroup = async (req, groupId) => {
+  const access = await memberChatAccess(req.params.associationId, req.params.scope, req.user._id, req.body.contextId);
+  const name = String(req.body.name || '').trim(), memberIds = [...new Set((Array.isArray(req.body.members) ? req.body.members : []).map(String))];
+  if (!name || name.length > 80 || !memberIds.length) throw chatFail('グループ名とメンバーを入力してください。');
+  const eligible = new Set((await memberChatDirectory(req.params.associationId, access)).map(member => member.id));
+  if (memberIds.some(id => !mongoose.isValidObjectId(id) || !eligible.has(id))) throw chatFail('同じ所属のメンバーだけを選択してください。');
+  if (groupId) {
+    const group = await ConversationContactGroup.findOneAndUpdate({ _id: groupId, association: req.params.associationId, channel: access.channel, context: access.contextId }, { $set: { name, members: memberIds } }, { new: true });
+    if (!group) throw chatFail('グループを確認できません。', 404);
+    return group;
+  }
+  return ConversationContactGroup.create({ association: req.params.associationId, channel: access.channel, context: access.contextId, name, members: memberIds, createdBy: req.user._id });
+};
+
+associationsRouter.post('/:associationId/member-chat/:scope/groups', provideCsrfToken, verifyCsrfToken, async (req, res, next) => { try { const group = await saveMemberChatGroup(req); return res.status(201).json({ id: String(group._id), csrfToken: req.session.csrfToken }); } catch (error) { return next(error); } });
+associationsRouter.post('/:associationId/member-chat/:scope/groups/:groupId', provideCsrfToken, verifyCsrfToken, async (req, res, next) => { try { await saveMemberChatGroup(req, req.params.groupId); return res.json({ ok: true, csrfToken: req.session.csrfToken }); } catch (error) { return next(error); } });
+associationsRouter.delete('/:associationId/member-chat/:scope/groups/:groupId', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try { const access = await memberChatAccess(req.params.associationId, req.params.scope, req.user._id, req.body.contextId); const result = await ConversationContactGroup.deleteOne({ _id: req.params.groupId, association: req.params.associationId, channel: access.channel, context: access.contextId }); if (!result.deletedCount) throw chatFail('グループを確認できません。', 404); return res.status(204).end(); } catch (error) { return next(error); }
 });
 
 associationsRouter.get('/', async (req, res, next) => {
