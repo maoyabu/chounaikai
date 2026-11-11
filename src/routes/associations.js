@@ -10,6 +10,8 @@ import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/offic
 import { confirmAnnouncement, loadRecipientAnnouncement } from '../services/officerAnnouncementService.js';
 import { communicationCategory, mobileCommunication } from '../services/mobileCommunicationService.js';
 import { User } from '../models/user.js';
+import { loadResidentSafety, saveResidentSafety } from '../services/safetyService.js';
+import { buildingStatuses, memberSafetyStatus, safetyEventKey, safetyStatuses } from '../lib/safetyStatus.js';
 
 export const associationsRouter = express.Router();
 
@@ -27,6 +29,52 @@ associationsRouter.get('/home', async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+});
+
+const mobileSafety = (context, csrfToken) => ({
+  association: {
+    id: String(context.association._id),
+    name: context.association.name,
+    alertLevel: context.association.alertLevel || 0,
+    eventKey: safetyEventKey(context.association)
+  },
+  household: context.household ? { id: String(context.household._id), name: context.household.displayName } : null,
+  members: context.members.map(member => ({
+    id: String(member._id),
+    name: member.user?.displayname || member.user?.username || member.name,
+    isRepresentative: Boolean(member.isRepresentative),
+    status: memberSafetyStatus(context.report, member._id)
+  })),
+  buildingStatus: context.report?.buildingStatus || 1,
+  updatedAt: context.report?.updatedAt || null,
+  safetyStatuses: safetyStatuses.map(([value, label]) => ({ value, label })),
+  buildingStatuses: buildingStatuses.map(([value, label]) => ({ value, label })),
+  csrfToken
+});
+
+associationsRouter.get('/:associationId/safety', provideCsrfToken, async (req, res, next) => {
+  try {
+    const context = await loadResidentSafety(req.params.associationId, req.user._id);
+    res.set('Cache-Control', 'private, no-store');
+    return res.json(mobileSafety(context, req.session.csrfToken));
+  } catch (error) { return next(error); }
+});
+
+associationsRouter.post('/:associationId/safety', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    const entries = req.body.memberStatuses && typeof req.body.memberStatuses === 'object' && !Array.isArray(req.body.memberStatuses)
+      ? Object.entries(req.body.memberStatuses) : [];
+    const body = {
+      eventKey: req.body.eventKey,
+      buildingStatus: String(req.body.buildingStatus ?? ''),
+      memberIds: entries.map(([id]) => id)
+    };
+    for (const [id, status] of entries) body[`status_${id}`] = String(status);
+    await saveResidentSafety({ associationId: req.params.associationId, userId: req.user._id, body });
+    const context = await loadResidentSafety(req.params.associationId, req.user._id);
+    res.set('Cache-Control', 'private, no-store');
+    return res.json(mobileSafety(context, req.session.csrfToken));
+  } catch (error) { return next(error); }
 });
 
 associationsRouter.get('/:associationId/communications', provideCsrfToken, async (req, res, next) => {

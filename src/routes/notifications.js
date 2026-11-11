@@ -10,6 +10,8 @@ import { loadMobileHome } from '../services/mobileHomeService.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { AssociationEvent } from '../models/associationEvent.js';
 import { setAnnouncementPin } from '../services/officerAnnouncementService.js';
+import { AssociationEquipment, EquipmentLoan } from '../models/equipment.js';
+import { decideEquipmentLoan, equipmentAccess } from '../services/equipmentService.js';
 
 export const notificationsRouter = express.Router();
 notificationsRouter.use(requireLogin);
@@ -30,6 +32,8 @@ const mobileNotification = (notification, context = {}) => {
     actionCompleted: Boolean(notification.actionCompleted),
     pinned: Boolean(notification.pinned),
     pinnedAt: notification.pinnedAt || null,
+    relatedId: notification.relatedId ? String(notification.relatedId) : null,
+    relatedLoan: notification.relatedLoan ? String(notification.relatedLoan) : null,
     actionUrl: action.actionUrl,
     actionLabel: action.actionLabel
   };
@@ -114,6 +118,34 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+const equipmentLoanPayload = async ({ notification, userId }) => {
+  if (notification.type !== 'equipment_loan' || !notification.relatedLoan) throw Object.assign(new Error('貸出申込みを確認できません。'), { status: 404 });
+  await equipmentAccess(notification.association, userId, true);
+  const loan = await EquipmentLoan.findOne({ _id: notification.relatedLoan, association: notification.association })
+    .populate('borrower', 'displayname username').lean();
+  if (!loan) throw Object.assign(new Error('貸出申込みを確認できません。'), { status: 404 });
+  const equipment = await AssociationEquipment.findOne({ _id: loan.equipment, association: notification.association })
+    .select('name place unit').lean();
+  if (!equipment) throw Object.assign(new Error('設備・備品を確認できません。'), { status: 404 });
+  return {
+    id: String(loan._id),
+    associationId: String(notification.association),
+    equipment: { id: String(equipment._id), name: equipment.name, place: equipment.place, unit: equipment.unit },
+    borrowerName: loan.borrower?.displayname || loan.borrower?.username || '利用者',
+    startDate: loan.startDate,
+    endDate: loan.endDate,
+    allDay: loan.allDay !== false,
+    startTime: loan.startTime || null,
+    endTime: loan.endTime || null,
+    quantity: loan.quantity,
+    purpose: loan.purpose || '',
+    status: loan.status,
+    canDecide: loan.status === 'pending',
+    createdAt: loan.createdAt,
+    decidedAt: loan.decidedAt || null
+  };
+};
+
 notificationsRouter.get('/push/status', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const endpoint = String(req.query.endpoint || '');
@@ -168,6 +200,27 @@ notificationsRouter.get('/:notificationId', provideCsrfToken, async (req, res, n
     res.set('Cache-Control', 'private, no-store');
     const contextFor = await mobileNotificationContexts([notification], req.user);
     return res.json({ notification: mobileNotification(notification, contextFor(notification)), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.get('/:notificationId/equipment-loan', provideCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedLoan').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    return res.json({ loan: await equipmentLoanPayload({ notification, userId: req.user._id }), csrfToken: req.session.csrfToken });
+  } catch (error) { return next(error); }
+});
+
+notificationsRouter.post('/:notificationId/equipment-loan', provideCsrfToken, verifyCsrfToken, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notificationId)) return res.status(404).json({ error: 'notification_not_found' });
+    const notification = await Notification.findOne({ _id: req.params.notificationId, recipient: req.user._id }).select('association type relatedLoan').lean();
+    if (!notification) return res.status(404).json({ error: 'notification_not_found' });
+    if (!['approved', 'rejected'].includes(req.body.action)) return res.status(400).json({ error: 'invalid_equipment_loan_action' });
+    await equipmentLoanPayload({ notification, userId: req.user._id });
+    await decideEquipmentLoan({ associationId: notification.association, userId: req.user._id, loanId: notification.relatedLoan, action: req.body.action });
+    return res.json({ loan: await equipmentLoanPayload({ notification, userId: req.user._id }), csrfToken: req.session.csrfToken });
   } catch (error) { return next(error); }
 });
 
