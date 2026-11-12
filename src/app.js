@@ -1,3 +1,4 @@
+import { apnsDevicesRouter } from './routes/apnsDevices.js';
 import { faqsRouter } from './routes/faqs.js';
 import { locationLinksRouter } from './routes/locationLinks.js';
 import { disasterInformationRouter } from './routes/disasterInformation.js';
@@ -122,6 +123,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use(privacyAudit({ writer: privacyAuditWriter }));
   app.use('/mfa', mfaRouter);
   app.use('/api/auth/mfa', mfaRouter);
+  app.use('/api/push-devices', apnsDevicesRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/passkeys', createPasskeyRouter(passkeys));
   app.use(requireEnabledAssociationFeature);

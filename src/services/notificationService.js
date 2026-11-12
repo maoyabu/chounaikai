@@ -1,3 +1,4 @@
+import { apnsConfigured, sendNativePush } from './apnsService.js';
 import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import { Notification } from '../models/notification.js';
@@ -94,7 +95,7 @@ export const deliverNotification = async (notification, { emailRequired = false 
   const recipient = notification.recipient;
   // Delivery is opt-in until SMTP/VAPID are configured. Notification creation
   // must remain fast and reliable in local development and during outages.
-  if (!mailConfig() && (!process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY)) return notification;
+  if (!apnsConfigured() && !mailConfig() && (!process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY)) return notification;
   try {
     const claimed = await Notification.findOneAndUpdate({ _id: notification._id, deliveryClaimedAt: null }, { $set: { deliveryClaimedAt: new Date() } });
     if (!claimed) return notification;
@@ -103,21 +104,23 @@ export const deliverNotification = async (notification, { emailRequired = false 
     const channel = settings?.channels?.[category] || defaultNotificationChannel(category);
     const user = await import('../models/user.js').then(({ User }) => User.findById(recipient).select('displayname username email').lean());
     if (!user) {
-      await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email.status': 'skipped', 'delivery.push.status': 'skipped' } });
+      await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email.status': 'skipped', 'delivery.push.status': 'skipped', 'delivery.apns.status': 'skipped' } });
       return notification;
     }
-    const [email, push] = await Promise.allSettled([
+    const [email, push, apns] = await Promise.allSettled([
       channel.email === false ? Promise.resolve({ status: 'skipped' }) : sendEmail({ notification, recipient: user, required: true }),
-      channel.push === false ? Promise.resolve({ status: 'skipped' }) : sendPush({ notification, recipient: user })
+      channel.push === false ? Promise.resolve({ status: 'skipped' }) : sendPush({ notification, recipient: user }),
+      channel.push === false ? Promise.resolve({ status: 'skipped' }) : sendNativePush({ notification, recipient: user })
     ]);
     await Notification.updateOne({ _id: notification._id }, { $set: {
+      'delivery.apns': apns.status === 'fulfilled' ? apns.value : { status: 'failed', error: 'apns_delivery_failed' },
       'delivery.email': email.status === 'fulfilled' ? email.value : { status: 'failed', error: String(email.reason?.message || email.reason) },
       'delivery.push': push.status === 'fulfilled' ? push.value : { status: 'failed', error: String(push.reason?.message || push.reason) }
     } });
   } catch (error) {
     console.error('Notification delivery setup failed:', error.name);
     // Leave a visible result instead of a notification stuck at "pending".
-    await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.email': { status: 'failed', error: 'delivery_setup_failed' }, 'delivery.push': { status: 'failed', error: 'delivery_setup_failed' } } }).catch(() => {});
+    await Notification.updateOne({ _id: notification._id }, { $set: { 'delivery.apns': { status: 'failed', error: 'delivery_setup_failed' }, 'delivery.email': { status: 'failed', error: 'delivery_setup_failed' }, 'delivery.push': { status: 'failed', error: 'delivery_setup_failed' } } }).catch(() => {});
   }
   return notification;
 };
