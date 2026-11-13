@@ -6,9 +6,11 @@
     <div class="equipment-inventory-layout">
       <input class="equipment-inventory-checkbox" type="checkbox" name="checked" aria-label="<%= item.name %>をチェック済みにする" <%= item.check?.checked ? 'checked' : '' %>>
       <% if(item.productImageUrl){ %><img class="equipment-inventory-photo" src="<%= item.productImageUrl %>" alt="<%= item.name %>の写真" loading="lazy"><% } else { %><span class="equipment-inventory-photo equipment-inventory-no-photo">写真なし</span><% } %>
+      <div class="equipment-inventory-info">
       <strong class="equipment-inventory-name"><%= item.name %></strong>
-      <div class="equipment-inventory-quantity"><label>棚卸し数量<input type="number" name="count" value="<%= item.check?.count ?? item.quantity %>" min="0" max="1000000" step="any" required></label><span>/ <span class="sr-only">必要数量 </span><%= item.minimumQuantity || 0 %><%= item.unit %></span></div>
       <p class="equipment-inventory-expiry">賞味期限：<% if(item.expiryDate){ const expired = item.expiryDate < (typeof today !== 'undefined' ? today : new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date())); %>あり（<%= item.expiryDate %>） <span class="<%= expired ? 'equipment-warning' : '' %>"><%= expired ? '期限切れ' : '期限内' %></span><% } else { %>なし<% } %></p>
+      </div>
+      <div class="equipment-inventory-quantity"><label>棚卸し数量<input type="number" name="count" value="<%= item.check?.count ?? item.quantity %>" min="0" max="1000000" step="any" required></label><span>/ <span class="sr-only">必要数量 </span><%= item.minimumQuantity || 0 %><%= item.unit %></span></div>
       <label class="equipment-inventory-comment">コメント<input name="comment" value="<%= item.check?.comment || '' %>" maxlength="1000"></label>
     </div>
     <p class="help-text" data-inventory-status role="status"></p>

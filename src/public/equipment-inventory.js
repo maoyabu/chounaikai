@@ -14,16 +14,25 @@
   document.querySelectorAll('[data-inventory-form]').forEach(form => {
     const item = form.closest('[data-inventory-item]');
     const place = form.closest('.equipment-inventory-place');
-    const checkbox = form.elements.checked;
+    const checkbox = form.querySelector('input[name="checked"]');
     const status = form.querySelector('[data-inventory-status]');
     const retry = form.querySelector('[data-inventory-retry]');
     let savedChecked = form.dataset.savedChecked === 'true';
     let revision = 0;
     let queue = Promise.resolve();
-    const save = () => {
+    const move = checked => {
+      const target = place.querySelector(`[data-inventory-group="${checked ? 'checked' : 'unchecked'}"]`);
+      if (item.parentElement !== target) target.append(item);
+      refreshCounts(place);
+    };
+    let failedBody;
+    const save = (retryBody) => {
       if (!form.reportValidity()) { checkbox.checked = savedChecked; return; }
       const current = ++revision;
-      const body = new URLSearchParams(new FormData(form));
+      const body = retryBody instanceof URLSearchParams ? retryBody : new URLSearchParams(new FormData(form));
+      if (!(retryBody instanceof URLSearchParams)) body.set('checked', checkbox.checked ? '1' : '0');
+      checkbox.checked = body.get('checked') === '1';
+      move(checkbox.checked);
       status.textContent = '保存中…';
       retry.hidden = true;
       queue = queue.then(async () => {
@@ -36,17 +45,15 @@
           if (!response.ok || !result.ok) throw new Error(result.error || '保存できませんでした。');
           savedChecked = result.checked;
           if (current !== revision) return;
-          const target = place.querySelector(`[data-inventory-group="${savedChecked ? 'checked' : 'unchecked'}"]`);
-          if (item.parentElement !== target) target.append(item);
-          refreshCounts(place);
+          checkbox.checked = savedChecked;
+          move(savedChecked);
+          failedBody = undefined;
           status.textContent = '保存しました';
         } catch (error) {
           if (current !== revision) return;
           checkbox.checked = savedChecked;
-          // Keep the row in the group of the last successfully saved state.
-          const target = place.querySelector(`[data-inventory-group="${savedChecked ? 'checked' : 'unchecked'}"]`);
-          if (item.parentElement !== target) target.append(item);
-          refreshCounts(place);
+          move(savedChecked);
+          failedBody = body;
           status.textContent = `未保存：${error.message} 数量・コメントを確認して再試行してください。`;
           retry.hidden = false;
         }
@@ -54,7 +61,7 @@
     };
     form.addEventListener('change', save);
     form.addEventListener('submit', event => { event.preventDefault(); save(); });
-    retry.addEventListener('click', save);
+    retry.addEventListener('click', () => save(failedBody));
   });
   document.querySelectorAll('.equipment-toolbar a[href^="#place-"]').forEach(link => {
     link.addEventListener('click', () => {

@@ -16,19 +16,21 @@ function setup() {
   item.parentElement = groups.unchecked;
   Object.assign(form, { elements: { checked: checkbox }, dataset: { savedChecked: 'false' }, action: '/inventory/item', reportValidity: () => true,
     closest: selector => selector.includes('data-') ? item : place,
-    querySelector: selector => selector.includes('status') ? status : retry,
+    querySelector: selector => selector.includes('input[name=') ? checkbox : selector.includes('status') ? status : retry,
   });
   const requests = []; let fail = false;
   vm.runInNewContext(source, {
     document: { querySelectorAll: selector => selector.includes('data-inventory-form') ? [form] : selector.includes('place-count') ? [label] : [] },
     URLSearchParams, FormData: class { constructor() { this.checked = checkbox.checked; } *[Symbol.iterator]() { yield ['_csrf', 'token']; if (this.checked) yield ['checked', 'on']; } },
-    fetch: async (url, options) => { requests.push(options); return { ok: !fail, json: async () => fail ? { error: '保存失敗' } : { ok: true, checked: options.body.has('checked') } }; },
+    fetch: async (url, options) => { requests.push(options); return { ok: !fail, json: async () => fail ? { error: '保存失敗' } : { ok: true, checked: options.body.get('checked') === '1' } }; },
   });
-  return { form, checkbox, item, groups, status, retry, label, requests, fail() { fail = true; }, async settle() { await new Promise(resolve => setImmediate(resolve)); } };
+  return { form, checkbox, item, groups, status, retry, label, requests, fail() { fail = true; }, recover() { fail = false; }, async settle() { await new Promise(resolve => setImmediate(resolve)); } };
 }
 test('checkbox autosaves with CSRF and moves in both directions, updating counts', async () => {
   const r = setup();
-  r.checkbox.checked = true; r.form.listeners.change(); await r.settle();
+  r.checkbox.checked = true; r.form.listeners.change();
+  assert.equal(r.item.parentElement, r.groups.checked, 'moves immediately before the save response');
+  await r.settle();
   assert.equal(r.requests[0].body.get('_csrf'), 'token');
   assert.equal(r.item.parentElement, r.groups.checked);
   assert.equal(r.label.textContent, '未：0／済：1');
@@ -43,14 +45,18 @@ test('failed save restores saved checkbox and offers retry without moving item',
   assert.equal(r.item.parentElement, r.groups.unchecked);
   assert.equal(r.retry.hidden, false);
   assert.match(r.status.textContent, /未保存：保存失敗/);
+  r.recover(); r.retry.listeners.click(); await r.settle();
+  assert.equal(r.requests[1].body.get('checked'), '1');
+  assert.equal(r.checkbox.checked, true);
+  assert.equal(r.item.parentElement, r.groups.checked);
 });
 test('rapid changes persist in order and only latest state moves the row', async () => {
   const r = setup();
   r.checkbox.checked = true; r.form.listeners.change();
   r.checkbox.checked = false; r.form.listeners.change(); await r.settle();
   assert.equal(r.requests.length, 2);
-  assert.equal(r.requests[0].body.has('checked'), true);
-  assert.equal(r.requests[1].body.has('checked'), false);
+  assert.equal(r.requests[0].body.get('checked'), '1');
+  assert.equal(r.requests[1].body.get('checked'), '0');
   assert.equal(r.item.parentElement, r.groups.unchecked);
 });
 test('inventory card renders three rows, required quantity and expiry status safely', async () => {

@@ -2012,20 +2012,21 @@ h1, h2, h3, h4, h5, h6,
 /* 場所別の棚卸しリスト */
 .equipment-inventory-place > summary { cursor: pointer; font-weight: 700; font-size: 1.2rem; }
 .equipment-inventory-place .equipment-inventory-columns { grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
-.equipment-inventory-layout { display: grid; grid-template-columns: 1.25rem 5rem minmax(0, 1fr) auto; gap: .6rem .8rem; align-items: start; }
+.equipment-inventory-layout { display: grid; grid-template-columns: 1.25rem 5rem minmax(0, 1fr) auto; gap: .25rem .8rem; align-items: start; }
 .equipment-inventory-checkbox { margin: .2rem 0 0; width: 1.2rem; height: 1.2rem; }
-.equipment-inventory-photo { grid-column: 2; grid-row: 1 / 3; width: 5rem; height: 5rem; object-fit: contain; border-radius: .35rem; }
+.equipment-inventory-photo { grid-column: 2; grid-row: 1; width: 5rem; height: 5rem; object-fit: contain; border-radius: .35rem; }
 .equipment-inventory-no-photo { display: grid; place-items: center; background: #f1f5f3; color: var(--muted); font-size: .7rem; }
-.equipment-inventory-name { grid-column: 3; min-width: 0; overflow-wrap: anywhere; }
-.equipment-inventory-quantity { grid-column: 4; display: flex; align-items: end; gap: .4rem; }
+.equipment-inventory-info { grid-column: 3; grid-row: 1; min-width: 0; }
+.equipment-inventory-name { display: block; min-width: 0; overflow-wrap: anywhere; }
+.equipment-inventory-quantity { grid-column: 4; grid-row: 1; display: flex; align-items: end; gap: .4rem; }
 .equipment-inventory-quantity label { display: grid; gap: .2rem; font-size: .7rem; }
-.equipment-inventory-quantity input { width: 5rem; min-width: 0; box-sizing: border-box; }
-.equipment-inventory-quantity > span { white-space: nowrap; padding-bottom: .65rem; }
-.equipment-inventory-layout .equipment-inventory-expiry { grid-column: 3 / -1; grid-row: 2; font-size: .85rem; overflow-wrap: anywhere; }
-.equipment-inventory-comment { grid-column: 2 / -1; display: grid; gap: .3rem; min-width: 0; }
-.equipment-inventory-comment input { width: 100%; box-sizing: border-box; min-width: 0; }
+.equipment-inventory-quantity input { width: 5rem; height: 2rem; min-width: 0; box-sizing: border-box; }
+.equipment-inventory-quantity > span { white-space: nowrap; height: 2rem; display: flex; align-items: center; }
+.equipment-inventory-layout .equipment-inventory-expiry { font-size: .85rem; overflow-wrap: anywhere; }
+.equipment-inventory-comment { grid-column: 2 / -1; display: flex; align-items: center; gap: .5rem; min-width: 0; margin-top: .25rem; white-space: nowrap; }
+.equipment-inventory-comment input { flex: 1; width: 0; box-sizing: border-box; min-width: 0; }
 @media (max-width: 600px) {
-  .equipment-inventory-layout { grid-template-columns: 1.1rem 2.5rem minmax(0, 1fr) auto; gap: .5rem .35rem; }
+  .equipment-inventory-layout { grid-template-columns: 1.1rem 2.5rem minmax(0, 1fr) auto; gap: .25rem .35rem; }
   .equipment-inventory-photo { width: 2.5rem; height: 3rem; }
   .equipment-inventory-name { font-size: .85rem; }
   .equipment-inventory-quantity { gap: .2rem; font-size: .75rem; }
