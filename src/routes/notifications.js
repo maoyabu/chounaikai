@@ -4,6 +4,7 @@ import { requireLogin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { disablePushSubscription, savePushSubscription } from '../services/notificationService.js';
 import { Notification } from '../models/notification.js';
+import { excludeMutedAnnouncementNotifications } from '../services/notificationVisibilityService.js';
 import { enrichNotificationStates, markNotificationRead, notificationPriority, notificationSortRank, syncCompletedNotifications, updateNotificationState } from '../services/notificationInboxService.js';
 import { notificationAction } from '../services/notificationDestination.js';
 import { loadMobileHome } from '../services/mobileHomeService.js';
@@ -127,6 +128,7 @@ notificationsRouter.get('/', provideCsrfToken, async (req, res, next) => {
     if (filter === 'unread') criteria.readAt = null;
     if (filter === 'read') criteria.readAt = { $ne: null };
     let notifications = await Notification.find(criteria).populate('association', 'name').lean();
+    notifications = await excludeMutedAnnouncementNotifications(notifications);
     await enrichNotificationStates(notifications, { recipient: req.user._id });
     await attachAnnouncementPins(notifications, req.user._id);
     notifications = await filterMobileNotificationsByRole(notifications, req.user._id);
@@ -314,6 +316,7 @@ notificationsRouter.get('/unread-count', async (req, res, next) => {
   res.set('Cache-Control', 'no-store');
   try {
     let notifications = await Notification.find({ recipient: req.user._id, readAt: null, hiddenAt: null }).lean();
+    notifications = await excludeMutedAnnouncementNotifications(notifications);
     await enrichNotificationStates(notifications, { recipient: req.user._id });
     notifications = await filterMobileNotificationsByRole(notifications, req.user._id);
     res.json({ unreadCount: notifications.length });
