@@ -4,6 +4,7 @@ import { requireLogin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { disablePushSubscription, savePushSubscription } from '../services/notificationService.js';
 import { Notification } from '../models/notification.js';
+import { canViewMobileRequest } from '../services/mobileRequestAccess.js';
 import { excludeMutedAnnouncementNotifications } from '../services/notificationVisibilityService.js';
 import { enrichNotificationStates, markNotificationRead, notificationPriority, notificationSortRank, syncCompletedNotifications, updateNotificationState } from '../services/notificationInboxService.js';
 import { notificationAction } from '../services/notificationDestination.js';
@@ -108,13 +109,10 @@ const chatNotificationTypes = new Set([
 
 const filterMobileNotificationsByRole = async (notifications, userId) => {
   const home = await loadMobileHome({ userId });
-  const requestAssociationIds = new Set(home.associations
-    .filter(profile => profile.roles.some(role => ['management', 'officer', 'district_leader'].includes(role.kind)))
-    .map(profile => profile.association.id));
   return notifications.filter(notification => {
     if (chatNotificationTypes.has(notification.type)) return false;
     if (notificationCategory(notification) !== 'request') return true;
-    return requestAssociationIds.has(String(notification.association?._id || notification.association || ''));
+    return canViewMobileRequest(notification, home.associations);
   });
 };
 

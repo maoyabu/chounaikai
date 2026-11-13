@@ -5,6 +5,7 @@ import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { dangerAccess } from '../services/dangerReportService.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
+import { GoodPlaceComment } from '../models/goodPlaceReaction.js';
 import { goodPlaceIdsByLikes, loadGoodPlaceHistoryReactions, loadGoodPlaceReactions, setGoodPlaceLike, addGoodPlaceComment } from '../services/goodPlaceReactionService.js';
 
 export const mobileGoodPlacesRouter = express.Router({ mergeParams: true });
@@ -15,7 +16,8 @@ export const mobileGoodPlace = report => ({
   author: report.author?.displayname || '退会したユーザー', createdAt: report.createdAt,
   photoPath: `/associations/${report.association}/good-places/${report._id}/photo`,
   latitude: report.latitude ?? null, longitude: report.longitude ?? null, address: report.address || '',
-  commentsEnabled: report.commentsEnabled !== false, likeCount: report.historyReactions?.likeCount || 0
+  commentsEnabled: report.commentsEnabled !== false, likeCount: report.historyReactions?.likeCount || 0,
+  commentCount: report.commentCount || 0
 });
 
 mobileGoodPlacesRouter.use(requireLogin, async (req, res, next) => {
@@ -40,6 +42,12 @@ mobileGoodPlacesRouter.get('/', async (req, res, next) => {
       reports = await GoodPlace.find({ association }).populate('author', 'displayname').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
     }
     const rows = await loadGoodPlaceHistoryReactions(association, reports.slice(0, 50));
+    const commentCounts = rows.length ? await GoodPlaceComment.aggregate([
+      { $match: { association: new mongoose.Types.ObjectId(association), report: { $in: rows.map(row => row._id) }, hiddenAt: null } },
+      { $group: { _id: '$report', count: { $sum: 1 } } }
+    ]) : [];
+    const counts = new Map(commentCounts.map(item => [String(item._id), item.count]));
+    for (const row of rows) row.commentCount = counts.get(String(row._id)) || 0;
     res.json({ reports: rows.map(mobileGoodPlace), page, hasNext: reports.length > 50 });
   } catch (error) { next(error); }
 });
@@ -54,7 +62,7 @@ mobileGoodPlacesRouter.get('/:reportId', async (req, res, next) => {
     if (!report) throw fail('投稿が見つかりません。', 404);
     // Hidden comments stay hidden in the mobile reader, including for the owner.
     const reactions = await loadGoodPlaceReactions({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id, owner: false, page: pageNumber(req.query.page) });
-    res.json({ report: { ...mobileGoodPlace(report), likeCount: reactions.likeCount }, liked: reactions.liked,
+    res.json({ report: { ...mobileGoodPlace(report), likeCount: reactions.likeCount, commentCount: reactions.commentCount }, liked: reactions.liked,
       commented: reactions.commented, comments: reactions.comments.map(comment => ({ id: String(comment._id), author: comment.user?.displayname || '退会したユーザー', body: comment.body, createdAt: comment.createdAt })),
       page: reactions.page, hasNext: reactions.hasNext, csrfToken: req.session.csrfToken });
   } catch (error) { next(error); }

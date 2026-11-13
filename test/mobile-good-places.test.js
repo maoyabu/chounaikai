@@ -40,12 +40,20 @@ test('newest list paginates at 50, provides counts and never exposes storage or 
     return { ...query(rows), sort(value) { assert.deepEqual(value, { createdAt: -1, _id: -1 }); return this; }, skip(value) { assert.equal(value, 50); return this; }, limit(value) { assert.equal(value, 51); return this; } };
   });
   t.mock.method(GoodPlaceLike, 'aggregate', async () => [{ _id: '0', count: 7 }]);
+  t.mock.method(GoodPlaceComment, 'aggregate', async pipeline => {
+    assert.equal(pipeline[0].$match.hiddenAt, null);
+    assert.equal(String(pipeline[0].$match.association), associationId);
+    assert.equal(pipeline[0].$match.report.$in.length, 50);
+    return [{ _id: '0', count: 12 }];
+  });
   t.mock.method(GoodPlaceComment, 'find', () => query([]));
   let result;
   await handler('/')({ params: { associationId }, query: { page: '2' } }, { json: value => { result = value; } }, next);
   assert.equal(result.reports.length, 50); assert.equal(result.hasNext, true); assert.equal(result.page, 2);
   assert.equal(result.reports[0].likeCount, 7); assert.equal(result.reports[0].author, '投稿者');
   assert.equal(result.reports[0].photoAttachment, undefined);
+  assert.equal(result.reports[0].commentCount, 12);
+  assert.equal(result.reports[1].commentCount, 0);
 });
 
 test('like order follows database ranking including date tie-break and page limits', async t => {
@@ -56,6 +64,7 @@ test('like order follows database ranking including date tie-break and page limi
   });
   t.mock.method(GoodPlace, 'find', () => query([{ _id: userId, association: associationId }, { _id: reportId, association: associationId }]));
   t.mock.method(GoodPlaceLike, 'aggregate', async () => []);
+  t.mock.method(GoodPlaceComment, 'aggregate', async () => []);
   t.mock.method(GoodPlaceComment, 'find', () => query([]));
   let result;
   await handler('/')({ params: { associationId }, query: { sort: 'likes' } }, { json: value => { result = value; } }, next);
@@ -78,6 +87,6 @@ test('detail returns comment permissions, liked state, visible comments and CSRF
   let result;
   await handler('/:reportId')({ params: { associationId, reportId }, query: {}, user: { _id: userId }, session: { csrfToken: 'token' } }, { json: value => { result = value; } }, next);
   assert.equal(result.report.commentsEnabled, false); assert.equal(result.liked, true); assert.equal(result.commented, true);
-  assert.equal(result.report.likeCount, 3); assert.equal(result.report.latitude, 0);
+  assert.equal(result.report.commentCount, 1); assert.equal(result.report.likeCount, 3); assert.equal(result.report.latitude, 0);
   assert.equal(result.comments[0].author, '住人'); assert.equal(result.csrfToken, 'token');
 });
