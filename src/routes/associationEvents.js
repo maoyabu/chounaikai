@@ -15,7 +15,7 @@ import { acceptPublicPhotos, acceptEventImage, uploadPublicPhoto, deletePublicPh
 
 export const associationEventsRouter = express.Router();
 const notFound = () => Object.assign(new Error('行事を確認できません。'), { status: 404 });
-const officerAccess = async req => {
+export const officerAccess = async req => {
   const access = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id });
   if (!access.canAnswer && !req.user.isAdmin) throw Object.assign(new Error('役員だけが行事を管理できます。'), { status: 403 });
   return access.association;
@@ -114,19 +114,21 @@ associationEventsRouter.get('/:associationId/events/manage', requireLogin, async
   } catch (error) { return next(error); }
 });
 
-associationEventsRouter.post('/:associationId/events', requireLogin, acceptEventImage, verifyCsrfToken, async (req, res, next) => {
+export const createAssociationEvent = async (req, res, next) => {
   try {
     const association = await officerAccess(req);
     const values = eventValues(req.body);
     const createdEvent = await persistEventImage({ file: req.file, association: association._id, persist: image => AssociationEvent.create({ association: association._id, ...values, ...(image ? { image } : {}) }) });
     await notifyEvent(createdEvent, '登録');
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $addToSet: { eventCategories: values.category } });
+    if (res.locals.mobileEvents) return res.json({ success: true });
     req.session.notice = '行事を登録しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);
   } catch (error) { return next(error); }
-});
+};
+associationEventsRouter.post('/:associationId/events', requireLogin, acceptEventImage, verifyCsrfToken, createAssociationEvent);
 
-associationEventsRouter.post('/:associationId/events/:eventId', requireLogin, acceptEventImage, verifyCsrfToken, async (req, res, next) => {
+export const updateAssociationEvent = async (req, res, next) => {
   try {
     const association = await officerAccess(req);
     if (!mongoose.isValidObjectId(req.params.eventId)) throw notFound();
@@ -141,12 +143,14 @@ associationEventsRouter.post('/:associationId/events/:eventId', requireLogin, ac
     } });
     await notifyEvent({ ...event.toObject(), ...values, visible: event.visible || values.visible }, '変更');
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $addToSet: { eventCategories: values.category } });
+    if (res.locals.mobileEvents) return res.json({ success: true });
     req.session.notice = '行事を更新しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);
   } catch (error) { return next(error); }
-});
+};
+associationEventsRouter.post('/:associationId/events/:eventId', requireLogin, acceptEventImage, verifyCsrfToken, updateAssociationEvent);
 
-associationEventsRouter.post('/:associationId/events/:eventId/complete', requireLogin, verifyCsrfToken, async (req, res, next) => {
+export const completeAssociationEvent = async (req, res, next) => {
   try {
     const association = await officerAccess(req);
     if (!mongoose.isValidObjectId(req.params.eventId)) throw notFound();
@@ -157,12 +161,14 @@ associationEventsRouter.post('/:associationId/events/:eventId/complete', require
     const update = { completed };
     if (completed) update.implementationReport = implementationReport;
     await AssociationEvent.collection.updateOne({ _id: event._id, association: association._id }, { $set: update });
+    if (res.locals.mobileEvents) return res.json({ success: true });
     req.session.notice = req.body.completed === 'on' ? '行事を完了にしました。' : '完了を取り消しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);
   } catch (error) { return next(error); }
-});
+};
+associationEventsRouter.post('/:associationId/events/:eventId/complete', requireLogin, verifyCsrfToken, completeAssociationEvent);
 
-associationEventsRouter.post('/:associationId/events/:eventId/delete', requireLogin, verifyCsrfToken, async (req, res, next) => {
+export const deleteAssociationEvent = async (req, res, next) => {
   try {
     const association = await officerAccess(req);
     if (!mongoose.isValidObjectId(req.params.eventId)) throw notFound();
@@ -171,7 +177,9 @@ associationEventsRouter.post('/:associationId/events/:eventId/delete', requireLo
     if (!result.deletedCount) throw notFound();
     await deleteEventImage(deletedEvent?.image, association._id).catch(() => {});
     await notifyEvent(deletedEvent, '削除');
+    if (res.locals.mobileEvents) return res.json({ success: true });
     req.session.notice = '行事を削除しました。';
     return res.redirect(`/associations/${association._id}/events/manage`);
   } catch (error) { return next(error); }
-});
+};
+associationEventsRouter.post('/:associationId/events/:eventId/delete', requireLogin, verifyCsrfToken, deleteAssociationEvent);
