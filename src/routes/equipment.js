@@ -53,7 +53,7 @@ equipmentRouter.post('/:associationId/equipment', verifyCsrfToken, handler(async
 
 equipmentRouter.get('/:associationId/equipment/inventory', handler(async (req, res) => {
   const access = await equipmentAccess(req.params.associationId, req.user._id, true), data = await inventoryData(req.params.associationId);
-  res.render('equipment-inventory', { title: '棚卸しリスト', ...access, ...data, groups: equipmentGroups(data.items), base: base(req.params.associationId) });
+  res.render('equipment-inventory', { title: '棚卸しリスト', ...access, ...data, today: japanDate(), groups: equipmentGroups(data.items), base: base(req.params.associationId) });
 }));
 equipmentRouter.get('/:associationId/equipment/inventory.xlsx', handler(async (req, res) => {
   const { association } = await equipmentAccess(req.params.associationId, req.user._id, true), data = await inventoryData(req.params.associationId);
@@ -65,7 +65,8 @@ equipmentRouter.get('/:associationId/equipment/inventory.xlsx', handler(async (r
   res.send(workbookBuffer);
 }));
 equipmentRouter.post('/:associationId/equipment/inventory/:equipmentId', verifyCsrfToken, handler(async (req, res) => {
-  await checkInventory({ associationId: req.params.associationId, userId: req.user._id, equipmentId: req.params.equipmentId, period: req.body.period, input: req.body });
+  const check = await checkInventory({ associationId: req.params.associationId, userId: req.user._id, equipmentId: req.params.equipmentId, period: req.body.period, input: req.body });
+  if (req.get('X-Requested-With') === 'XMLHttpRequest') return res.json({ ok: true, checked: check.checked });
   req.session.notice = '棚卸しの数量とチェック情報を記録しました。'; res.redirect(base(req.params.associationId));
 }));
 

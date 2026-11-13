@@ -1,1 +1,17 @@
-<article class="equipment-inventory-item"><div class="equipment-card-main"><% if(item.productImageUrl){ %><img src="<%= item.productImageUrl %>" alt="" loading="lazy"><% } %><div><strong><%= item.name %></strong><p><%= item.quantity %><%= item.unit %><% if(item.shortage){ %> <span class="equipment-warning">不足 <%= item.shortage %><%= item.unit %></span><% } %></p><% if(item.check?.checkedAt){ %><small>最終チェック：<%= new Date(item.check.checkedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}) %> ／ <%= item.check.checkedBy?.displayname || item.check.checkedBy?.username || '退会済みの会員' %></small><% } %></div></div><form class="form-stack" action="<%= base %>/inventory/<%= item._id %>" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="period" value="<%= period %>"><input type="hidden" name="place" value="<%= item.place %>"><div class="equipment-form-grid"><label>棚卸数量<input type="number" name="count" value="<%= item.check?.count ?? item.quantity %>" min="0" max="1000000" step="any" required></label><label>コメント<input name="comment" value="<%= item.check?.comment || '' %>" maxlength="1000"></label></div><label class="announcement-option"><input type="checkbox" name="checked" <%= item.check?.checked ? 'checked' : '' %>><span>チェック済み</span></label><button class="button button-quiet button-small">記録を保存</button></form></article>
+<article class="equipment-inventory-item" data-inventory-item>
+  <form action="<%= base %>/inventory/<%= item._id %>" method="post" data-inventory-form data-saved-checked="<%= item.check?.checked ? 'true' : 'false' %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="period" value="<%= period %>">
+    <input type="hidden" name="place" value="<%= item.place %>">
+    <div class="equipment-inventory-layout">
+      <input class="equipment-inventory-checkbox" type="checkbox" name="checked" aria-label="<%= item.name %>をチェック済みにする" <%= item.check?.checked ? 'checked' : '' %>>
+      <% if(item.productImageUrl){ %><img class="equipment-inventory-photo" src="<%= item.productImageUrl %>" alt="<%= item.name %>の写真" loading="lazy"><% } else { %><span class="equipment-inventory-photo equipment-inventory-no-photo">写真なし</span><% } %>
+      <strong class="equipment-inventory-name"><%= item.name %></strong>
+      <div class="equipment-inventory-quantity"><label>棚卸し数量<input type="number" name="count" value="<%= item.check?.count ?? item.quantity %>" min="0" max="1000000" step="any" required></label><span>/ <span class="sr-only">必要数量 </span><%= item.minimumQuantity || 0 %><%= item.unit %></span></div>
+      <p class="equipment-inventory-expiry">賞味期限：<% if(item.expiryDate){ const expired = item.expiryDate < (typeof today !== 'undefined' ? today : new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date())); %>あり（<%= item.expiryDate %>） <span class="<%= expired ? 'equipment-warning' : '' %>"><%= expired ? '期限切れ' : '期限内' %></span><% } else { %>なし<% } %></p>
+      <label class="equipment-inventory-comment">コメント<input name="comment" value="<%= item.check?.comment || '' %>" maxlength="1000"></label>
+    </div>
+    <p class="help-text" data-inventory-status role="status"></p>
+    <button type="button" class="button button-quiet button-small" data-inventory-retry hidden>保存を再試行</button>
+  </form>
+</article>
