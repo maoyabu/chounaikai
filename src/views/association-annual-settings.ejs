@@ -104,7 +104,7 @@
     document.querySelector('[data-close-new-leader]')?.addEventListener('click', () => document.getElementById('new-leader-dialog')?.close());
     document.querySelector('[data-open-new-plan]')?.addEventListener('click', () => document.getElementById('new-department-plan-dialog')?.showModal());
     document.querySelectorAll('[data-close-plan-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
-    document.querySelectorAll('[data-open-plan-edit]').forEach((article) => article.addEventListener('click', (event) => { if (event.target.closest('dialog, form, button, input, select, textarea')) return; document.getElementById(article.dataset.openPlanEdit)?.showModal(); }));
+    document.querySelectorAll('[data-open-plan-edit]').forEach((article) => article.addEventListener('record-edit', (event) => { if (event.target.closest('dialog, form, button, input, select, textarea')) return; document.getElementById(article.dataset.openPlanEdit)?.showModal(); }));
     const leaderDistricts = <%- JSON.stringify(typeof leaderDistricts !== 'undefined' ? leaderDistricts : []) %>;
     const leaderDistrictSelect = document.querySelector('#new-leader-dialog select[name="districtGroupId"]');
     if (leaderDistrictSelect) {
@@ -168,7 +168,7 @@
       // SSR 側の配列が空でも、既存の紐付けモーダルのIDから編集対象を確定する。
       const record = sourceRecord || { _id: recordId, name: article.querySelector('strong')?.textContent?.trim() || '', nameKana: '', phone: '', mobilePhone: '' };
       article.classList.add('record-editable');
-      article.addEventListener('click', (event) => {
+      article.addEventListener('record-edit', (event) => {
         if (event.target.closest('button, form, dialog, a, input, select')) return;
         event.preventDefault();
         event.stopImmediatePropagation();

@@ -1,0 +1,10 @@
+<dialog class="officer-dialog record-actions-dialog" aria-labelledby="record-actions-title">
+  <div class="dialog-heading"><h2 id="record-actions-title">項目の操作</h2><button type="button" class="dialog-close" data-record-actions-close aria-label="閉じる">×</button></div>
+  <p data-record-actions-name></p>
+  <div class="record-actions-buttons"><button type="button" class="button button-primary" data-record-actions-edit>編集</button><button type="button" class="button button-quiet" data-record-actions-report>実施報告を編集</button><button type="button" class="button button-danger-outline" data-record-actions-delete>削除</button><button type="button" class="button button-quiet" data-record-actions-close>キャンセル</button></div>
+</dialog>
+<dialog class="officer-dialog record-delete-dialog" aria-labelledby="record-delete-title">
+  <h2 id="record-delete-title">この項目を削除しますか？</h2><p data-record-delete-name></p><p>削除すると元に戻せません。</p>
+  <div class="form-actions"><button type="button" class="button button-quiet" data-record-delete-cancel autofocus>キャンセル</button><button type="button" class="button button-danger-outline" data-record-delete-confirm>削除する</button></div>
+</dialog>
+<script src="/assets/record-actions.js?v=<%= assetVersion %>"></script>
