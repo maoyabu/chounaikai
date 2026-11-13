@@ -10,7 +10,7 @@ import { SafetyReport } from '../src/models/safetyReport.js';
 import { Shelter } from '../src/models/shelter.js';
 import { loadDisasterInformation } from '../src/services/disasterInformationService.js';
 import { safetyRouter } from '../src/routes/safety.js';
-import { disasterInformationRouter } from '../src/routes/disasterInformation.js';
+import { disasterInformationRouter, mobileDisasterRouter } from '../src/routes/disasterInformation.js';
 import { requireLogin } from '../src/middleware/auth.js';
 const aid='aaaaaaaaaaaaaaaaaaaaaaaa',uid='bbbbbbbbbbbbbbbbbbbbbbbb',hid='cccccccccccccccccccccccc',mid='dddddddddddddddddddddddd';
 const base={_id:aid,name:'第一町内会',alertLevel:3,safetyEventKey:'incident',hazardMapUrl:'https://example.com/map?a=1&b=2',shelterInformation:{name:'市の避難所',url:'https://example.com/shelters'}};
@@ -89,4 +89,39 @@ test('legacy safety links redirect into the new safety tab and hub is login prot
   let url;
   await handler({params:{associationId:aid}},{redirect(value){url=value;}},error=>{throw error;});
   assert.equal(url,`/associations/${aid}/disaster?tab=safety`);
+});
+
+test('mobile disaster API shares current alert, guide and shelter information without private model fields', async t => {
+  access(t);
+  t.mock.method(Shelter, 'find', filter => {
+    assert.deepEqual(filter, { association: aid, active: true });
+    return query([{ ...shelter, createdBy: uid, photos: [{ url: 'https://example.com/photo.jpg', publicId: 'private' }],
+      acceptance: { status: 'available', comment: '残り10名', registeredAt: new Date(), registeredBy: uid, registeredByName: '担当者' } }]);
+  });
+  assert.equal(mobileDisasterRouter.stack[0].handle, requireLogin);
+  const handler = mobileDisasterRouter.stack.find(layer => layer.route?.path === '/:associationId/disaster').route.stack[0].handle;
+  let result;
+  await handler({ params: { associationId: aid }, user: { _id: uid } }, { set() {}, json(value) { result = value; } }, error => { throw error; });
+  assert.equal(result.alertLevel, 3);
+  assert.deepEqual(result.alertLevels.map(item => item.level), [5, 4, 3, 2, 1]);
+  assert.equal(result.alertImagePath, '/assets/images/alert-levels.jpg');
+  assert.equal(result.informationLinks[0].name, '市の避難所');
+  assert.equal(result.shelters[0].acceptance.comment, '残り10名');
+  assert.equal(result.shelters[0].createdBy, undefined);
+  assert.equal(result.shelters[0].acceptance.registeredBy, undefined);
+  assert.deepEqual(result.shelters[0].photos, ['https://example.com/photo.jpg']);
+  AssociationMembership.findOne.mock.mockImplementation(() => query(null));
+  await assert.rejects(handler({ params: { associationId: aid }, user: { _id: uid } }, { set() {}, json() {} }, error => { throw error; }), { status: 403 });
+});
+
+test('mobile normal mode explicitly reports no registered alert and no shelters', async t => {
+  access(t, { ...base, alertLevel: 0, shelterInformation: { name: '', url: '' } });
+  Shelter.find.mock.mockImplementation(() => query([]));
+  const handler = mobileDisasterRouter.stack.find(layer => layer.route?.path === '/:associationId/disaster').route.stack[0].handle;
+  let result;
+  await handler({ params: { associationId: aid }, user: { _id: uid } }, { set() {}, json(value) { result = value; } }, error => { throw error; });
+  assert.equal(result.alertLevel, 0);
+  assert.equal(result.alertLevelUpdatedAt, null);
+  assert.deepEqual(result.shelters, []);
+  assert.deepEqual(result.informationLinks, []);
 });
