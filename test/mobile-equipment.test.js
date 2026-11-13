@@ -92,3 +92,27 @@ test('cancel endpoint rejects another borrowers application even before service 
   });
   await assert.rejects(route('/loans/:loanId/cancel', 'post')({ ...req, params: { associationId: aid, loanId: eid } }, {}, next), { status: 403 });
 });
+
+test('calendar distinguishes pending from approved even at full capacity and excludes cancelled loans', () => {
+  const loan = { startDate: '2026-11-20', endDate: '2026-11-20', allDay: false, quantity: 2 };
+  const loans = [
+    { ...loan, _id: 'pending', status: 'pending', startTime: '09:00', endTime: '12:00' },
+    { ...loan, _id: 'approved', status: 'approved', quantity: 1, startTime: '12:00', endTime: '15:00' },
+    { ...loan, _id: 'cancelled', status: 'cancelled', startTime: '15:00', endTime: '18:00' },
+    { ...loan, _id: 'mixed', status: 'pending', quantity: 1, startTime: '13:00', endTime: '14:00' }
+  ];
+  const day = mobileEquipmentCalendar(item, loans, '2026-11', '2026-11-01').cells.find(cell => cell?.day === 20);
+  const pending = day.segments.find(segment => segment.startTime === '09:00');
+  assert.equal(pending.available, 0);
+  assert.equal(pending.pendingQuantity, 2);
+  assert.equal(pending.approvedQuantity, 0);
+  const approved = day.segments.find(segment => segment.startTime === '12:00');
+  assert.equal(approved.available, 1);
+  assert.equal(approved.approvedQuantity, 1);
+  assert.equal(approved.pendingQuantity, 0);
+  const mixed = day.segments.find(segment => segment.startTime === '13:00');
+  assert.equal(mixed.pendingQuantity, 1);
+  assert.equal(mixed.approvedQuantity, 1);
+  const free = day.segments.find(segment => segment.startTime === '15:00');
+  assert.equal(free.pendingQuantity + free.approvedQuantity, 0);
+});

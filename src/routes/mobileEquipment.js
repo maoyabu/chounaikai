@@ -4,7 +4,7 @@ import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
 import { AssociationEquipment, EquipmentLoan } from '../models/equipment.js';
 import { equipmentAccess, equipmentError, checkedEquipmentId, japanDate, monthIndex, monthString, requestEquipmentLoan, decideEquipmentLoan } from '../services/equipmentService.js';
-import { equipmentDaySchedule } from '../services/equipmentTimeService.js';
+import { equipmentDaySchedule, equipmentReservations, equipmentLoanWindow } from '../services/equipmentTimeService.js';
 
 export const mobileEquipmentRouter = express.Router({ mergeParams: true });
 const handle = callback => async (req, res, next) => { try { await callback(req, res); } catch (error) { next(error); } };
@@ -24,9 +24,18 @@ export const mobileEquipmentCalendar = (item, loans, month, today = japanDate())
   const start = `${month}-01`, next = monthString(index + 1);
   const days = new Date(Date.parse(`${next}-01`) - 86400000).getUTCDate();
   const cells = Array((new Date(start).getUTCDay() + 6) % 7).fill(null);
+  const reservations = equipmentReservations(item, loans).map(loan => ({ ...equipmentLoanWindow(loan), status: loan.status, quantity: loan.quantity }));
   for (let day = 1; day <= days; day++) {
     const date = `${month}-${String(day).padStart(2, '0')}`;
-    const segments = equipmentDaySchedule(item, loans, date);
+    const midnight = Date.parse(`${date}T00:00:00+09:00`);
+    const segments = equipmentDaySchedule(item, loans, date).map(segment => {
+      const first = midnight + segment.startMinute * 60000, last = midnight + segment.endMinute * 60000;
+      const overlapping = reservations.filter(loan => loan.start < last && loan.end > first);
+      return { ...segment,
+        pendingQuantity: overlapping.filter(loan => loan.status === 'pending').reduce((sum, loan) => sum + loan.quantity, 0),
+        approvedQuantity: overlapping.filter(loan => loan.status === 'approved').reduce((sum, loan) => sum + loan.quantity, 0)
+      };
+    });
     const capacity = Math.max(0, ...segments.map(segment => segment.available));
     cells.push({ date, day, segments, capacity, available: date >= today && capacity > 0 });
   }
