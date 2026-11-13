@@ -26,7 +26,7 @@ const fiscalYear = (date, startMonth = 4) => {
   return value.getMonth() + 1 >= Number(startMonth) ? value.getFullYear() : value.getFullYear() - 1;
 };
 
-async function classificationForEntry(req, date, cf) {
+export async function classificationForEntry(req, date, cf) {
   const { association, groupId } = req.financeContext;
   const expense = cf === '支出';
   const classification = String(req.body[expense ? 'expense_department' : 'income_category'] || '').trim();
