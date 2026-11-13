@@ -17,6 +17,8 @@ import { mobileDisasterRouter } from './routes/disasterInformation.js';
 import { mobileEventsRouter } from './routes/mobileEvents.js';
 import { mobileEquipmentRouter } from './routes/mobileEquipment.js';
 import { mobileFinanceRouter } from './routes/mobileFinance.js';
+import { mobileInventoryRouter } from './routes/mobileInventory.js';
+import { mobileProfileRouter } from './routes/mobileProfile.js';
 import { dangerReportsRouter } from './routes/dangerReports.js';
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
@@ -134,6 +136,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/associations', mobileEventsRouter);
   app.use('/api/associations/:associationId/equipment', mobileEquipmentRouter);
   app.use('/api/associations/:associationId/finance', mobileFinanceRouter);
+  app.use('/api/associations/:associationId/inventory', mobileInventoryRouter);
+  app.use('/api/profile', mobileProfileRouter);
   app.use('/api/associations/:associationId/good-places', mobileGoodPlacesRouter);
   app.use('/api/passkeys', createPasskeyRouter(passkeys));
   app.use(requireEnabledAssociationFeature);
