@@ -23,9 +23,19 @@ const dateValue = value => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== text) throw fail('日付を正しく入力してください。');
   return date;
 };
-export const mobileFinanceEntry = entry => ({
+// Legacy entries can omit classification. Match the editor's unique budget lookup without changing stored data.
+export const mobileFinanceClassification = (entry, budgets, startMonth = 4) => {
+  const stored = financeClassification(entry);
+  if (stored !== '未設定') return stored;
+  const date = new Date(entry.date);
+  const year = String(date.getUTCFullYear() - (date.getUTCMonth() + 1 < startMonth ? 1 : 0));
+  const field = entry.cf === '収入' ? 'income_item' : 'expense_item';
+  const candidates = new Set(budgets.filter(row => String(row.year) === year && row.cf === entry.cf && row[field] === entry[field]).map(financeClassification));
+  return candidates.size === 1 ? [...candidates][0] : stored;
+};
+export const mobileFinanceEntry = (entry, budgets = [], startMonth = 4) => ({
   id: String(entry._id), date: new Date(entry.date).toISOString().slice(0, 10), cf: entry.cf,
-  classification: financeClassification(entry), item: (entry.cf === '収入' ? entry.income_item : entry.expense_item) || '',
+  classification: mobileFinanceClassification(entry, budgets, startMonth), item: (entry.cf === '収入' ? entry.income_item : entry.expense_item) || '',
   content: entry.content || '', amount: Number(entry.amount), paymentType: entry.payment_type || '',
   inputterName: entry.inputterName || '', usedBy: entry.usedBy || entry.inputterName || '',
   memo: entry.memo || '', receiptNo: entry.receiptNo || '', tag: entry.tags?.[0]?.name || ''
@@ -61,15 +71,16 @@ mobileFinanceRouter.use(requireLogin, async (req, res, next) => {
 mobileFinanceRouter.get('/entries', handle(async (req, res) => {
   const scope = own(req), query = mobileFinanceQuery(scope, req.query);
   const page = Math.max(1, Math.min(100000, parseInt(req.query.page, 10) || 1));
-  const [entries, total, incomeItems, expenseItems, payments] = await Promise.all([
+  const [entries, total, incomeItems, expenseItems, payments, budgets] = await Promise.all([
     Finance.find(query).sort({ date: -1, entry_date: -1, _id: -1 }).skip((page - 1) * 50).limit(50).lean(),
     Finance.countDocuments(query),
     Finance.distinct('income_item', { ...scope, cf: '収入' }),
     Finance.distinct('expense_item', { ...scope, cf: '支出' }),
-    Finance.distinct('payment_type', scope)
+    Finance.distinct('payment_type', scope),
+    FinanceBudget.find({ group: req.financeContext.groupId }).lean()
   ]);
   const clean = values => values.filter(Boolean).sort();
-  res.json({ entries: entries.map(mobileFinanceEntry), total, page, hasMore: page * 50 < total,
+  res.json({ entries: entries.map(entry => mobileFinanceEntry(entry, budgets, req.financeContext.association.financeFiscalStartMonth || 4)), total, page, hasMore: page * 50 < total,
     incomeItems: clean(incomeItems), expenseItems: clean(expenseItems), paymentTypes: clean(payments), csrfToken: res.locals.csrfToken });
 }));
 
@@ -85,7 +96,7 @@ mobileFinanceRouter.get('/form', handle(async (req, res) => {
   const methods = association.financePaymentMethods?.length
     ? association.financePaymentMethods.filter(method => method.active !== false).sort((a, b) => (a.order || 0) - (b.order || 0)).map(method => method.name)
     : association.financePaymentTypes || [];
-  res.json({ entry: entry ? mobileFinanceEntry(entry) : null, fiscalStartMonth: association.financeFiscalStartMonth || 4,
+  res.json({ entry: entry ? mobileFinanceEntry(entry, budgets, association.financeFiscalStartMonth || 4) : null, fiscalStartMonth: association.financeFiscalStartMonth || 4,
     inputterName: entry?.inputterName || req.user.displayname || req.user.username || '', paymentTypes: methods,
     budgets: budgets.map(row => ({ id: String(row._id), year: String(row.year), cf: row.cf, classification: financeClassification(row),
       item: (row.cf === '収入' ? row.income_item : row.expense_item) || '',

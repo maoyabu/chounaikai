@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mobileFinanceRouter, mobileFinanceValues, mobileFinanceQuery } from '../src/routes/mobileFinance.js';
+import { mobileFinanceRouter, mobileFinanceValues, mobileFinanceQuery, mobileFinanceClassification } from '../src/routes/mobileFinance.js';
 import { Finance } from '../src/models/finance.js';
 import { FinanceBudget } from '../src/models/financeBudget.js';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
@@ -52,6 +52,7 @@ test('filters preserve author scope, combine item and keyword, escape regex and 
 });
 
 test('list and filter suggestions contain only current users entries, with pagination', async t => {
+  t.mock.method(FinanceBudget, 'find', () => q([]));
   t.mock.method(Finance, 'find', filter => { assert.deepEqual(filter, scope); return q([{ _id: eid, date: '2026-04-01', cf: '支出', amount: 1200, expense_item: '備品費' }]); });
   t.mock.method(Finance, 'countDocuments', async filter => { assert.deepEqual(filter, scope); return 51; });
   t.mock.method(Finance, 'distinct', async (_field, filter) => { assert.equal(filter.group, gid); assert.equal(filter.user, uid); return ['備品費']; });
@@ -59,6 +60,17 @@ test('list and filter suggestions contain only current users entries, with pagin
   await handler('/entries')(request(), res, next);
   assert.equal(res.value.entries.length, 1); assert.equal(res.value.hasMore, true);
   assert.equal(res.value.entries[0].date, '2026-04-01'); assert.equal(res.value.csrfToken, 'token');
+});
+
+test('legacy classification matches editor by fiscal year and item without guessing ambiguous departments', () => {
+  const entry = { date: '2026-03-31', cf: '支出', expense_item: '女性部' };
+  const budgets = [{ year: '2025', cf: '支出', expense_item: '女性部', expense_department: '女性部' },
+    { year: '2026', cf: '支出', expense_item: '女性部', expense_department: '別年度の部' }];
+  assert.equal(mobileFinanceClassification(entry, budgets), '女性部');
+  assert.equal(mobileFinanceClassification({ ...entry, expense_department: '登録済みの部' }, budgets), '登録済みの部');
+  assert.equal(mobileFinanceClassification(entry, [...budgets, { ...budgets[0], expense_department: '他の部' }]), '未設定');
+  assert.equal(mobileFinanceClassification(entry, []), '未設定');
+  assert.equal(mobileFinanceClassification({ date: '2026-04-01', cf: '収入', income_item: '会費' }, [{ year: '2026', cf: '収入', income_item: '会費', income_category: '会費収入' }]), '会費収入');
 });
 
 test('form and writes reject other authors entries and deletion always scopes by author and group', async t => {
