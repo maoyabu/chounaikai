@@ -24,31 +24,37 @@ const ownAccess = async (association, user) => {
   ]);
   if (!member || !officer) throw Object.assign(new Error('現年度の役員だけが公開設定を変更できます。'), { status: 403 });
 };
-disclosureRouter.get('/profile/disclosure', async (req, res, next) => {
-  try {
-    const officers = await AnnualOfficer.find({ user: req.user._id, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('association').lean();
+export const loadOwnDisclosureRows = async userId => {
+    const officers = await AnnualOfficer.find({ user: userId, fiscalYear: annualRoleYearFilter(), cancelledAt: null }).select('association').lean();
     const associations = await NeighborhoodAssociation.find({ _id: { $in: officers.map(item => item.association) }, status: 'active', deletedAt: { $exists: false } }).lean();
-    const memberships = await AssociationMembership.find({ user: req.user._id, status: 'active' }).select('association').lean();
+    const memberships = await AssociationMembership.find({ user: userId, status: 'active' }).select('association').lean();
     const active = new Set(memberships.map(item => String(item.association)));
-    const consents = await DisclosureConsent.find({ user: req.user._id }).lean();
-    const rows = associations.filter(item => active.has(String(item._id))).map(association => {
+    const consents = await DisclosureConsent.find({ user: userId }).lean();
+    return associations.filter(item => active.has(String(item._id))).map(association => {
       const consent = consents.find(item => String(item.association) === String(association._id));
       return { association, policy: policyValues(association.officerDisclosurePolicy), consent, effective: effectiveDisclosure(association.officerDisclosurePolicy, consent?.fiscalYear === currentFiscalYear() ? consent : null, association.officerDisclosureHistory) };
     });
+};
+export const saveOwnDisclosure = async (associationId, user, body) => {
+    const association = await activeAssociation(associationId);
+    await ownAccess(association, user);
+    if (body.confirmDisclosure !== 'yes') throw Object.assign(new Error('公開先を確認して同意してください。'), { status: 400 });
+    if (String(body.policyRevision) !== String(association.officerDisclosureHistory?.length || 0)) throw Object.assign(new Error('町内会の公開ルールが変更されました。画面を再読み込みしてください。'), { status: 409 });
+    const scopes = parseDisclosure(body, association.officerDisclosurePolicy), at = new Date();
+    await DisclosureConsent.findOneAndUpdate({ association: association._id, user: user._id }, {
+      $set: { scopes, confirmedAt: at, policyRevision: association.officerDisclosureHistory?.length || 0, fiscalYear: currentFiscalYear() }, $push: { history: { actor: user._id, at, scopes } }
+    }, { upsert: true, runValidators: true });
+};
+disclosureRouter.get('/profile/disclosure', async (req, res, next) => {
+  try {
+    const rows = await loadOwnDisclosureRows(req.user._id);
     res.set('Cache-Control', 'no-store');
     res.render(req.query.embedded === '1' ? 'partials/profile-disclosure-content' : 'profile-disclosure', { title: '個人情報の公開設定', rows, disclosureFields, disclosureLevels });
   } catch (error) { next(error); }
 });
 disclosureRouter.post('/profile/disclosure/:associationId', verifyCsrfToken, async (req, res, next) => {
   try {
-    const association = await activeAssociation(req.params.associationId);
-    await ownAccess(association, req.user);
-    if (req.body.confirmDisclosure !== 'yes') throw Object.assign(new Error('公開先を確認して同意してください。'), { status: 400 });
-    if (String(req.body.policyRevision) !== String(association.officerDisclosureHistory?.length || 0)) throw Object.assign(new Error('町内会の公開ルールが変更されました。画面を再読み込みしてください。'), { status: 409 });
-    const scopes = parseDisclosure(req.body, association.officerDisclosurePolicy), at = new Date();
-    await DisclosureConsent.findOneAndUpdate({ association: association._id, user: req.user._id }, {
-      $set: { scopes, confirmedAt: at, policyRevision: association.officerDisclosureHistory?.length || 0, fiscalYear: currentFiscalYear() }, $push: { history: { actor: req.user._id, at, scopes } }
-    }, { upsert: true, runValidators: true });
+    await saveOwnDisclosure(req.params.associationId, req.user, req.body);
     req.session.notice = '公開設定を保存しました。';
     res.redirect('/profile?tab=disclosure');
   } catch (error) { next(error); }
