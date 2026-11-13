@@ -57,7 +57,7 @@ export const createQuestion = async ({ associationId, userId, title, body, files
   return thread;
 };
 
-export const addQuestionMessage = async ({ associationId, threadId, userId, body, files = [] }) => {
+export const addQuestionMessage = async ({ associationId, threadId, userId, body, files = [], expectedKind }) => {
   if (!mongoose.isValidObjectId(threadId)) throw fail('投稿を確認してください。', 404);
   const { canAnswer } = await loadQuestionBoxAccess({ associationId, userId });
   const thread = await QuestionThread.findOne({ _id: threadId, association: associationId }).select('author status title').lean();
@@ -65,6 +65,7 @@ export const addQuestionMessage = async ({ associationId, threadId, userId, body
   if (['no_reply', 'completed'].includes(thread.status)) throw fail('このやり取りは終了しています。', 409);
   const isAuthor = String(thread.author) === String(userId);
   const kind = thread.status === 'unanswered' ? 'officer' : 'resident';
+  if (expectedKind && kind !== expectedKind) throw fail('先に別の返信が届きました。画面を読み直してください。', 409);
   if (kind === 'officer' && !canAnswer) throw fail('回答できるのは当年度の役員または町内会管理者です。', 403);
   if (kind === 'resident' && !isAuthor) throw fail('再質問できるのは投稿者本人です。', 403);
   const now = new Date();
