@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { EquipmentLoan } from '../models/equipment.js';
 import { LocationLinkRequest } from '../models/locationLinkRequest.js';
 import { Notification } from '../models/notification.js';
-import { OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
+import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { QuestionThread } from '../models/questionThread.js';
 import { JoinApplication, WithdrawalApplication } from '../models/workflow.js';
 import { AssociationGroupRequest, AssociationGroupJoinRequest, AssociationGroupMembership } from '../models/associationGroup.js';
@@ -74,6 +74,7 @@ export const notificationPriority = item => {
 
 // Reading a notice is independent of completing its underlying request.
 export const enrichNotificationStates = async (items, { recipient }) => {
+  await attachSurveyResponseState(items, recipient);
   const load = async (types, Model, fields) => {
     const ids = items.filter(item => types.includes(item.type) && item.relatedId).map(item => item.relatedId);
     return ids.length ? Model.find({ _id: { $in: ids } }).select(fields).lean() : [];
@@ -123,3 +124,20 @@ export const enrichNotificationStates = async (items, { recipient }) => {
 };
 
 export const notificationSortRank = item => item.priority === 'urgent' ? 0 : item.actionCompleted ? 3 : !item.readAt ? 1 : item.priority === 'action' ? 2 : 3;
+
+export const attachSurveyResponseState = async (items, recipient) => {
+  const notices = items.filter(item => ['officer_announcement', 'officer_announcement_reminder'].includes(item.type) && item.relatedId);
+  for (const item of items) item.requiresSurveyResponse = false;
+  if (!notices.length) return;
+  const ids = [...new Set(notices.map(item => String(item.relatedId)))];
+  const [announcements, receipts] = await Promise.all([
+    OfficerAnnouncement.find({ _id: { $in: ids } }).select('_id responseMode mutedAt').lean(),
+    OfficerAnnouncementReceipt.find({ recipient, announcement: { $in: ids } }).select('announcement respondedAt').lean()
+  ]);
+  const surveys = new Set(announcements.filter(item => !item.mutedAt && ['single', 'multiple'].includes(item.responseMode)).map(item => String(item._id)));
+  const responses = new Map(receipts.map(item => [String(item.announcement), item]));
+  for (const item of notices) {
+    const id = String(item.relatedId);
+    item.requiresSurveyResponse = surveys.has(id) && responses.has(id) && !responses.get(id).respondedAt;
+  }
+};

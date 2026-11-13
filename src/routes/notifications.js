@@ -40,6 +40,7 @@ const mobileNotification = (notification, context = {}) => {
     hiddenAt: notification.hiddenAt || null,
     priority: notificationPriority(notification),
     actionCompleted: Boolean(notification.actionCompleted),
+    requiresSurveyResponse: Boolean(notification.requiresSurveyResponse),
     pinned: Boolean(notification.pinned),
     pinnedAt: notification.pinnedAt || null,
     relatedId: notification.relatedId ? String(notification.relatedId) : null,
