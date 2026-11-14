@@ -1,4 +1,7 @@
 import express from 'express';
+import mongoose from 'mongoose';
+import { AssociationEvent } from '../models/associationEvent.js';
+import { AssociationGroup } from '../models/associationGroup.js';
 import { requireLogin } from '../middleware/auth.js';
 import { dangerAccess } from '../services/dangerReportService.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
@@ -12,6 +15,7 @@ export const mobileCalendarEvent = event => ({
   recurrence: event.recurrence || { frequency: 'none' }, imageURL: event.image?.url || null,
   imageCaption: event.imageCaption || '', youtubeURL: event.youtubeUrl || '', qrURL: event.qrUrl || '', qrCaption: event.qrCaption || ''
 });
+
 mobileEventsRouter.use(requireLogin);
 mobileEventsRouter.get('/:associationId/calendar', async (req, res, next) => {
   try {
@@ -23,5 +27,22 @@ mobileEventsRouter.get('/:associationId/calendar', async (req, res, next) => {
     res.set('Cache-Control', 'private, no-store');
     res.json({ associationName: association.name, currentMonth: window.currentMonth, previousMonth: window.previousMonth,
       nextMonth: window.nextMonth, months: window.months, events: events.map(mobileCalendarEvent) });
+  } catch (error) { next(error); }
+});
+
+// Notification links must resolve the event itself, including past events outside
+// the calendar's three-month window. Apply the same visibility as the Web page.
+mobileEventsRouter.get('/:associationId/calendar/events/:eventId', async (req, res, next) => {
+  try {
+    const association = await dangerAccess(req.params.associationId, req.user._id);
+    if (!associationFeatureEnabled(association, 'events') || !mongoose.isValidObjectId(req.params.eventId)) {
+      throw Object.assign(new Error('行事を確認できません。'), { status: 404 });
+    }
+    const event = await AssociationEvent.findOne({ _id: req.params.eventId, association: association._id, visible: true }).lean();
+    if (!event || (event.group && !await AssociationGroup.exists({
+      _id: event.group, association: association._id, status: { $in: ['active', 'suspended'] }
+    }))) throw Object.assign(new Error('行事を確認できません。'), { status: 404 });
+    res.set('Cache-Control', 'private, no-store');
+    res.json(mobileCalendarEvent(event));
   } catch (error) { next(error); }
 });
