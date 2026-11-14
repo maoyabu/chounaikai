@@ -10,7 +10,7 @@ import { AssociationGroup, AssociationGroupMembership } from '../models/associat
 // Both the association total and each location use the same household roster.
 // Family members need not have accounts; ended roster entries are excluded by
 // the member-count query below. District totals include their child groups.
-export const summarizeAssociationHouseholds = (districtGroups, households, memberCounts) => {
+export const summarizeAssociationHouseholds = (districtGroups, households, memberCounts, { includeIds = false } = {}) => {
   const memberCountByHousehold = new Map(memberCounts.map(item => [String(item._id), item.count]));
   const householdsByGroup = new Map();
   for (const household of households) {
@@ -29,7 +29,7 @@ export const summarizeAssociationHouseholds = (districtGroups, households, membe
     const rows = ids.flatMap(id => householdsByGroup.get(String(id)) || []);
     const parent = group.parentDistrict && districts.find(district => String(district._id) === String(group.parentDistrict));
     const name = parent && !group.name.startsWith(parent.name) ? `${parent.name} ${group.name}` : group.name;
-    return { name, householdCount: rows.length, residentCount: residents(rows) };
+    return { ...(includeIds ? { id: String(group._id) } : {}), name, householdCount: rows.length, residentCount: residents(rows) };
   });
   return { districtStats, householdCount: households.length, residentCount: residents(households) };
 };
