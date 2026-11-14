@@ -6,22 +6,27 @@ import { Household, HouseholdMember } from '../models/organization.js';
 import { WithdrawalApplication } from '../models/workflow.js';
 import { requestWithdrawal, confirmWithdrawal, decideWithdrawal, cancelWithdrawal } from '../services/withdrawalService.js';
 
-export const withdrawalsRouter = express.Router();
-withdrawalsRouter.get('/profile/withdrawals', requireLogin, async (req, res, next) => {
-  try {
-    const memberships = await AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).populate('household').lean();
+export const loadOwnWithdrawals = async userId => {
+    const memberships = await AssociationMembership.find({ user: userId, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).populate('household').lean();
     const visibleMemberships = memberships.filter(membership => membership.association && membership.household?.active);
-    const ownedIds = visibleMemberships.filter(membership => String(membership.household.representative || membership.household.feeRepresentative) === String(req.user._id)).map(membership => membership.household._id);
+    const ownedIds = visibleMemberships.filter(membership => String(membership.household.representative || membership.household.feeRepresentative) === String(userId)).map(membership => membership.household._id);
     const [successorMemberships, members, applications, headApplications] = await Promise.all([
-      AssociationMembership.find({ household: { $in: ownedIds }, user: { $ne: req.user._id }, status: 'active' }).populate('user', 'displayname username').lean(),
+      AssociationMembership.find({ household: { $in: ownedIds }, user: { $ne: userId }, status: 'active' }).populate('user', 'displayname username').lean(),
       HouseholdMember.find({ household: { $in: ownedIds }, endsAt: null }).select('user').lean(),
-      WithdrawalApplication.find({ requestedBy: req.user._id }).populate('association', 'name').populate('successor', 'displayname username').sort({ createdAt: -1 }).limit(30).lean(),
+      WithdrawalApplication.find({ requestedBy: userId }).populate('association', 'name').populate('successor', 'displayname username').sort({ createdAt: -1 }).limit(30).lean(),
       WithdrawalApplication.find({ household: { $in: ownedIds }, status: 'awaiting_household' }).populate('requestedBy', 'displayname username email').populate('household', 'displayName').populate('association', 'name').lean()
     ]);
     const successors = successorMemberships.filter(membership => members.some(member => String(member.user) === String(membership.user?._id)));
     const busy = await WithdrawalApplication.find({ household: { $in: visibleMemberships.map(membership => membership.household._id) }, status: { $in: ['awaiting_household', 'pending', 'processing'] } }).select('household').lean();
+    return { memberships: visibleMemberships, successors, applications, headApplications, busyHouseholds: busy.map(application => String(application.household)) };
+};
+
+export const withdrawalsRouter = express.Router();
+withdrawalsRouter.get('/profile/withdrawals', requireLogin, async (req, res, next) => {
+  try {
+    const { memberships, successors, applications, headApplications, busyHouseholds } = await loadOwnWithdrawals(req.user._id);
     res.set('Cache-Control', 'no-store');
-    return res.render(req.query.embedded === '1' ? 'partials/profile-withdrawals-content' : 'withdrawals', { title: '町内会の退会申請', memberships: visibleMemberships, successors, applications, headApplications, busyHouseholds: busy.map(application => String(application.household)) });
+    return res.render(req.query.embedded === '1' ? 'partials/profile-withdrawals-content' : 'withdrawals', { title: '町内会の退会申請', memberships, successors, applications, headApplications, busyHouseholds });
   } catch (error) { next(error); }
 });
 withdrawalsRouter.post('/associations/:associationId/withdrawals', requireLogin, verifyCsrfToken, async (req, res, next) => {

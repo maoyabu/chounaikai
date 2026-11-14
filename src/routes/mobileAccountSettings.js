@@ -1,3 +1,6 @@
+import { changePassword } from '../services/passwordChangeService.js';
+import { loadOwnWithdrawals } from './withdrawals.js';
+import { requestWithdrawal, confirmWithdrawal, cancelWithdrawal } from '../services/withdrawalService.js';
 import express from 'express';
 import { requireLogin } from '../middleware/auth.js';
 import { provideCsrfToken, verifyCsrfToken } from '../middleware/csrf.js';
@@ -29,5 +32,46 @@ export const createMobileAccountSettingsRouter = ({ lineService, passkeys }) => 
     await saveOwnDisclosure(req.params.associationId, req.user, req.body);
     res.json({ success: true });
   }));
+  router.get('/password', handle(async (_req, res) => {
+    res.json({ csrfToken: res.locals.csrfToken });
+  }));
+  router.post('/password', verifyCsrfToken, handle(async (req, res) => {
+    if (Date.now() - (req.session.passwordChangeAttemptAt || 0) < 3000) {
+      return res.status(429).json({ error: '少し待ってから再度お試しください。' });
+    }
+    req.session.passwordChangeAttemptAt = Date.now();
+    await changePassword({ userId: req.user._id, currentPassword: req.body.currentPassword, password: req.body.password, confirmation: req.body.passwordConfirmation });
+    delete req.session.passwordResetToken;
+    res.json({ success: true });
+  }));
+  router.get('/withdrawals', handle(async (req, res) => {
+    const value = await loadOwnWithdrawals(req.user._id);
+    const application = row => ({ id: String(row._id), associationId: String(row.association?._id || ''),
+      associationName: row.association?.name || '町内会', status: row.status, scope: row.scope,
+      reason: row.reason || '', requesterName: row.requestedBy?.displayname || row.requestedBy?.username || '',
+      householdName: row.household?.displayName || '' });
+    res.json({ csrfToken: res.locals.csrfToken,
+      memberships: value.memberships.map(row => ({ id: String(row.association._id), name: row.association.name,
+        isHead: String(row.household.representative || row.household.feeRepresentative) === String(req.user._id),
+        busy: value.busyHouseholds.includes(String(row.household._id)),
+        successors: value.successors.filter(candidate => String(candidate.household) === String(row.household._id))
+          .map(candidate => ({ id: String(candidate.user._id), name: candidate.user.displayname || candidate.user.username })) })),
+      applications: value.applications.map(application), headApplications: value.headApplications.map(application) });
+  }));
+  router.post('/withdrawals/:associationId/request', verifyCsrfToken, handle(async (req, res) => {
+    await requestWithdrawal({ associationId: req.params.associationId, userId: req.user._id, scope: req.body.scope,
+      successorId: req.body.successorId, reason: req.body.reason, confirmed: req.body.confirmWithdrawal === 'on' });
+    res.json({ success: true });
+  }));
+  router.post('/withdrawals/:applicationId/cancel', verifyCsrfToken, handle(async (req, res) => {
+    await cancelWithdrawal({ applicationId: req.params.applicationId, actorId: req.user._id });
+    res.json({ success: true });
+  }));
+  for (const decision of ['approve', 'reject']) {
+    router.post('/withdrawals/:associationId/:applicationId/' + decision, verifyCsrfToken, handle(async (req, res) => {
+      await confirmWithdrawal({ ...req.params, actorId: req.user._id, approve: decision === 'approve' });
+      res.json({ success: true });
+    }));
+  }
   return router;
 };
