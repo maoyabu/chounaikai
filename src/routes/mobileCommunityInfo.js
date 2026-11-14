@@ -1,3 +1,4 @@
+import { canViewOfficerDirectory } from '../services/officerDirectoryAccess.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin } from '../middleware/auth.js';
@@ -28,7 +29,9 @@ mobileCommunityInfoRouter.get('/:associationId/community-info', async (req, res,
       DistrictGroup.find({ association: association._id, active: true }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean(),
       Household.find({ association: association._id, active: true, deletedAt: { $exists: false } }).select('_id districtGroup').lean()
     ]);
-    const officers = await discloseOfficers(association, rawOfficers, await viewerDisclosureAccess(association, req.user));
+    const viewer = await viewerDisclosureAccess(association, req.user);
+    const directoryAllowed = await canViewOfficerDirectory(association, req.user, viewer);
+    const officers = await discloseOfficers(association, rawOfficers, viewer);
     const counts = households.length ? await HouseholdMember.aggregate([
       { $match: { association: association._id, household: { $in: households.map(row => row._id) }, endsAt: null } },
       { $group: { _id: '$household', count: { $sum: 1 } } }
@@ -37,10 +40,11 @@ mobileCommunityInfoRouter.get('/:associationId/community-info', async (req, res,
     const officerDTO = row => ({ id: String(row._id), name: row.name || '', displayLabel: row.displayLabel || '担当者',
       role: row.role?.name || '一般役員', department: row.department?.name || '部会未設定', district: row.districtGroup?.name || '',
       avatar: row.user?.avatar || '', address: row.address || '', phone: row.phone || '', mobilePhone: row.mobilePhone || '', email: row.email || '' });
+    const planOfficerDTO = row => ({ ...officerDTO(row), name: '', department: '', district: '', address: '', phone: '', mobilePhone: '', email: '' });
     const stats = summarizeAssociationHouseholds(districts, households, counts, { includeIds: true });
-    res.json({ associationName: association.name, fiscalYear,
+    res.json({ associationName: association.name, fiscalYear, canViewOfficerDirectory: directoryAllowed,
       plans: plans.map(plan => ({ id: String(plan._id), department: plan.department?.name || '部会未設定', goal: plan.goal || '',
-        officers: officers.filter(row => String(row.department?._id || row.department || '') === String(plan.department?._id || plan.department || '')).map(officerDTO) })),
-      officers: officers.map(officerDTO), ...stats });
+        officers: officers.filter(row => String(row.department?._id || row.department || '') === String(plan.department?._id || plan.department || '')).map(planOfficerDTO) })),
+      officers: directoryAllowed ? officers.map(officerDTO) : [], ...stats });
   } catch (error) { next(error); }
 });

@@ -34,7 +34,7 @@ export const summarizeAssociationHouseholds = (districtGroups, households, membe
   return { districtStats, householdCount: households.length, residentCount: residents(households) };
 };
 
-export const loadAssociationPageData = async (association, { publicOnly = true, month, viewer = {} } = {}) => {
+export const loadAssociationPageData = async (association, { publicOnly = true, month, viewer = {}, directoryAllowed = false } = {}) => {
   const now = new Date(), fiscalYear = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
   const window = calendarWindow(month, now);
   const showGoodPlaceAuthors = !publicOnly && await canViewGoodPlaceAuthors(association._id, viewer.viewerId);
@@ -60,6 +60,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     officers: officers.filter((officer) => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || ''))
   }));
   return {
+    canViewOfficerDirectory: !publicOnly && directoryAllowed,
     goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans: plansWithOfficers, ...householdStats,
     groups: groups.filter(group => !publicOnly || group.publicVisibility === 'open').map(group => ({ ...group, memberCount: groupCount.get(String(group._id)) || 0 }))
   };

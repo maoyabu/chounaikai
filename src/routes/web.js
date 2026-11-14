@@ -1,3 +1,4 @@
+import { canViewOfficerDirectory } from '../services/officerDirectoryAccess.js';
 import { attachDashboardSafety } from '../services/safetyService.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
@@ -876,7 +877,9 @@ webRouter.get('/associations/:associationId', requireLogin, async (req, res, nex
     const isApplicant = String(association.requestedBy?._id || association.requestedBy) === String(req.user._id);
     if ((!membership && !req.user.isAdmin && !isApplicant) || (association.deletedAt && !req.user.isAdmin)) return res.status(404).render('error', { title: '町内会が見つかりません', message: '指定された町内会を確認できませんでした。' });
     res.set('Cache-Control', 'no-store');
-    const pageData = association.status === 'active' && !association.deletedAt ? await loadAssociationPageData(association, { publicOnly: false, month: req.query.month, viewer: await viewerDisclosureAccess(association, req.user) }) : null;
+    const viewer = await viewerDisclosureAccess(association, req.user);
+    const directoryAllowed = await canViewOfficerDirectory(association, req.user, viewer);
+    const pageData = association.status === 'active' && !association.deletedAt ? await loadAssociationPageData(association, { publicOnly: false, month: req.query.month, viewer, directoryAllowed }) : null;
     return res.render('association-detail', { title: association.name, association, membership, canManage: Boolean(req.user.isAdmin || assignment?.role), pageData });
   } catch (error) {
     return next(error);
@@ -894,8 +897,10 @@ webRouter.get('/associations/:associationId/officers', requireLogin, async (req,
       AssociationMembership.findOne({ association: req.params.associationId, user: req.user._id, status: 'active' }).lean()
     ]);
     if (!association || (!membership && !req.user.isAdmin)) return res.status(404).render('error', { title: '町内会が見つかりません', message: '指定された町内会を確認できませんでした。' });
+    const viewer = await viewerDisclosureAccess(association, req.user);
+    if (!await canViewOfficerDirectory(association, req.user, viewer)) return res.status(403).render('error', { title: '閲覧できません', message: '役員一覧は町内会管理者・役員・班長のみ閲覧できます。' });
     const rawOfficers = await AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname email avatar').populate('role', 'name').populate('department', 'name').populate('districtGroup', 'name').sort({ createdAt: 1 }).lean();
-    const officers = await discloseOfficers(association, rawOfficers, await viewerDisclosureAccess(association, req.user));
+    const officers = await discloseOfficers(association, rawOfficers, viewer);
     res.set('Cache-Control', 'no-store');
     return res.render('association-public-officers', { title: `${association.name}の役員`, association, fiscalYear, officers });
   } catch (error) { return next(error); }

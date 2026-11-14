@@ -1,3 +1,6 @@
+import ejs from 'ejs';
+import { AnnualLeaderAssignment } from '../src/models/annualLeaderAssignment.js';
+import { webRouter } from '../src/routes/web.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -29,6 +32,7 @@ function fixture(t, consent = false) {
   t.mock.method(AssociationMembership, 'find', () => q([{ user: oid }]));
   t.mock.method(RoleAssignment, 'find', () => q([]));
   t.mock.method(AnnualOfficer, 'exists', async () => false);
+  t.mock.method(AnnualLeaderAssignment, 'exists', async filter => { assert.equal(filter.association, aid); assert.equal(filter.representative, uid); assert.equal(filter.cancelledAt, null); return false; });
   t.mock.method(AnnualOfficer, 'find', filter => {
     assert.equal(filter.association, aid); assert.equal(filter.fiscalYear, currentFiscalYear()); assert.equal(filter.cancelledAt, null);
     return q([{ _id: 'officer', fiscalYear: currentFiscalYear(), name: '役員氏名', address: '秘密住所', phone: '秘密電話', mobilePhone: '秘密携帯',
@@ -53,17 +57,58 @@ test('unconsented officers are redacted in both directory and department goals',
   const result = await response.json();
   assert.equal(result.fiscalYear, currentFiscalYear());
   assert.equal(result.plans[0].goal, '防災訓練'); assert.equal(result.plans[0].officers[0].displayLabel, '部長担当');
-  assert.equal(result.officers[0].name, ''); assert.equal(result.officers[0].avatar, ''); assert.equal(result.officers[0].district, '');
+  assert.equal(result.canViewOfficerDirectory, false); assert.deepEqual(result.officers, []);
   assert.doesNotMatch(JSON.stringify(result), /秘密|secret|役員氏名|非表示の実施報告/);
 });
 test('current resident consent reveals only approved fields and household totals include accountless family', async t => {
   const request = await start(t); fixture(t, true);
   const result = await (await request()).json();
-  assert.equal(result.officers[0].name, '役員氏名'); assert.equal(result.officers[0].avatar, '/photo.png');
-  assert.equal(result.officers[0].email, ''); assert.equal(result.officers[0].address, ''); assert.equal(result.officers[0].phone, '');
+  assert.equal(result.canViewOfficerDirectory, false); assert.deepEqual(result.officers, []);
+  assert.equal(result.plans[0].officers[0].displayLabel, '役員氏名');
   assert.equal(result.householdCount, 1); assert.equal(result.residentCount, 3);
   assert.deepEqual(result.districtStats.map(({ name, householdCount, residentCount }) => ({ name, householdCount, residentCount })), [
     { name: 'A地区', householdCount: 1, residentCount: 3 }, { name: 'A地区 1班', householdCount: 1, residentCount: 3 }
   ]);
   assert.equal(new Set(result.districtStats.map(row => row.id)).size, 2);
+});
+
+test('current officers, managers and leaders may view the directory; former leaders cannot', async t => {
+  const request = await start(t); fixture(t, true);
+  AnnualOfficer.exists.mock.mockImplementation(async () => true);
+  let result = await (await request()).json();
+  assert.equal(result.canViewOfficerDirectory, true); assert.equal(result.officers.length, 1);
+  AnnualOfficer.exists.mock.mockImplementation(async () => false);
+  RoleAssignment.find.mock.mockImplementation(() => q([{ role: { name: '管理者' } }]));
+  result = await (await request()).json(); assert.equal(result.canViewOfficerDirectory, true);
+  RoleAssignment.find.mock.mockImplementation(() => q([]));
+  AnnualLeaderAssignment.exists.mock.mockImplementation(async filter => {
+    assert.equal(filter.association, aid); assert.equal(filter.representative, uid);
+    assert.equal(filter.cancelledAt, null); assert.ok(filter.fiscalYear.$in.includes(currentFiscalYear())); return true;
+  });
+  result = await (await request()).json(); assert.equal(result.canViewOfficerDirectory, true); assert.equal(result.officers.length, 1);
+  assert.equal(result.officers[0].address, ''); assert.equal(result.officers[0].email, '');
+  AnnualLeaderAssignment.exists.mock.mockImplementation(async () => false);
+  result = await (await request()).json(); assert.equal(result.canViewOfficerDirectory, false); assert.deepEqual(result.officers, []);
+});
+test('Web direct officer URL denies ordinary residents and allows current leaders', async t => {
+  fixture(t, true);
+  t.mock.method(AssociationMembership, 'findOne', () => q({ user: uid }));
+  const handler = webRouter.stack.find(layer => layer.route?.path === '/associations/:associationId/officers').route.stack.at(-1).handle;
+  const req = { params: { associationId: aid }, query: {}, user: { _id: uid } };
+  const response = () => ({ statusCode: 200, status(code) { this.statusCode = code; return this; }, set() { return this; }, render(view, data) { this.view = view; this.data = data; return this; } });
+  const denied = response(); await handler(req, denied, error => { throw error; });
+  assert.equal(denied.statusCode, 403); assert.equal(AnnualOfficer.find.mock.callCount(), 0);
+  AnnualLeaderAssignment.exists.mock.mockImplementation(async () => true);
+  const allowed = response(); await handler(req, allowed, error => { throw error; });
+  assert.equal(allowed.statusCode, 200); assert.equal(allowed.view, 'association-public-officers'); assert.equal(allowed.data.officers.length, 1);
+});
+
+test('Web association summary hides the directory and its link unless explicitly authorized', async () => {
+  const locals = { association: { _id: aid, name: '町内会', optionalFeatures: {} }, isResidentPage: true,
+    currentUser: { _id: uid }, fiscalYear: currentFiscalYear(), householdCount: 0, residentCount: 0,
+    departmentPlans: [], officers: [], districtStats: [] };
+  const hidden = await ejs.renderFile('src/views/partials/association-page-content.ejs', { ...locals, canViewOfficerDirectory: false });
+  assert.doesNotMatch(hidden, /年度の町内会役員|役員の一覧を見る/);
+  const visible = await ejs.renderFile('src/views/partials/association-page-content.ejs', { ...locals, canViewOfficerDirectory: true });
+  assert.match(visible, /年度の町内会役員/); assert.match(visible, /役員の一覧を見る/);
 });
