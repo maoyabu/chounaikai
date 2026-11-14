@@ -22,6 +22,10 @@ export const officerAccess = async req => {
 };
 
 associationEventsRouter.get('/:associationId/join', async (req, res, next) => {
+  // The authenticated application form is handled by householdsRouter, mounted
+  // after this public router. Do not shadow it with the invitation page.
+  res.set('Cache-Control', 'no-store');
+  if (req.isAuthenticated?.()) return next();
   try {
     if (!mongoose.isValidObjectId(req.params.associationId)) throw notFound();
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } }).lean();
