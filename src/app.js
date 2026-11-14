@@ -1,3 +1,4 @@
+import { mobileHouseholdsRouter } from './routes/mobileHouseholds.js';
 import { apnsDevicesRouter } from './routes/apnsDevices.js';
 import { faqsRouter } from './routes/faqs.js';
 import { locationLinksRouter } from './routes/locationLinks.js';
@@ -143,6 +144,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/associations/:associationId/equipment', mobileEquipmentRouter);
   app.use('/api/associations/:associationId/finance', mobileFinanceRouter);
   app.use('/api/associations/:associationId/inventory', mobileInventoryRouter);
+  app.use('/api/profile/households', mobileHouseholdsRouter);
   app.use('/api/profile', createMobileAccountSettingsRouter({ lineService, passkeys }));
   app.use('/api/profile', mobileProfileRouter);
   app.use('/api/associations/:associationId/alert-level', mobileAlertLevelsRouter);

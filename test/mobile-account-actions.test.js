@@ -1,3 +1,4 @@
+import { productionErrorResponses, applicationErrorHandler } from '../src/middleware/errorResponses.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -10,11 +11,13 @@ import { HouseholdMember } from '../src/models/organization.js';
 import { WithdrawalApplication } from '../src/models/workflow.js';
 const uid = 'aaaaaaaaaaaaaaaaaaaaaaaa', aid = 'bbbbbbbbbbbbbbbbbbbbbbbb', hid = 'cccccccccccccccccccccccc';
 const q = value => ({ select() { return this; }, populate() { return this; }, sort() { return this; }, limit() { return this; }, lean: async () => value });
-async function start(t) {
+async function start(t, production = false) {
   const session = { csrfToken: 'valid', passwordResetToken: 'reset' };
   const app = express(); app.use(express.json());
   app.use((req, res, next) => { req.user = { _id: uid }; req.isAuthenticated = () => req.get('x-auth') !== 'no'; req.session = session; res.render = (_view, locals) => res.json(locals); next(); });
+  if (production) app.use(productionErrorResponses('production'));
   app.use('/api/profile', createMobileAccountSettingsRouter({ lineService: {}, passkeys: {} }));
+  if (production) app.use(applicationErrorHandler('production'));
   app.use((error, _req, res, _next) => res.status(error.status || 500).json({ error: error.message }));
   const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
@@ -86,4 +89,26 @@ test('cancellation binds current applicant and pending states; stale requests fa
 test('withdrawal request requires explicit confirmation before persistence', async t => {
   const { request } = await start(t);
   assert.equal((await request(`/withdrawals/${aid}/request`, { _csrf: 'valid', scope: 'household' })).status, 400);
+});
+
+test('production password API preserves only fixed validation messages and accepts valid changes', async t => {
+  const { request, session } = await start(t, true);
+  const user = new User({ username: 'resident' }); await user.setPassword('old-password');
+  t.mock.method(User, 'findById', () => ({ select: async () => user }));
+  const update = t.mock.method(User, 'updateOne', async () => ({ matchedCount: 1 }));
+  t.mock.method(PasswordReset, 'deleteOne', async () => ({}));
+  const base = { _csrf: 'valid', currentPassword: 'old-password', password: 'new-password', passwordConfirmation: 'new-password' };
+  for (const [patch, code, message] of [
+    [{ password: 'short' }, 'password_length_invalid', '新しいパスワードは8〜128文字で入力してください。'],
+    [{ passwordConfirmation: 'different' }, 'password_confirmation_mismatch', '確認用パスワードが一致しません。'],
+    [{ currentPassword: 'incorrect' }, 'password_current_incorrect', '現在のパスワードが正しくありません。']
+  ]) {
+    session.passwordChangeAttemptAt = 0;
+    const response = await request('/password', { ...base, ...patch });
+    assert.equal(response.status, 400); assert.deepEqual(await response.json(), { error: code, message });
+  }
+  assert.equal(update.mock.callCount(), 0);
+  session.passwordChangeAttemptAt = 0;
+  assert.equal((await request('/password', base)).status, 200);
+  assert.equal(update.mock.callCount(), 1);
 });

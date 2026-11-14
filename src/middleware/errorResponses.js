@@ -1,3 +1,11 @@
+const passwordMessages = Object.freeze({
+  "password_current_required": "現在のパスワードを入力してください。",
+  "password_length_invalid": "新しいパスワードは8〜128文字で入力してください。",
+  "password_confirmation_mismatch": "確認用パスワードが一致しません。",
+  "password_unchanged": "現在とは異なるパスワードを設定してください。",
+  "password_current_incorrect": "現在のパスワードが正しくありません。",
+  "password_state_changed": "パスワードの状態が変わりました。再度ログインしてお試しください。"
+});
 const messages = Object.freeze({
   400: '入力内容または認証情報を確認して、もう一度お試しください。',
   401: 'ログインし直して、もう一度お試しください。',
@@ -21,6 +29,9 @@ export const errorStatus = error => {
 const isApi = req => req.originalUrl?.toLowerCase().startsWith('/api/') || req.get('X-Requested-With') === 'XMLHttpRequest';
 const safeJson = (status, data) => {
   const result = { error: status < 500 && publicCodes.has(data?.error) ? data.error : codes[status] || (status >= 500 ? 'internal_error' : 'request_failed'), message: publicErrorMessage(status) };
+  if (status === 400 && Object.hasOwn(passwordMessages, data?.error)) {
+    result.error = data.error; result.message = passwordMessages[data.error];
+  }
   if (result.error === 'mfa_required') {
     result.setupRequired = data?.setupRequired === true;
     result.next = result.setupRequired ? '/mfa/setup' : '/mfa/verify';
@@ -85,7 +96,7 @@ export const applicationErrorHandler = nodeEnv => (error, req, res, _next) => {
   if (status >= 500) console.error(error);
   if (res.headersSent) { req.socket.destroy(); return; }
   res.status(status).set('Cache-Control', 'no-store');
-  if (isApi(req)) return res.json(nodeEnv === 'production' ? safeJson(status) : { error: status === 500 ? 'internal_error' : error?.message || codes[status] });
+  if (isApi(req)) return res.json(nodeEnv === 'production' ? safeJson(status, { error: error?.code }) : { error: status === 500 ? 'internal_error' : error?.message || codes[status] });
   if (nodeEnv === 'production') return res.type('html').send(safeHtml(status));
   res.render('error', { title: 'エラー', message: status < 500 ? error?.message || publicErrorMessage(status) : publicErrorMessage(status) }, (failure, html) => {
     // Render failures never escape to Express's default stack-trace renderer.

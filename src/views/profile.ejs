@@ -130,7 +130,7 @@
           <% householdMembers.forEach((member) => { %>
             <article class="profile-member-row">
               <button type="button" class="profile-member-open" data-open-member-dialog="member-dialog-<%= member._id %>" aria-haspopup="dialog" aria-controls="member-dialog-<%= member._id %>"><span><strong><%= member.user?.displayname || member.name %></strong><small><%= member.isRepresentative ? '世帯代表者' : member.linkedAccountMissing ? 'アカウント削除済み' : member.user ? 'アカウント紐付け済み' : member.relationship || 'アカウント未紐付け' %></small></span><span aria-hidden="true">詳細を見る ›</span></button>
-              <%- include('partials/member-support', { member, associationId, householdId: household._id, canEdit: !member.linkedAccountMissing && (!member.user || String(member.user._id || member.user) === String(currentUser._id)) }) %>
+              <%- include('partials/member-support', { member, associationId, householdId: household._id, canEdit: true }) %>
               <dialog class="household-member-dialog" id="member-dialog-<%= member._id %>" aria-labelledby="member-dialog-title-<%= member._id %>">
                 <div class="dialog-heading"><div><p class="eyebrow">家族</p><h3 id="member-dialog-title-<%= member._id %>"><%= member.user?.displayname || member.name %>さんのプロフィール</h3></div><button type="button" class="dialog-close" data-close-member-dialog aria-label="閉じる">×</button></div>
               <% if (!member.isRepresentative && member.user) { %><div class="member-heading"><strong><%= member.user.displayname || member.name %></strong><span class="status-badge">アカウント紐付け済み</span></div>

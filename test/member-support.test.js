@@ -14,7 +14,7 @@ test('support stores only the flag and priority, clears priority for no and remo
   for (const supportPriority of [undefined,'0','4','1.5','01', ['1']]) assert.throws(()=>parseMemberSupport({supportRequired:'yes',supportPriority}), {status:400});
   assert.throws(()=>parseMemberSupport({}), {status:400});
 });
-test('only the member or representative of an unlinked member may save; membership is required', async t => {
+test('the member or household head may save linked and unlinked support; membership is required', async t => {
   let member = {user:'self'}, representative = 'head', active = true, updates = [];
   t.mock.method(Household,'findOne',async ()=>({representative}));
   t.mock.method(HouseholdMember,'findOne',async ()=>member);
@@ -23,13 +23,13 @@ test('only the member or representative of an unlinked member may save; membersh
   t.mock.method(HouseholdMember,'updateOne',async (filter,change)=>updates.push({filter,change}));
   const save = actorId => saveMemberSupport({associationId,householdId,memberId,actorId,values:{supportRequired:'yes',supportPriority:'1'}});
   await save('self');
-  await assert.rejects(save('head'),{status:403});
+  await save('head');
   member = {};
   await save('head');
   await assert.rejects(save('outsider'),{status:403});
   active = false;
   await assert.rejects(save('head'),{status:403});
-  assert.equal(updates.length,2);
+  assert.equal(updates.length,3);
   assert.deepEqual(updates[0].filter,{_id:memberId,household:householdId,association:associationId,endsAt:null});
 });
 test('support modal renders opt-in state, toggle and all criteria without collecting medical details', async ()=>{

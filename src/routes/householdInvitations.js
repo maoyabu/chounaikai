@@ -70,7 +70,7 @@ householdInvitationsRouter.post('/household-invitations/decline', verifyCsrfToke
   return res.redirect(req.user ? '/dashboard' : '/register');
 });
 
-householdInvitationsRouter.post('/associations/:associationId/household/:householdId/invitations/:invitationId/cancel', requireLogin, verifyCsrfToken, async (req, res, next) => {
+export const cancelOwnedHouseholdInvitation = async (req, res, next) => {
   try {
     if (![req.params.associationId, req.params.householdId, req.params.invitationId].every(mongoose.isValidObjectId)) throw fail('招待を確認してください。');
     const household = await Household.findOne({ _id: req.params.householdId, association: req.params.associationId, representative: req.user._id, active: true });
@@ -78,11 +78,12 @@ householdInvitationsRouter.post('/associations/:associationId/household/:househo
     const result = await Invitation.updateOne({ _id: req.params.invitationId, association: req.params.associationId, household: household._id, invitedBy: req.user._id, status: 'pending' }, { $set: { status: 'cancelled' } });
     if (!result.modifiedCount) throw fail('この招待は既に受諾または取り消し済みです。', 409);
     req.session.notice = '未受諾の招待を取り消しました。';
-    return res.redirect('/dashboard');
+    return res.locals.mobileHouseholds ? res.json({ success: true }) : res.redirect('/dashboard');
   } catch (error) { return next(error); }
-});
+};
+householdInvitationsRouter.post('/associations/:associationId/household/:householdId/invitations/:invitationId/cancel', requireLogin, verifyCsrfToken, cancelOwnedHouseholdInvitation);
 
-householdInvitationsRouter.post('/associations/:associationId/household/:householdId/members/:memberId/invite', requireLogin, verifyCsrfToken, async (req, res, next) => {
+export const inviteOwnedHouseholdMember = async (req, res, next) => {
   try {
     const { associationId, householdId, memberId } = req.params;
     if (![associationId, householdId, memberId].every(mongoose.isValidObjectId)) throw fail('家族を確認してください。');
@@ -106,6 +107,7 @@ householdInvitationsRouter.post('/associations/:associationId/household/:househo
     member.email = email;
     await member.save();
     req.session.notice = `${member.name}さんに招待メールを送信しました。`;
-    return res.redirect('/dashboard');
+    return res.locals.mobileHouseholds ? res.json({ success: true }) : res.redirect('/dashboard');
   } catch (error) { return next(error); }
-});
+};
+householdInvitationsRouter.post('/associations/:associationId/household/:householdId/members/:memberId/invite', requireLogin, verifyCsrfToken, inviteOwnedHouseholdMember);
