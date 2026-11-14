@@ -20,8 +20,7 @@ export async function saveMemberSupport({ associationId, householdId, memberId, 
   const member = household && await HouseholdMember.findOne({ _id: memberId, household: householdId, association: associationId, endsAt: null });
   if (!member || !await NeighborhoodAssociation.exists({ _id: associationId, status: 'active', deletedAt: { $exists: false } })) throw fail('家族を確認できません。', 404);
   if (!await AssociationMembership.exists({ association: associationId, household: householdId, user: actorId, status: 'active' })) throw fail('参加中の世帯を確認できません。', 403);
-  const own = String(member.user || '') === String(actorId);
   const managed = String(household.representative) === String(actorId);
-  if (!own && !managed) throw fail('本人または同じ世帯の世帯主のみ登録できます。', 403);
+  if (!managed) throw fail('支援要否は同じ世帯の世帯主のみ登録・変更できます。', 403);
   return HouseholdMember.updateOne({ _id: memberId, household: householdId, association: associationId, endsAt: null }, change);
 }

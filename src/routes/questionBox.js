@@ -1,3 +1,4 @@
+import { discloseOfficers, viewerDisclosureAccess } from '../services/officerDisclosureService.js';
 import express from 'express';
 import { pendingEquipmentLoans, summarizePendingEquipmentLoans } from '../services/equipmentService.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
@@ -24,11 +25,15 @@ questionBoxRouter.get('/:associationId/department-plans', async (req, res, next)
     if (!canAnswer) return res.status(403).render('error', { title: 'エラー', message: '役員メニューを開く権限がありません。' });
     const fiscalYear = Number(req.query.year) || currentFiscalYear();
     if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2200) throw Object.assign(new Error('年度を確認してください。'), { status: 400 });
-    const [plans, myOfficer] = await Promise.all([
+    const [plans, myOfficer, rawOfficers] = await Promise.all([
       AnnualDepartmentPlan.find({ association: association._id, fiscalYear }).populate('department', 'name sortOrder').sort({ createdAt: 1 }).lean(),
-      AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean()
+      AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean(),
+      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean()
     ]);
-    return res.render('officer-department-plans', { title: `${association.name} 部会の年度目標`, association, fiscalYear, plans, canEditReports: Boolean(myOfficer) });
+    const viewer = await viewerDisclosureAccess(association, req.user);
+    const officers = await discloseOfficers(association, rawOfficers, viewer);
+    const plansWithOfficers = plans.map(plan => ({ ...plan, officers: officers.filter(officer => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || '')) }));
+    return res.render('officer-department-plans', { title: `${association.name} 部会の年度目標`, association, fiscalYear, plans: plansWithOfficers, canEditReports: Boolean(myOfficer) });
   } catch (error) { return next(error); }
 });
 
@@ -38,7 +43,8 @@ questionBoxRouter.post('/:associationId/department-plans/:planId/report', verify
     if (!canAnswer) throw Object.assign(new Error('実施報告を入力できる権限がありません。'), { status: 403 });
     const fiscalYear = Number(req.body.fiscalYear), report = String(req.body.report || '').trim();
     const plan = await AnnualDepartmentPlan.findOne({ _id: req.params.planId, association: association._id, fiscalYear });
-    const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean();
+    const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean(),
+      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean();
     if (!plan || !officer || String(plan.department) !== String(officer.department)) throw Object.assign(new Error('担当部会の事業計画を確認できません。'), { status: 403 });
     plan.report = report; plan.reportUpdatedBy = req.user._id; await plan.save();
     await notifyResponsible({ association: association._id, type: 'department_plan', title: '部会の実施報告が更新されました', relatedId: plan._id });

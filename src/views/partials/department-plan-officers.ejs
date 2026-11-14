@@ -1,0 +1,11 @@
+<% if (officers.length) { %>
+<div class="association-department-officers">
+  <% officers.forEach(officer => { %>
+    <span class="association-department-officer">
+      <% if (officer.user?.avatar) { %><img src="<%= officer.user.avatar %>" alt=""><% } else { %><span class="association-department-officer-placeholder" aria-hidden="true">人</span><% } %>
+      <span><%= officer.displayLabel || '担当者' %></span>
+      <span class="status-badge association-department-officer-role"><%= officer.role?.name || '一般役員' %></span>
+    </span>
+  <% }) %>
+</div>
+<% } %>

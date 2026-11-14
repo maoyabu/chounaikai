@@ -2065,3 +2065,5 @@ h1, h2, h3, h4, h5, h6,
 .record-actions-help { margin: .65rem 0; }
 .record-actions-enabled { user-select: none; }
 .record-actions-enabled input, .record-actions-enabled textarea, .record-actions-enabled dialog { user-select: text; }
+
+.association-department-officer-role { font-size: .75rem; padding: .15rem .5rem; white-space: nowrap; }

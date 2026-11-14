@@ -62,3 +62,18 @@ test('public page and department plans never expose names, even to a signed-in v
     assert.ok(html.includes(officer.user.avatar));
   }
 });
+
+test('department goal badges show disclosure-approved names and roles, escaping both', async () => {
+  const visible = view('residents', policy);
+  const render = officers => ejs.renderFile('src/views/partials/department-plan-officers.ejs', { officers });
+  const html = await render([visible]);
+  assert.ok(html.includes('秘密氏名'));
+  assert.match(html, /class="status-badge association-department-officer-role">会長<\/span>/);
+  const hidden = await render([view('open', policy)]);
+  assert.ok(!hidden.includes('秘密氏名'));
+  assert.ok(hidden.includes('会長担当'));
+  const escaped = await render([{ displayLabel: '<script>name</script>', role: { name: '<b>role</b>' } }]);
+  assert.ok(!escaped.includes('<script>'));
+  assert.ok(!escaped.includes('<b>'));
+  assert.equal(await render([]), '\n');
+});
