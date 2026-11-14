@@ -43,8 +43,7 @@ questionBoxRouter.post('/:associationId/department-plans/:planId/report', verify
     if (!canAnswer) throw Object.assign(new Error('実施報告を入力できる権限がありません。'), { status: 403 });
     const fiscalYear = Number(req.body.fiscalYear), report = String(req.body.report || '').trim();
     const plan = await AnnualDepartmentPlan.findOne({ _id: req.params.planId, association: association._id, fiscalYear });
-    const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean(),
-      AnnualOfficer.find({ association: association._id, fiscalYear, cancelledAt: null }).populate('user', 'displayname username email avatar').populate('role', 'name').populate('department', 'name').sort({ createdAt: 1 }).lean();
+    const officer = await AnnualOfficer.findOne({ association: association._id, fiscalYear, user: req.user._id, cancelledAt: null }).select('department').lean();
     if (!plan || !officer || String(plan.department) !== String(officer.department)) throw Object.assign(new Error('担当部会の事業計画を確認できません。'), { status: 403 });
     plan.report = report; plan.reportUpdatedBy = req.user._id; await plan.save();
     await notifyResponsible({ association: association._id, type: 'department_plan', title: '部会の実施報告が更新されました', relatedId: plan._id });
