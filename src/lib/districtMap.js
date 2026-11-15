@@ -23,7 +23,8 @@ export function districtMapPresentation(value) {
     // Earth share URLs contain a Drive project ID, not a My Maps ID.
     // Earth blocks external framing; show its public map thumbnail instead.
     const data = url.pathname.match(/\/data=([A-Za-z0-9_-]+)/)?.[1];
-    const projectId = data ? Buffer.from(data, 'base64url').toString('latin1').match(/\x0a\x21([A-Za-z0-9_-]{33})/)?.[1] : '';
+    const sharedProjectId = url.pathname.match(/^\/earth\/d\/([A-Za-z0-9_-]+)\/?$/)?.[1];
+    const projectId = sharedProjectId || (data ? Buffer.from(data, 'base64url').toString('latin1').match(/\x0a\x21([A-Za-z0-9_-]{33})/)?.[1] : '');
     if (projectId) previewUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(projectId)}&sz=w1600`;
   }
   const embedUrl = /^[A-Za-z0-9_-]+$/.test(mapId) ? `https://www.google.com/maps/d/embed?mid=${encodeURIComponent(mapId)}` : '';
