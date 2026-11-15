@@ -102,6 +102,7 @@
         <% if (!districtGroups.length) { %><div class="alert alert-error">登録できる班がありません。町内会管理者へ確認してください。</div><% } else { %>
         <form class="form-card form-stack" action="/associations/<%= membership.association._id %>/household" method="post">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<%- include('partials/district-map-link', { association: membership.association }) %>
           <label>地区 <span class="required">必須</span><select class="profile-registration-district" required><option value="">選択してください</option><% districtGroups.forEach((district) => { %><option value="<%= district._id %>"><%= district.name %></option><% }) %></select></label><label>班 <span class="required">必須</span><select class="profile-registration-group"><option value="">地区を選択してください</option></select></label><input type="hidden" name="districtGroupId" class="profile-registration-location">
           <div class="form-columns"><label>郵便番号 <span class="required">必須</span><input name="postalCode" inputmode="numeric" autocomplete="postal-code" required></label><label>電話番号（任意）<input type="tel" name="phone" autocomplete="tel"></label></div>
           <label>住所 <span class="required">必須</span><input name="street" autocomplete="street-address" required></label><label>建物名など（任意）<input name="building"></label>

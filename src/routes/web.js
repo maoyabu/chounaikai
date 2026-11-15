@@ -474,7 +474,7 @@ webRouter.get('/profile', requireLogin, async (req, res, next) => {
     const visibleHouseholds = households.filter((household) => household.association);
     const [members, memberships] = await Promise.all([
       HouseholdMember.find({ household: { $in: visibleHouseholds.map((household) => household._id) }, endsAt: null }).sort({ isRepresentative: -1, birthDate: 1 }).lean(),
-      AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name' }).lean()
+      AssociationMembership.find({ user: req.user._id, status: 'active' }).populate({ path: 'association', match: { status: 'active', deletedAt: { $exists: false } }, select: 'name districtMapUrl' }).lean()
     ]);
     const accountIds = members.map((member) => member.user).filter(Boolean);
     const accounts = accountIds.length ? await User.find({ _id: { $in: accountIds } }).select('displayname username email birth_date sex').lean() : [];

@@ -1,0 +1,9 @@
+<% const districtMap = association.districtMapUrl ? districtMapPresentation(association.districtMapUrl) : null; if (districtMap) { %>
+<section class="content-card district-map-section">
+  <h2><%= association.name %>の地区・班の区分地図</h2>
+  <p class="help-text">お住まいの場所から、所属する地区と班をご確認ください。</p>
+  <% if (districtMap.embedUrl) { %><iframe class="district-map-frame" src="<%= districtMap.embedUrl %>" title="<%= association.name %>の地区・班の区分地図" loading="lazy" allowfullscreen></iframe><% } %>
+  <p><a class="button button-quiet" href="<%= districtMap.href %>" target="_blank" rel="noopener noreferrer">自分の地区を確認する（別タブ）</a></p>
+  <% if (districtMap.embedUrl) { %><p class="help-text">地図が表示されない場合は、上のリンクから開いてください。</p><% } %>
+</section>
+<% } %>

@@ -226,3 +226,11 @@
 .association-list-faq-button{flex-shrink:0;background:#173f75;color:#fff}
 .association-list-faq-button:hover{background:#102e57}
 .association-list-faq-button:focus-visible{outline:3px solid #173f75;outline-offset:3px}
+
+.district-map-frame {
+  display: block;
+  width: 100%;
+  height: clamp(320px, 60vh, 560px);
+  border: 0;
+  border-radius: 12px;
+}

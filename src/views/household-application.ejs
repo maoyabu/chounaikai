@@ -6,6 +6,7 @@
   <% if (!districtGroups.length) { %><div class="alert alert-error">現在、参加先として選択できる班がありません。</div><% } else { %>
   <form action="/associations/<%= association._id %>/join" method="post" class="form-card form-stack">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<%- include('partials/district-map-link', { association: association }) %>
     <label>地区 <span class="required">必須</span><select id="join-district" required><option value="">選択してください</option><% districtGroups.forEach((district) => { %><option value="<%= district._id %>"><%= district.name %></option><% }) %></select></label><label>班 <span class="required">必須</span><select id="join-group"><option value="">地区を選択してください</option></select></label><input type="hidden" name="districtGroupId" id="join-district-group" value="<%= values.districtGroupId || '' %>">
     <input type="hidden" name="residentMode" value="representative">
     <div id="join-representative-fields" class="form-stack">

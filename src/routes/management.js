@@ -1,3 +1,4 @@
+import { parseDistrictMapUrl } from '../lib/districtMap.js';
 import { handleLocationLink } from './locationLinks.js';
 import { loadMemberTags } from '../services/memberTagService.js';
 import { parseHazardMapUrl } from '../lib/hazardMap.js';
@@ -316,8 +317,10 @@ managementRouter.post('/:associationId/manage/name', requirePermission('associat
     const name = String(req.body.name || '').trim(); if (!name) throw fail('町内会名を入力してください。');
     const annualAssociationFee = Number(req.body.annualAssociationFee || 0);
     if (!Number.isInteger(annualAssociationFee) || annualAssociationFee < 0) throw fail('町内会費は0以上の整数で入力してください。');
+    const districtMapUrl = parseDistrictMapUrl(req.body.districtMapUrl);
     const hazardMapUrl = parseHazardMapUrl(req.body.hazardMapUrl);
     const association = await NeighborhoodAssociation.findById(req.params.associationId); if (!association) throw fail('町内会を確認できません。', 404);
+    association.districtMapUrl = districtMapUrl;
     association.hazardMapUrl = hazardMapUrl;
     const before = { name: association.name, annualAssociationFee: association.annualAssociationFee }; association.name = name; association.annualAssociationFee = annualAssociationFee;
     association.address = { postalCode: String(req.body.postalCode || '').replace(/[^0-9]/g, ''), prefecture: String(req.body.prefecture || '').trim(), city: String(req.body.city || '').trim(), street: String(req.body.street || '').trim() };

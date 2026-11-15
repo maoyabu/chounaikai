@@ -1,3 +1,4 @@
+import { districtMapPresentation } from './lib/districtMap.js';
 import { mobileCommunityInfoRouter } from './routes/mobileCommunityInfo.js';
 import { mobileHouseholdsRouter } from './routes/mobileHouseholds.js';
 import { apnsDevicesRouter } from './routes/apnsDevices.js';
@@ -83,6 +84,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.locals.mfaService = applySiteMfaPolicy(mfaService || createMfaService({ key: mfaEncryptionKey(mfaKey, sessionSecret, nodeEnv) }), app.locals.siteSecurityService);
   // Change the asset URL whenever the server starts (or when a release version
   // is provided) so browsers do not keep using stale CSS/JS assets.
+  app.locals.districtMapPresentation = districtMapPresentation;
   app.locals.assetVersion = process.env.RELEASE_VERSION || String(Date.now());
   app.set('trust proxy', trustProxy);
   const secureMongoOptions = { ...mongoOptions, ...mongoSecurityOptions(mongoUri, nodeEnv, { caFile: mongoOptions.tlsCAFile, allowedHosts: process.env.MONGODB_ALLOWED_HOSTS }) };
