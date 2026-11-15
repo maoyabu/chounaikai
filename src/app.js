@@ -20,6 +20,7 @@ import { mobileDisasterRouter } from './routes/disasterInformation.js';
 import { mobileEventManagementRouter } from './routes/mobileEventManagement.js';
 import { mobileQuestionsRouter } from './routes/mobileQuestions.js';
 import { mobileEventsRouter } from './routes/mobileEvents.js';
+import { mobileGroupsRouter } from './routes/mobileGroups.js';
 import { mobileEquipmentRouter } from './routes/mobileEquipment.js';
 import { mobileFinanceRouter } from './routes/mobileFinance.js';
 import { mobileInventoryRouter } from './routes/mobileInventory.js';
@@ -142,6 +143,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/associations', mobileDisasterRouter);
   app.use('/api/associations', mobileEventsRouter);
+  app.use('/api/associations/:associationId/groups', mobileGroupsRouter);
   app.use('/api/associations/:associationId/questions', mobileQuestionsRouter);
   app.use('/api/associations/:associationId/events/manage', mobileEventManagementRouter);
   app.use('/api/associations/:associationId/equipment', mobileEquipmentRouter);
