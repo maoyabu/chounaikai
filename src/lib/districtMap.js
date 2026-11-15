@@ -16,13 +16,16 @@ export function districtMapPresentation(value) {
   if (!href) return null;
   const url = new URL(href);
   let mapId = '';
+  let previewUrl = '';
   if (['www.google.com', 'google.com'].includes(url.hostname) && url.pathname.startsWith('/maps/d/')) {
     mapId = url.searchParams.get('mid') || '';
   } else if (url.hostname === 'earth.google.com') {
-    // My Maps exports its map ID as a length-delimited field in Earth share URLs.
+    // Earth share URLs contain a Drive project ID, not a My Maps ID.
+    // Earth blocks external framing; show its public map thumbnail instead.
     const data = url.pathname.match(/\/data=([A-Za-z0-9_-]+)/)?.[1];
-    if (data) mapId = Buffer.from(data, 'base64url').toString('latin1').match(/\x0a\x21([A-Za-z0-9_-]{33})/)?.[1] || '';
+    const projectId = data ? Buffer.from(data, 'base64url').toString('latin1').match(/\x0a\x21([A-Za-z0-9_-]{33})/)?.[1] : '';
+    if (projectId) previewUrl = `https://drive.google.com/thumbnail?id=${encodeURIComponent(projectId)}&sz=w1600`;
   }
   const embedUrl = /^[A-Za-z0-9_-]+$/.test(mapId) ? `https://www.google.com/maps/d/embed?mid=${encodeURIComponent(mapId)}` : '';
-  return { href, embedUrl };
+  return { href, embedUrl, previewUrl };
 }

@@ -2,6 +2,12 @@
 <section class="content-card district-map-section">
   <h2><%= association.name %>の地区・班の区分地図</h2>
   <p class="help-text">お住まいの場所から、所属する地区と班をご確認ください。</p>
+  <% if (districtMap.previewUrl) { %>
+  <a class="district-map-preview-link" href="<%= districtMap.href %>" target="_blank" rel="noopener noreferrer" aria-label="地区・班の地図を別タブで開く">
+    <img class="district-map-preview" src="<%= districtMap.previewUrl %>" alt="<%= association.name %>の地区・班の区分地図" loading="lazy" referrerpolicy="no-referrer">
+  </a>
+  <p class="help-text">地図画像を表示しています。拡大・移動して詳しく確認するには、画像または下のリンクから地図を開いてください。</p>
+  <% } %>
   <% if (districtMap.embedUrl) { %><iframe class="district-map-frame" src="<%= districtMap.embedUrl %>" title="<%= association.name %>の地区・班の区分地図" loading="lazy" allowfullscreen></iframe><% } %>
   <p><a class="button button-quiet" href="<%= districtMap.href %>" target="_blank" rel="noopener noreferrer">自分の地区を確認する（別タブ）</a></p>
   <% if (districtMap.embedUrl) { %><p class="help-text">地図が表示されない場合は、上のリンクから開いてください。</p><% } %>

@@ -11,9 +11,10 @@ test('district map validates links and supports removal', () => {
     assert.equal(districtMapPresentation(value), null);
   }
 });
-test('Earth My Maps shares and My Maps links use the restricted Google embed origin', () => {
+test('Earth projects use image previews while My Maps uses Google embed', () => {
   const embed = 'https://www.google.com/maps/d/embed?mid=1COmtrtF9BOyk9rR-SaiRKmVhJnNAzhJ_';
-  assert.equal(districtMapPresentation(earth).embedUrl, embed);
+  assert.equal(districtMapPresentation(earth).embedUrl, '');
+  assert.equal(districtMapPresentation(earth).previewUrl, 'https://drive.google.com/thumbnail?id=1COmtrtF9BOyk9rR-SaiRKmVhJnNAzhJ_&sz=w1600');
   assert.equal(districtMapPresentation('https://www.google.com/maps/d/viewer?mid=1COmtrtF9BOyk9rR-SaiRKmVhJnNAzhJ_').embedUrl, embed);
   assert.equal(districtMapPresentation('https://example.com/map').embedUrl, '');
   assert.equal(districtMapPresentation('https://www.google.com.evil.test/maps/d/embed?mid=abc').embedUrl, '');
@@ -26,6 +27,11 @@ test('map and registration link render configured links and hide absent or unsaf
     const html = await render(earth);
     assert.match(html, /自分の地区を確認する/);
     assert.match(html, /target="_blank" rel="noopener noreferrer"/);
-    if (partial === 'district-map') assert.match(html, /<iframe.*https:\/\/www.google.com\/maps\/d\/embed/);
+    if (partial === 'district-map') {
+      assert.match(html, /<img class="district-map-preview".*https:\/\/drive.google.com\/thumbnail/);
+      assert.doesNotMatch(html, /<iframe/);
+      const myMapsHtml = await render('https://www.google.com/maps/d/viewer?mid=abc123');
+      assert.match(myMapsHtml, /<iframe.*https:\/\/www.google.com\/maps\/d\/embed/);
+    }
   }
 });
