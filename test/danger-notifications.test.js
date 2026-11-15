@@ -1,3 +1,4 @@
+import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import nodemailer from 'nodemailer';
@@ -34,10 +35,15 @@ test('dispatches email and Push independently and respects explicit channel OFF'
   t.mock.method(NotificationSettings,'findOne',()=>({lean:async()=>settings}));
   t.mock.method(User,'findById',()=>({select:()=>({lean:async()=>({_id:'recipient',email:'resident@example.test'})})}));
   t.mock.method(PushSubscription,'find',async()=>[{endpoint:'https://push.example.test',keys:{},save:async()=>{}}]);
+  t.mock.method(NeighborhoodAssociation,'findById',()=>({select:()=>({lean:async()=>({name:'中央町内会'})})}));
   t.mock.method(nodemailer,'createTransport',()=>({sendMail:async value=>{mail=value;}}));
   t.mock.method(webpush,'setVapidDetails',()=>{});
   t.mock.method(webpush,'sendNotification',async(_subscription,payload)=>{push=JSON.parse(payload);});
   await deliverNotification(record);
+  assert.equal(mail.subject,'【まちの伝言板】［中央町内会］緊急情報');
+  assert.match(mail.text,/中央町内会からのお知らせです。/);
+  assert.match(mail.text,/緊急情報/);
+  assert.match(mail.html,/Webで内容を確認する/);
   assert.equal(mail.to,'resident@example.test');assert.match(mail.text,/https:\/\/app.example.test\/associations\/association\/dangers\/report/);
   assert.equal(push.url,'/associations/association/dangers/report');assert.equal(delivery['delivery.email'].status,'sent');assert.equal(delivery['delivery.push'].status,'sent');
   t.mock.method(nodemailer,'createTransport',()=>({sendMail:async()=>{throw new Error('SMTP unavailable');}}));

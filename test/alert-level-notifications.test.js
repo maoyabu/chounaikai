@@ -1,3 +1,4 @@
+import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ejs from 'ejs';
@@ -78,6 +79,7 @@ test('warning delivery shares safety links and honors push/email switches indepe
   t.mock.method(PushSubscription,'find',async()=>[{endpoint:'https://push.example.test',keys:{},save:async()=>{}}]);
   t.mock.method(webpush,'setVapidDetails',()=>{});
   t.mock.method(webpush,'sendNotification',async(_,payload)=>{push=JSON.parse(payload);});
+  t.mock.method(NeighborhoodAssociation,'findById',()=>({select:()=>({lean:async()=>({name:'中央町内会'})})}));
   t.mock.method(nodemailer,'createTransport',()=>({sendMail:async message=>{mail=message;}}));
   t.mock.method(Notification,'updateOne',async(_,update)=>{result=update.$set;});
   await deliverNotification(record);

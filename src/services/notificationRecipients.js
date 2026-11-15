@@ -18,10 +18,10 @@ export const notifyResponsible = async ({ association, districtGroup, officers =
   } catch (error) { console.error('Responsible notification failed:', error.name); }
 };
 
-export const queueNotice = async ({ association, recipients, type, title, relatedId, relatedLoan, relatedRequest }) => {
+export const queueNotice = async ({ association, recipients, type, title, body = '町内会のページで内容を確認してください。', relatedId, relatedLoan, relatedRequest }) => {
   try {
     const ids = [...new Set(recipients.filter(Boolean).map(String))];
-    if (ids.length) await Notification.insertMany(ids.map(recipient => ({ association, recipient, type, title, body: '町内会のページで内容を確認してください。', relatedId, relatedLoan, relatedRequest })));
+    if (ids.length) await Notification.insertMany(ids.map(recipient => ({ association, recipient, type, title, body, relatedId, relatedLoan, relatedRequest })));
   } catch (error) { console.error('Notification queue failed:', error.name); }
 };
 
@@ -30,7 +30,13 @@ export const notifyEvent = async (event, action) => {
   try {
     const groupUsers = event.group ? await AssociationGroupMembership.find({ association: event.association, group: event.group, status: 'active' }).distinct('user') : null;
     const recipients = await AssociationMembership.find({ association: event.association, status: 'active', ...(groupUsers ? { user: { $in: groupUsers } } : {}) }).distinct('user');
-    await queueNotice({ association: event.association, recipients, type: event.group ? 'group_event' : 'event', title: `行事が${action}されました`, relatedId: event._id });
+    await queueNotice({ association: event.association, recipients, type: event.group ? 'group_event' : 'event', title: `行事が${action}されました`, body: [
+      `行事名：${event.title || '行事'}`,
+      event.startDate && `開始：${event.startDate}${event.allDay ? '（終日）' : ` ${event.startTime || ''}`}`,
+      event.hasEndDate !== false && event.endDate && `終了：${event.endDate}${event.allDay ? '' : ` ${event.endTime || ''}`}`,
+      event.category && `分類：${event.category}`,
+      event.body && `内容：\n${event.body}`
+    ].filter(Boolean).join('\n'), relatedId: event._id });
   } catch (error) { console.error('Event notification failed:', error.name); }
 };
 

@@ -1,5 +1,8 @@
+import { renderEmailHtml } from './emailTemplate.js';
 import { apnsConfigured, sendNativePush } from './apnsService.js';
 import nodemailer from 'nodemailer';
+import { OfficerAnnouncement } from '../models/officerAnnouncement.js';
+import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import webpush from 'web-push';
 import { Notification } from '../models/notification.js';
 import { PushSubscription } from '../models/pushSubscription.js';
@@ -30,13 +33,21 @@ const sendEmail = async ({ notification, recipient, required }) => {
   const config = mailConfig();
   if (!wantsEmail({ email: recipient?.email, emailRequired: required }) || !config) return { status: 'skipped' };
   const transporter = nodemailer.createTransport({ ...config.transport, disableFileAccess: true, disableUrlAccess: true });
+  const association = notification.association?.name ? notification.association : await NeighborhoodAssociation.findById(notification.association).select('name').lean();
+  const associationName = association?.name || '町内会';
+  const subject = `【まちの伝言板】［${associationName}］${notification.title}`;
   const url = `${config.baseUrl}${notificationDestination(notification)}`;
+  const announcement = notification.relatedType === 'OfficerAnnouncement' && notification.relatedId
+    ? await OfficerAnnouncement.findOne({ _id: notification.relatedId, association: notification.association?._id || notification.association }).select('title body').lean()
+    : null;
+  const details = announcement ? `${notification.body}\n\n件名：${announcement.title}\n内容：\n${announcement.body}` : notification.body;
+  const content = `${associationName}からのお知らせです。\n\n${notification.title}\n\n${details}`;
   await transporter.sendMail({
     from: config.from,
     to: recipient.email,
-    subject: `【まちの伝言板】${notification.title}`,
-    text: `${recipient.displayname || recipient.username || ''}さん\n\n${notification.body}\n\n詳細：${url}`,
-    html: `<p>${escapeHtml(recipient.displayname || recipient.username || '')}さん</p><p>${escapeHtml(notification.body)}</p><p><a href="${escapeHtml(url)}">詳細を確認する</a></p>`
+    subject,
+    text: `${recipient.displayname || recipient.username || ''}さん\n\n${content}\n\n以下のWebページで内容をご確認ください。\n${url}`,
+    html: renderEmailHtml({ title: notification.title, bodyHtml: `<p>${escapeHtml(recipient.displayname || recipient.username || '')}さん</p><p>${escapeHtml(content).replace(/\n/g, '<br>')}</p><p>以下のWebページで内容をご確認ください。</p><p><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;background:#176b4d;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold">Webで内容を確認する</a></p>` })
   });
   return { status: 'sent', sentAt: new Date() };
 };

@@ -18,8 +18,12 @@ test('hidden events do not notify; group events notify only active association/g
   t.mock.method(Notification, 'insertMany', async values => { records = values; });
   await notifyEvent({ visible: false }, '登録');
   assert.equal(Notification.insertMany.mock.callCount(), 0);
-  await notifyEvent({ visible: true, association: 'town', group: 'group', _id: 'event' }, '変更');
+  await notifyEvent({ visible: true, association: 'town', group: 'group', _id: 'event', title: '秋まつり', startDate: '2026-11-15', startTime: '10:00', endDate: '2026-11-15', endTime: '12:00', body: '公園に集合してください。' }, '変更');
   assert.equal(records.length, 1);
   assert.equal(records[0].recipient, 'resident');
   assert.equal(records[0].type, 'group_event');
+  assert.match(records[0].body, /行事名：秋まつり/);
+  assert.match(records[0].body, /開始：2026-11-15 10:00/);
+  assert.match(records[0].body, /終了：2026-11-15 12:00/);
+  assert.match(records[0].body, /公園に集合してください。/);
 });
