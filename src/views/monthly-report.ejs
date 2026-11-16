@@ -7,26 +7,25 @@
   <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
   <section class="content-card">
     <h2>対象月</h2>
-    <form method="get" class="monthly-report-selector">
-      <label>報告する月<input type="month" name="month" value="<%= report.month %>" min="2000-01" max="2200-12" required></label>
-      <button class="button button-quiet">月を選択</button>
-      <button class="button button-primary" name="output" value="1">月次レポートを出力</button>
+    <form method="get" class="monthly-report-selector" data-monthly-report-selector>
+      <label>報告する月<input type="month" name="month" value="<%= report.month %>" min="2000-01" max="2200-12" required data-report-month></label>
+      <noscript><button class="button button-primary">レポートを表示</button></noscript>
     </form>
     <p>情報共有・会計・各部の実績は<%= reportMonthLabel(report.month) %>、町内会行事の振り返りは<%= reportMonthLabel(report.previousMonth) %>です。</p>
   </section>
-  <section class="content-card">
-    <h2><%= reportMonthLabel(report.month) %>の情報共有事項</h2>
+  <dialog id="monthly-information-dialog" class="monthly-information-dialog" aria-labelledby="monthly-information-title">
+    <div class="dialog-heading">
+    <h2 id="monthly-information-title"><%= reportMonthLabel(report.month) %>の情報共有事項</h2><button type="button" class="dialog-close" data-monthly-information-close aria-label="閉じる">×</button></div>
     <form method="post" action="/associations/<%= association._id %>/monthly-reports" class="form-stack">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= report.month %>">
       <label>情報共有<textarea name="information" rows="7" maxlength="20000" placeholder="今月共有したい事項を入力してください。"><%= report.information %></textarea></label>
       <p class="help-text">この町内会の役員で共有します。レポートには保存済みの内容を使用します。</p>
-      <div class="form-actions"><button class="button button-primary">情報共有を保存</button></div>
+      <div class="form-actions"><button type="button" class="button button-quiet" data-monthly-information-close>キャンセル</button><button class="button button-primary">情報共有を保存</button></div>
     </form>
-  </section>
-  <% if (showOutput) { %>
+  </dialog>
   <section class="monthly-report-output" aria-label="月次レポート">
     <div class="section-heading"><h2><%= reportMonthLabel(report.month) %> 月次レポート</h2><a class="button button-primary" href="/associations/<%= association._id %>/monthly-reports.xlsx?month=<%= report.month %>">Excel形式でダウンロード</a></div>
-    <section class="content-card"><h3>情報共有事項</h3><div class="monthly-report-text"><%= report.information || '登録されていません。' %></div></section>
+    <section class="content-card"><div class="section-heading"><h3>情報共有事項</h3><button type="button" class="button button-quiet" data-monthly-information-open>情報共有事項を登録・編集</button></div><div class="monthly-report-text"><%= report.information || '登録されていません。' %></div></section>
     <section class="content-card"><h3>会計報告</h3>
       <p>集計期間：<%= report.finance.fiscalStartMonth %>-01 ～ <%= reportMonthLabel(report.month) %>末</p>
       <% if (report.finance.enabled) { %>
@@ -48,6 +47,6 @@
       </section><% }); %>
     </section>
   </section>
-  <% } %>
 </main>
+<script src="/assets/monthly-report.js?v=<%= assetVersion %>" defer></script>
 <%- include('partials/foot') %>

@@ -132,7 +132,7 @@ test('officers and managers can save information and preserve the selected month
   const req = { params: { associationId: aid }, user: { _id: uid }, body: { month: '2026-12', information: '年末行事の案内' }, session: {} };
   await route('post', '/:associationId/monthly-reports').stack.at(-1).handle(req, { redirect: value => { redirected = value; } }, next);
   assert.deepEqual(filter, { association: aid, month: '2026-12' });
-  assert.equal(redirected, `/associations/${aid}/monthly-reports?month=2026-12&output=1`);
+  assert.equal(redirected, `/associations/${aid}/monthly-reports?month=2026-12`);
 });
 
 test('officer download returns a valid Excel attachment and disabled finance never reads ledger data', async t => {
@@ -183,15 +183,18 @@ test('Excel export contains the same saved information, numeric finance totals a
   assert.match(JSON.stringify(restored.getWorksheet('部ごとの行事').getSheetValues()), /防災点検/);
 });
 
-test('monthly report page escapes shared text, displays month scopes and output links, and hides output until requested', async () => {
+test('monthly report page escapes shared text, displays month scopes and output links, and always shows the selected report with a modal editor', async () => {
   const report = buildMonthlyReport({ association, month: '2026-11', information: '<script>alert(1)</script>\n連絡事項', events: [event('前月行事', '2026-10-01')] });
-  const locals = { title: '月次報告', association, report, showOutput: true, reportMonthLabel, eventSchedule, csrfToken: 'token', currentPath: '' };
+  const locals = { title: '月次報告', association, report, reportMonthLabel, eventSchedule, csrfToken: 'token', currentPath: '' };
   const html = await renderView('src/views/monthly-report.ejs', locals);
   assert.match(html, /&lt;script&gt;/);
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
   assert.match(html, /前月（2026年10月）/);
   assert.match(html, /monthly-reports.xlsx\?month=2026-11/);
   assert.match(html, /name="_csrf" value="token"/);
-  const initial = await renderView('src/views/monthly-report.ejs', { ...locals, showOutput: false });
-  assert.doesNotMatch(initial, /Excel形式でダウンロード/);
+  assert.match(html, /<dialog[^>]+id="monthly-information-dialog"/);
+  assert.match(html, /data-monthly-information-open/);
+  assert.match(html, /data-report-month/);
+  assert.doesNotMatch(html, /月次レポートを出力/);
+  assert.match(html, /name="month" value="2026-11"/);
 });

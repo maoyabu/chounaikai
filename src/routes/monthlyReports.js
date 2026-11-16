@@ -19,7 +19,7 @@ monthlyReportsRouter.get('/:associationId/monthly-reports', async (req, res, nex
     const month = req.query.month === undefined ? currentReportMonth() : req.query.month;
     const report = await loadMonthlyReport({ association, month });
     res.set('Cache-Control', 'private, no-store');
-    return res.render('monthly-report', { title: `${association.name} 月次報告`, association, report, showOutput: req.query.output === '1', reportMonthLabel, eventSchedule });
+    return res.render('monthly-report', { title: `${association.name} 月次報告`, association, report, reportMonthLabel, eventSchedule });
   } catch (error) { return next(error); }
 });
 
@@ -29,7 +29,7 @@ monthlyReportsRouter.post('/:associationId/monthly-reports', verifyCsrfToken, as
     const { month } = reportPeriod(req.body.month);
     await saveMonthlyInformation({ association: association._id, month, information: req.body.information, user: req.user._id });
     req.session.notice = `${reportMonthLabel(month)}の情報共有事項を保存しました。`;
-    return res.redirect(`/associations/${association._id}/monthly-reports?month=${month}&output=1`);
+    return res.redirect(`/associations/${association._id}/monthly-reports?month=${month}`);
   } catch (error) { return next(error); }
 });
 

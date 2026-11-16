@@ -3,6 +3,9 @@
 .monthly-report-selector label { display: grid; gap: .4rem; }
 .monthly-report-selector input { padding: .7rem; }
 .monthly-report-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.monthly-information-dialog { width: min(720px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; border: 1px solid #dce5df; border-radius: 1rem; padding: 1.5rem; color: #17231f; }
+.monthly-information-dialog::backdrop { background: rgb(0 0 0 / 40%); }
+.monthly-information-dialog h2 { font-size: 1.25rem; }
 .monthly-report-table-wrap { overflow-x: auto; }
 .monthly-report-table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; }
 .monthly-report-output > .section-heading > .button { color: #fff; }
