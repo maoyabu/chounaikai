@@ -9,7 +9,8 @@ import { verifyCsrfToken } from '../middleware/csrf.js';
 import { AssociationEvent } from '../models/associationEvent.js';
 import { NeighborhoodAssociation } from '../models/neighborhoodAssociation.js';
 import { loadQuestionBoxAccess } from '../services/questionBoxService.js';
-import { eventValues } from '../services/associationEventService.js';
+import { eventValues, eventDepartmentValue } from '../services/associationEventService.js';
+import { Department } from '../models/organization.js';
 import { loadAssociationPageData } from '../services/associationPublicPageService.js';
 import { acceptPublicPhotos, acceptEventImage, uploadPublicPhoto, deletePublicPhoto } from '../services/publicPageImageService.js';
 
@@ -114,7 +115,8 @@ associationEventsRouter.get('/:associationId/events/manage', requireLogin, async
     const association = await officerAccess(req);
     const events = await AssociationEvent.find({ association: association._id }).sort({ startDate: -1, startTime: -1 }).lean();
     const categories = [...new Set([...(association.eventCategories || []), ...events.map(event => event.category)])].sort((a, b) => a.localeCompare(b, 'ja'));
-    return res.render('association-events-manage', { title: `${association.name} 町内会行事管理`, association, events, categories });
+    const departments = await Department.find({ association: association._id }).sort({ sortOrder: 1, name: 1 }).lean();
+    return res.render('association-events-manage', { title: `${association.name} 町内会行事管理`, association, events, categories, departments });
   } catch (error) { return next(error); }
 });
 
@@ -122,6 +124,7 @@ export const createAssociationEvent = async (req, res, next) => {
   try {
     const association = await officerAccess(req);
     const values = eventValues(req.body);
+    values.department = await eventDepartmentValue(req.body, association._id);
     const createdEvent = await persistEventImage({ file: req.file, association: association._id, persist: image => AssociationEvent.create({ association: association._id, ...values, ...(image ? { image } : {}) }) });
     await notifyEvent(createdEvent, '登録');
     await NeighborhoodAssociation.updateOne({ _id: association._id }, { $addToSet: { eventCategories: values.category } });
@@ -139,6 +142,7 @@ export const updateAssociationEvent = async (req, res, next) => {
     const values = eventValues(req.body);
     const previous = await AssociationEvent.findOne({ _id: req.params.eventId, association: association._id }).lean();
     if (!previous) throw notFound();
+    values.department = await eventDepartmentValue(req.body, association._id, previous);
     const event = await persistEventImage({ file: req.file, association: association._id, previousImage: previous.image, persist: async image => {
       if (image) values.image = image;
       const updated = await AssociationEvent.findOneAndUpdate({ _id: req.params.eventId, association: association._id }, { $set: values });

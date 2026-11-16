@@ -1,0 +1,8 @@
+<% if (!items.length) { %><p class="empty-state">該当する行事はありません。</p><% } else { %>
+<div class="monthly-report-table-wrap" tabindex="0" role="region" aria-label="行事一覧（横にスクロールできます）"><table class="monthly-report-table">
+  <thead><tr><th scope="col">日程</th><th scope="col">行事タイトル</th><% if (!future) { %><th scope="col">状況</th><th scope="col">完了報告</th><% } %></tr></thead>
+  <tbody><% items.forEach(event => { %><tr>
+    <td><%= eventSchedule(event) %></td><td><%= event.title %></td>
+    <% if (!future) { %><td><%= event.completed ? '完了' : '未完了' %></td><td class="monthly-report-text"><%= event.implementationReport || '未登録' %></td><% } %>
+  </tr><% }); %></tbody>
+</table></div><% } %>

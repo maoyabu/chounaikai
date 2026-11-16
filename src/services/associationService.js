@@ -17,6 +17,7 @@ import { QuestionThread } from '../models/questionThread.js';
 import { OfficerAnnouncement, OfficerAnnouncementReceipt } from '../models/officerAnnouncement.js';
 import { OfficerContactGroup } from '../models/officerContactGroup.js';
 import { AssociationEvent } from '../models/associationEvent.js';
+import { MonthlyReport } from '../models/monthlyReport.js';
 
 let transactionSupport;
 
@@ -151,6 +152,7 @@ export const permanentlyDeleteAssociation = async ({ association }) => {
     QuestionThread.deleteMany({ association: associationId }), OfficerAnnouncement.deleteMany({ association: associationId }),
     OfficerAnnouncementReceipt.deleteMany({ association: associationId }),
     OfficerContactGroup.deleteMany({ association: associationId }), AssociationEvent.deleteMany({ association: associationId }),
+    MonthlyReport.deleteMany({ association: associationId }),
     AssociationEquipment.deleteMany({ association: associationId }), EquipmentSettings.deleteMany({ association: associationId }),
     EquipmentInventory.deleteMany({ association: associationId }), EquipmentLoan.deleteMany({ association: associationId }),
     EquipmentPurchase.deleteMany({ association: associationId }), EquipmentReminder.deleteMany({ association: associationId }),

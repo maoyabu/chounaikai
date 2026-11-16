@@ -65,6 +65,7 @@ import { withdrawalsRouter } from './routes/withdrawals.js';
 import { questionBoxRouter } from './routes/questionBox.js';
 import { officerAnnouncementsRouter } from './routes/officerAnnouncements.js';
 import { officerNetworkRouter } from './routes/officerNetwork.js';
+import { monthlyReportsRouter } from './routes/monthlyReports.js';
 import { districtMessagesRouter } from './routes/districtMessages.js';
 import { associationEventsRouter } from './routes/associationEvents.js';
 import { associationGroupsRouter } from './routes/associationGroups.js';
@@ -189,6 +190,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/associations', sheltersRouter);
   app.use('/associations', alertLevelsRouter);
   app.use('/associations', questionBoxRouter);
+  app.use('/associations', monthlyReportsRouter);
   app.use('/associations', officerAnnouncementsRouter);
   app.use('/associations', officerNetworkRouter);
   app.use('/associations', districtMessagesRouter);

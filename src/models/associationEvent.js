@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const schema = new mongoose.Schema({
   association: { type: mongoose.Schema.Types.ObjectId, ref: 'NeighborhoodAssociation', required: true, index: true },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'AssociationGroup', index: true },
+  department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null, index: true },
   title: { type: String, required: true, trim: true },
   body: { type: String, required: true, trim: true },
   startDate: { type: String, required: true },

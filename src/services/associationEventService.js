@@ -1,4 +1,6 @@
 import { AssociationEvent } from '../models/associationEvent.js';
+import mongoose from 'mongoose';
+import { Department } from '../models/organization.js';
 
 const fail = message => Object.assign(new Error(message), { status: 400 });
 const required = (value, max, label) => {
@@ -7,6 +9,14 @@ const required = (value, max, label) => {
   return result;
 };
 const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+// Older clients omit this field; editing there must preserve an existing assignment.
+export const eventDepartmentValue = async (body, association, previous = null) => {
+  if (!Object.hasOwn(body, 'department')) return previous?.department || null;
+  if (body.department === '') return null;
+  if (typeof body.department !== 'string' || !mongoose.isValidObjectId(body.department) || !await Department.exists({ _id: body.department, association })) throw fail('担当部はこの町内会の部会から選択してください。');
+  return body.department;
+};
 
 export const eventValues = body => {
   const title = required(body.title, 120, '行事タイトル');

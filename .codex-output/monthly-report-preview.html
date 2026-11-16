@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="町内会の情報と運営を、分かりやすくひとつにまとめるサービスです。">
+  <meta name="csrf-token" content="preview">
+  <title>月次報告 | 町内会管理</title>
+  
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/app.css?v=test">
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/registration.css?v=test">
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/shelters.css?v=test">
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/safety.css?v=test">
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/alert-levels.css?v=test">
+  <link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/profile.css?v=test">
+  
+  <script src="file:///Users/oyabu/dev/chounaikai/src/public/operation-busy.js?v=test"></script>
+  <script src="file:///Users/oyabu/dev/chounaikai/src/public/notification-badge.js?v=test" defer></script>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="/dashboard" aria-label="まちの伝言板 ホーム">
+    <span class="brand-mark" aria-hidden="true">町</span>
+    <span>まちの伝言板</span>
+  </a>
+  <div class="header-actions">
+  
+    <a class="header-guide-link" href="https://hammerhead-seeder-33a.notion.site/3f91cf50880680a8831fd42a64aaf54d" target="_blank" rel="noopener noreferrer" aria-label="ガイド（新しいタブで開く）"><span aria-hidden="true">↗</span><span>ガイド</span></a>
+
+  
+  </div>
+</header>
+<script>(()=>{const menu=document.querySelector('.hamburger-menu');if(!menu)return;document.addEventListener('click',event=>{if(menu.open&&!menu.contains(event.target))menu.removeAttribute('open')})})();</script>
+
+<link rel="stylesheet" href="file:///Users/oyabu/dev/chounaikai/src/public/monthly-report.css?v=test">
+<main class="page-shell monthly-report-shell">
+  <a class="back-link" href="/associations/preview/officer">← 役員メニューへ戻る</a>
+  <section class="page-heading"><div><h1>みどり町内会 月次報告</h1><p>対象月の情報共有事項を登録し、会計と行事の報告を出力します。</p></div></section>
+  
+  <section class="content-card">
+    <h2>対象月</h2>
+    <form method="get" class="monthly-report-selector">
+      <label>報告する月<input type="month" name="month" value="2026-11" min="2000-01" max="2200-12" required></label>
+      <button class="button button-quiet">月を選択</button>
+      <button class="button button-primary" name="output" value="1">月次レポートを出力</button>
+    </form>
+    <p>情報共有・会計・各部の実績は2026年11月、町内会行事の振り返りは2026年10月です。</p>
+  </section>
+  <section class="content-card">
+    <h2>2026年11月の情報共有事項</h2>
+    <form method="post" action="/associations/preview/monthly-reports" class="form-stack">
+      <input type="hidden" name="_csrf" value="preview"><input type="hidden" name="month" value="2026-11">
+      <label>情報共有<textarea name="information" rows="7" maxlength="20000" placeholder="今月共有したい事項を入力してください。">11月の役員会で共有する事項です。
+・防災訓練の振り返り
+・年末の防犯パトロールについて</textarea></label>
+      <p class="help-text">この町内会の役員で共有します。レポートには保存済みの内容を使用します。</p>
+      <div class="form-actions"><button class="button button-primary">情報共有を保存</button></div>
+    </form>
+  </section>
+  
+  <section class="monthly-report-output" aria-label="月次レポート">
+    <div class="section-heading"><h2>2026年11月 月次レポート</h2><a class="button button-primary" href="/associations/preview/monthly-reports.xlsx?month=2026-11">Excel形式でダウンロード</a></div>
+    <section class="content-card"><h3>情報共有事項</h3><div class="monthly-report-text">11月の役員会で共有する事項です。
+・防災訓練の振り返り
+・年末の防犯パトロールについて</div></section>
+    <section class="content-card"><h3>会計報告</h3>
+      <p>集計期間：2026-04-01 ～ 2026年11月末</p>
+      
+      <dl class="monthly-report-finance"><div><dt>累計収入</dt><dd>1,200,000円</dd></div><div><dt>累計支出</dt><dd>450,000円</dd></div><div><dt>次月繰越し金</dt><dd>750,000円</dd></div></dl>
+      <p class="help-text">次月繰越し金＝累計収入－累計支出。期首繰越金は収入として登録済みの金額を含みます。</p>
+      
+    </section>
+    <section class="content-card"><h3>前月（2026年10月）の町内会行事と完了報告</h3>
+      
+<div class="monthly-report-table-wrap" tabindex="0" role="region" aria-label="行事一覧（横にスクロールできます）"><table class="monthly-report-table">
+  <thead><tr><th scope="col">日程</th><th scope="col">行事タイトル</th><th scope="col">状況</th><th scope="col">完了報告</th></tr></thead>
+  <tbody><tr>
+    <td>2026-10-25 09:00 ～ 12:00</td><td>秋の防災訓練</td>
+    <td>完了</td><td class="monthly-report-text">50名が参加。避難場所と備蓄品の確認を行いました。
+今後は班ごとの連絡体制を強化します。</td>
+  </tr></tbody>
+</table></div>
+
+    </section>
+    <section class="content-card"><h3>部ごとの行事・完了報告・予定</h3><p class="help-text">次月以降の単発行事は登録済みの全件、繰り返し行事は2026年12月から12か月分を表示します。</p><p class="help-text">町内会行事の公開済みデータを使用します。担当部未登録の既存行事は、分類名と部名が一致する場合に部へ振り分けます。繰り返し行事の完了・実施報告は元の行事に登録された共通内容です。</p>
+      
+      <section class="monthly-report-department"><h4>防災部</h4>
+        <h5>2026年11月の行事と完了報告</h5>
+        
+<div class="monthly-report-table-wrap" tabindex="0" role="region" aria-label="行事一覧（横にスクロールできます）"><table class="monthly-report-table">
+  <thead><tr><th scope="col">日程</th><th scope="col">行事タイトル</th><th scope="col">状況</th><th scope="col">完了報告</th></tr></thead>
+  <tbody><tr>
+    <td>2026-11-10 10:00 ～ 11:00</td><td>備蓄品点検</td>
+    <td>完了</td><td class="monthly-report-text">使用期限と数量を確認しました。</td>
+  </tr></tbody>
+</table></div>
+
+        <h5>2026年12月以降の行事</h5>
+        
+<div class="monthly-report-table-wrap" tabindex="0" role="region" aria-label="行事一覧（横にスクロールできます）"><table class="monthly-report-table">
+  <thead><tr><th scope="col">日程</th><th scope="col">行事タイトル</th></tr></thead>
+  <tbody><tr>
+    <td>2026-12-20 19:00 ～ 20:00</td><td>年末の防犯パトロール</td>
+    
+  </tr></tbody>
+</table></div>
+
+        
+      </section><section class="monthly-report-department"><h4>文化部</h4>
+        <h5>2026年11月の行事と完了報告</h5>
+        <p class="empty-state">該当する行事はありません。</p>
+
+        <h5>2026年12月以降の行事</h5>
+        <p class="empty-state">該当する行事はありません。</p>
+
+        
+      </section>
+    </section>
+  </section>
+  
+</main>
+<script>(()=>{const cf=document.getElementById('finance-entry-cf'),payment=document.querySelector('select[name="payment_type"]');if(!cf||!payment)return;const field=payment.closest('label'),update=()=>{const income=cf.value==='収入';field.hidden=income;field.style.display=income?'none':'';payment.required=!income;payment.disabled=income;if(income)payment.value=''};cf.addEventListener('change',update);update()})();</script>
+<script>(()=>{document.addEventListener('close',event=>{const dialog=event.target;if(!dialog.matches('.finance-detail-budget-dialog')||dialog.returnValue!=='ok'||!dialog.row)return;const total=[...dialog.querySelectorAll('[data-key="budget"]')].reduce((sum,input)=>sum+(Number(input.value.replace(/,/g,''))||0),0),amount=dialog.row.querySelector('.finance-amount-input');if(amount){amount.value=total.toLocaleString('ja-JP');amount.readOnly=true}},true)})();</script>
+<script>(()=>{document.addEventListener('close',event=>{const dialog=event.target;if(!dialog.matches('.finance-detail-budget-dialog')||dialog.returnValue!=='ok'||!dialog.row)return;const details=[...dialog.querySelectorAll('.finance-detail-row')].map(row=>Object.fromEntries([...row.querySelectorAll('[data-key]')].map(input=>[input.dataset.key,input.dataset.key==='budget'?Number(input.value.replace(/,/g,''))||0:input.value.trim()]))).filter(detail=>detail.name||detail.content||detail.budget||detail.memo);const hidden=dialog.row.querySelector('[name="itemDetails"]');if(hidden)hidden.value=JSON.stringify(details)},true)})();</script>
+<script>(()=>{document.addEventListener('click',event=>{const button=event.target.closest('.finance-detail-budget-dialog button[value="ok"]');if(!button)return;const dialog=button.closest('.finance-detail-budget-dialog');if(!dialog?.row)return;const details=[...dialog.querySelectorAll('.finance-detail-row')].map(row=>Object.fromEntries([...row.querySelectorAll('[data-key]')].map(input=>[input.dataset.key,input.dataset.key==='budget'?Number(input.value.replace(/,/g,''))||0:input.value.trim()]))).filter(detail=>detail.name||detail.content||detail.budget||detail.memo);const hidden=dialog.row.querySelector('[name="itemDetails"]');if(hidden)hidden.value=JSON.stringify(details)},true)})();</script>
+<dialog class="finance-detail-view-dialog"><div class="finance-detail-view-heading"><h2>予算明細</h2><button type="button" class="finance-detail-view-close" aria-label="閉じる">×</button></div><div class="finance-detail-view-content"></div><div class="finance-detail-view-subtotal"></div></dialog><script>(()=>{const dialog=document.querySelector('.finance-detail-view-dialog'),content=dialog.querySelector('.finance-detail-view-content'),subtotal=dialog.querySelector('.finance-detail-view-subtotal');dialog.querySelector('.finance-detail-view-close').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});document.addEventListener('click',event=>{const trigger=event.target.closest('.finance-budget-detail-trigger');if(!trigger)return;const details=JSON.parse(decodeURIComponent(trigger.dataset.details||'[]'));content.replaceChildren(...details.map(detail=>{const article=document.createElement('article');article.className='finance-detail-view-item finance-detail-view-row';const title=document.createElement('strong');title.className='finance-detail-view-name';title.textContent=detail.name||'';const description=document.createElement('span');description.className='finance-detail-view-description';description.textContent=detail.content||'';const amount=document.createElement('strong');amount.className='finance-detail-view-amount';amount.textContent='¥'+Number(detail.budget||0).toLocaleString('ja-JP');const memo=document.createElement('div');memo.className='finance-detail-view-memo';memo.textContent=detail.memo||'';article.append(title,description,amount,memo);return article}));const sum=details.reduce((total,detail)=>total+(Number(detail.budget)||0),0);subtotal.textContent='小計：¥'+sum.toLocaleString('ja-JP');dialog.showModal()})})();</script>
+<script>(()=>{const cf=document.getElementById('finance-entry-cf');if(!cf)return;const fields=['receiptNo','usedBy'].map(name=>document.querySelector(`[name="${name}"]`)?.closest('label')).filter(Boolean),update=()=>{const income=cf.value==='収入';fields.forEach(field=>{field.hidden=income;field.style.display=income?'none':''})};cf.addEventListener('change',update);update()})();</script>
+<script>(()=>{if(Array.isArray(window.financeYears)&&window.financeYears.length){document.querySelectorAll('.finance-annual-year-selector select,.finance-public-summary select').forEach(select=>{const current=select.value;[...select.options].forEach(option=>{if(!window.financeYears.includes(Number(option.value)))option.remove()});if([...select.options].some(option=>option.value===current))select.value=current});document.querySelectorAll('input[name="years"]').forEach(input=>{if(!window.financeYears.includes(Number(input.value)))input.closest('label')?.remove()})}if(new URLSearchParams(location.search).get('public')!=='1')return;const match=location.pathname.match(/^\/associations\/([^/]+)\/finance\/(?:expense-chart|monthly-expense-chart)/);if(!match)return;const back=document.querySelector('.back-link');if(back){back.href=`/associations/${match[1]}/finance/public`;back.textContent='← 住人用の会計報告のページに戻る'}})();</script>
+<dialog class="officer-dialog record-actions-dialog" aria-labelledby="record-actions-title">
+  <div class="dialog-heading"><h2 id="record-actions-title">項目の操作</h2><button type="button" class="dialog-close" data-record-actions-close aria-label="閉じる">×</button></div>
+  <p data-record-actions-name></p>
+  <div class="record-actions-buttons"><button type="button" class="button button-primary" data-record-actions-edit>編集</button><button type="button" class="button button-quiet" data-record-actions-report>実施報告を編集</button><button type="button" class="button button-danger-outline" data-record-actions-delete>削除</button><button type="button" class="button button-quiet" data-record-actions-close>キャンセル</button></div>
+</dialog>
+<dialog class="officer-dialog record-delete-dialog" aria-labelledby="record-delete-title">
+  <h2 id="record-delete-title">この項目を削除しますか？</h2><p data-record-delete-name></p><p>削除すると元に戻せません。</p>
+  <div class="form-actions"><button type="button" class="button button-quiet" data-record-delete-cancel autofocus>キャンセル</button><button type="button" class="button button-danger-outline" data-record-delete-confirm>削除する</button></div>
+</dialog>
+<script src="file:///Users/oyabu/dev/chounaikai/src/public/record-actions.js?v=test"></script>
+
+
+
+
+<footer class="site-footer">
+  <nav aria-label="規約・個人情報の取扱い">
+    <a href="/privacy-policy">プライバシーポリシー</a>
+    <a href="/terms">利用規約</a>
+    <a href="/personal-information-protection">個人情報保護方針</a>
+  </nav>
+  <p>運営：Kurashi Campany Inc.（仮称）</p>
+</footer>
+</body>
+</html>
+

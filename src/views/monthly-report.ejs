@@ -1,0 +1,53 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<link rel="stylesheet" href="/assets/monthly-report.css?v=<%= assetVersion %>">
+<main class="page-shell monthly-report-shell">
+  <a class="back-link" href="/associations/<%= association._id %>/officer">← 役員メニューへ戻る</a>
+  <section class="page-heading"><div><h1><%= association.name %> 月次報告</h1><p>対象月の情報共有事項を登録し、会計と行事の報告を出力します。</p></div></section>
+  <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+  <section class="content-card">
+    <h2>対象月</h2>
+    <form method="get" class="monthly-report-selector">
+      <label>報告する月<input type="month" name="month" value="<%= report.month %>" min="2000-01" max="2200-12" required></label>
+      <button class="button button-quiet">月を選択</button>
+      <button class="button button-primary" name="output" value="1">月次レポートを出力</button>
+    </form>
+    <p>情報共有・会計・各部の実績は<%= reportMonthLabel(report.month) %>、町内会行事の振り返りは<%= reportMonthLabel(report.previousMonth) %>です。</p>
+  </section>
+  <section class="content-card">
+    <h2><%= reportMonthLabel(report.month) %>の情報共有事項</h2>
+    <form method="post" action="/associations/<%= association._id %>/monthly-reports" class="form-stack">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= report.month %>">
+      <label>情報共有<textarea name="information" rows="7" maxlength="20000" placeholder="今月共有したい事項を入力してください。"><%= report.information %></textarea></label>
+      <p class="help-text">この町内会の役員で共有します。レポートには保存済みの内容を使用します。</p>
+      <div class="form-actions"><button class="button button-primary">情報共有を保存</button></div>
+    </form>
+  </section>
+  <% if (showOutput) { %>
+  <section class="monthly-report-output" aria-label="月次レポート">
+    <div class="section-heading"><h2><%= reportMonthLabel(report.month) %> 月次レポート</h2><a class="button button-primary" href="/associations/<%= association._id %>/monthly-reports.xlsx?month=<%= report.month %>">Excel形式でダウンロード</a></div>
+    <section class="content-card"><h3>情報共有事項</h3><div class="monthly-report-text"><%= report.information || '登録されていません。' %></div></section>
+    <section class="content-card"><h3>会計報告</h3>
+      <p>集計期間：<%= report.finance.fiscalStartMonth %>-01 ～ <%= reportMonthLabel(report.month) %>末</p>
+      <% if (report.finance.enabled) { %>
+      <dl class="monthly-report-finance"><div><dt>累計収入</dt><dd><%= report.finance.income.toLocaleString('ja-JP') %>円</dd></div><div><dt>累計支出</dt><dd><%= report.finance.expense.toLocaleString('ja-JP') %>円</dd></div><div><dt>次月繰越し金</dt><dd><%= report.finance.carryover.toLocaleString('ja-JP') %>円</dd></div></dl>
+      <p class="help-text">次月繰越し金＝累計収入－累計支出。期首繰越金は収入として登録済みの金額を含みます。</p>
+      <% } else { %><p>会計機能が無効、または会計データとの連携が未設定です。</p><% } %>
+    </section>
+    <section class="content-card"><h3>前月（<%= reportMonthLabel(report.previousMonth) %>）の町内会行事と完了報告</h3>
+      <%- include('partials/monthly-report-events', { items: report.previousEvents, future: false, eventSchedule }) %>
+    </section>
+    <section class="content-card"><h3>部ごとの行事・完了報告・予定</h3><p class="help-text"><%= report.futureNote %></p><p class="help-text"><%= report.eventNote %></p>
+      <% if (!report.departmentReports.length) { %><p>部会・該当する行事は登録されていません。</p><% } %>
+      <% report.departmentReports.forEach(department => { %><section class="monthly-report-department"><h4><%= department.name %></h4>
+        <h5><%= reportMonthLabel(report.month) %>の行事と完了報告</h5>
+        <%- include('partials/monthly-report-events', { items: department.currentEvents, future: false, eventSchedule }) %>
+        <h5><%= reportMonthLabel(report.nextMonth) %>以降の行事</h5>
+        <%- include('partials/monthly-report-events', { items: department.futureEvents, future: true, eventSchedule }) %>
+        <% if (department.annualReport) { %><h5>年度の実施報告（参考・月別の報告ではありません）</h5><div class="monthly-report-text"><%= department.annualReport %></div><% } %>
+      </section><% }); %>
+    </section>
+  </section>
+  <% } %>
+</main>
+<%- include('partials/foot') %>
