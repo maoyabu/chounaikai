@@ -1627,6 +1627,14 @@ h1, h2, h3, h4, h5, h6,
 .officer-function-green strong { color: var(--green-dark); }
 .officer-function-green .list-arrow { color: var(--green); }
 .officer-function-green:hover, .officer-function-green:focus-visible { background: var(--green-pale); }
+.officer-functions-section .officer-function-red { border-left: 4px solid #c43d4b; }
+.officer-function-red strong { color: #982d3a; }
+.officer-function-red .list-arrow { color: #c43d4b; }
+.officer-function-red:hover, .officer-function-red:focus-visible { background: #fff0f1; }
+.officer-functions-section .officer-function-brown { border-left: 4px solid #94613b; }
+.officer-function-brown strong { color: #734726; }
+.officer-function-brown .list-arrow { color: #94613b; }
+.officer-function-brown:hover, .officer-function-brown:focus-visible { background: #faf1e8; }
 .officer-functions-section .officer-function-calendar { border-left: 4px solid #c99122; }
 .officer-function-calendar strong { color: #875b13; }
 .officer-function-calendar .list-arrow { color: #c99122; }
