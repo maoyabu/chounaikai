@@ -1,4 +1,5 @@
 import { revokeApnsSession } from '../services/apnsService.js';
+import { revokeAndroidFcmSession } from '../services/androidFcmService.js';
 import express from 'express';
 import passport from 'passport';
 import { recordPrimaryAuth } from '../middleware/mfa.js';
@@ -22,7 +23,7 @@ authRouter.post('/login', (req, res, next) => {
 });
 
 authRouter.post('/logout', requireLogin, async (req, res, next) => {
-  try { await revokeApnsSession(req.sessionID); } catch (error) { return next(error); }
+  try { await revokeApnsSession(req.sessionID); await revokeAndroidFcmSession(req.sessionID); } catch (error) { return next(error); }
   req.logout((error) => {
     if (error) return next(error);
     return req.session.destroy((sessionError) => {

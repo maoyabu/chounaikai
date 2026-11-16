@@ -2,6 +2,7 @@ import { districtMapPresentation } from './lib/districtMap.js';
 import { mobileCommunityInfoRouter } from './routes/mobileCommunityInfo.js';
 import { mobileHouseholdsRouter } from './routes/mobileHouseholds.js';
 import { apnsDevicesRouter } from './routes/apnsDevices.js';
+import { androidPushDevicesRouter } from './routes/androidPushDevices.js';
 import { faqsRouter } from './routes/faqs.js';
 import { locationLinksRouter } from './routes/locationLinks.js';
 import { disasterInformationRouter } from './routes/disasterInformation.js';
@@ -142,6 +143,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/mfa', mfaRouter);
   app.use('/api/auth/mfa', mfaRouter);
   app.use('/api/push-devices', apnsDevicesRouter);
+  app.use('/api/android-push-devices', androidPushDevicesRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/associations', mobileDisasterRouter);
   app.use('/api/associations', mobileEventsRouter);

@@ -20,6 +20,7 @@ const notificationSchema = new mongoose.Schema({
   deliveryClaimedAt: Date,
   delivery: {
     apns: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String },
+    androidFcm: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String },
     push: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String },
     email: { status: { type: String, enum: ['pending', 'sent', 'skipped', 'failed'], default: 'pending' }, sentAt: Date, error: String }
   },
