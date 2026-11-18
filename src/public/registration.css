@@ -2075,3 +2075,14 @@ h1, h2, h3, h4, h5, h6,
 .record-actions-enabled input, .record-actions-enabled textarea, .record-actions-enabled dialog { user-select: text; }
 
 .association-department-officer-role { font-size: .75rem; padding: .15rem .5rem; white-space: nowrap; }
+
+/* Keep large event images and intrinsic form widths inside the viewport. */
+.association-event-dialog { box-sizing: border-box; overflow-wrap: anywhere; }
+.association-event-form, .association-event-form label, .association-event-form fieldset,
+.association-event-form .form-columns > * { min-width: 0; max-width: 100%; }
+.association-event-form input, .association-event-form select, .association-event-form textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.event-edit-image { display: block; max-width: 100%; height: auto; object-fit: contain; }
+.event-list-filters { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+.event-list-filters label { display: grid; gap: .35rem; min-width: 0; max-width: 100%; }
+.event-list-filters input, .event-list-filters select { max-width: 100%; }
+[data-filter-event][hidden] { display: none !important; }

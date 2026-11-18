@@ -1,0 +1,8 @@
+<div class="event-list-filters">
+  <label>完了した行事<select data-event-filter="completed"><option value="show">表示する</option><option value="hide">表示しない</option></select></label>
+  <% if (manageFilters) { %>
+    <label>年度（4月〜翌年3月）<select data-event-filter="year"><option value="">すべての年度</option><% [...new Set(events.map(event => Number(event.startDate.slice(0, 4)) - (Number(event.startDate.slice(5, 7)) < 4 ? 1 : 0)))].sort((a,b) => b-a).forEach(year => { %><option value="<%= year %>"><%= year %>年度</option><% }); %></select></label>
+    <% if (typeof departments !== 'undefined') { %><label>部会<select data-event-filter="department"><option value="">すべての部会</option><option value="unset">未設定</option><% departments.forEach(department => { %><option value="<%= department._id %>"><%= department.name %></option><% }); %></select></label><% } %>
+    <label>フリーワード<input type="search" data-event-filter="search" placeholder="タイトル・内容・分類など"></label>
+  <% } %>
+</div>
