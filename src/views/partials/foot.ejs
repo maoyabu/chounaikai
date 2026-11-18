@@ -10,7 +10,8 @@
 <% if (currentUser) { %><dialog id="notification-permission-dialog" class="officer-dialog" data-login-prompt="<%= showNotificationPrompt ? 'true' : 'false' %>"><div class="dialog-heading"><div><p class="eyebrow">通知設定</p><h2>通知をONにしますか？</h2></div><button type="button" class="dialog-close" data-notification-dismiss aria-label="閉じる">×</button></div><p>緊急・危険情報、参加申請、行事変更、町内会からの重要なお知らせをブラウザで受け取れるようになります。</p><p id="notification-consent-error" class="help-text" role="status" hidden></p><div class="form-actions"><button type="button" class="button button-quiet" data-notification-dismiss>後で設定</button><button type="button" class="button button-primary" id="notification-enable-button">通知をONにする</button></div></dialog><script src="/assets/notification-consent.js?v=<%= assetVersion %>"></script><% } %>
 <% if (typeof hideDangerCompose === 'undefined' || !hideDangerCompose) { %><%- include('danger-compose') %><% } %>
 <footer class="site-footer">
-  <nav aria-label="規約・個人情報の取扱い">
+  <nav aria-label="ご利用案内・規約・個人情報の取扱い">
+    <%- include('guide-link', { guideLinkClass: 'footer-guide-link' }) %>
     <a href="/app/ios">iOSアプリ</a>
     <a href="/app/ios/support">アプリサポート</a>
     <a href="/privacy-policy">プライバシーポリシー</a>

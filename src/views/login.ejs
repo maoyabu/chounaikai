@@ -1,8 +1,9 @@
 <%- include('partials/head') %>
-<%- include('partials/guide-bar') %>
+<link rel="stylesheet" href="/assets/ios-app-pages.css?v=<%= assetVersion %>">
+<%- include('partials/ios-app-header', { appLoginUrl: '/login' }) %>
 <main class="login-shell">
   <section class="login-intro" aria-labelledby="welcome-title">
-    <div class="brand brand-large"><span class="brand-mark" aria-hidden="true">町</span><span>町内会管理</span></div>
+    <div class="brand brand-large"><span class="brand-mark" aria-hidden="true">町</span><span>まちの伝言板</span></div>
     <h1 id="welcome-title">自分が住んでいる町を<br>安心して助け合える場所に</h1>
     <p><a href="https://www.allaboutme.jp/guide">All About me</a><br>
       <a href="https://www.7daysplan.jp/user/login">Preplace</a><br>

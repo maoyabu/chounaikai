@@ -23,20 +23,20 @@ test('iOS app promotion and support routes are public render routes', () => {
 
 test('iOS app promotion page describes features and links to support', async () => {
   const html = await renderView(path.join(views, 'ios-app-promotion.ejs'), {
-    title: 'まちの伝言板 Lite',
+    title: 'まちの伝言板',
     metaDescription: 'アプリ紹介',
     appLoginUrl: '/login',
     supportEmail: 'machino.dengonban@gmail.com',
     hideDangerCompose: true
   });
-  assert.match(html, /まちの伝言板 Liteでできること/);
+  assert.match(html, /まちの伝言板でできること/);
   assert.match(html, /Face IDまたはTouch ID/);
   assert.match(html, /href="\/app\/ios\/support"/);
 });
 
 test('iOS app support page includes App Store support essentials', async () => {
   const html = await renderView(path.join(views, 'ios-app-support.ejs'), {
-    title: 'まちの伝言板 Lite サポート',
+    title: 'まちの伝言板 サポート',
     metaDescription: 'アプリサポート',
     appLoginUrl: '/login',
     supportEmail: 'machino.dengonban@gmail.com',

@@ -7,7 +7,6 @@
   <% if (currentUser) { %>
     <div class="header-account">
       <span class="account-summary"><% if (currentUser.avatar) { %><img class="profile-avatar profile-avatar-header" src="<%= currentUser.avatar %>" alt=""><% } %><span class="account-name"><%= currentUser.displayname || currentUser.username %>さん</span><% (typeof currentRoleTags !== 'undefined' ? currentRoleTags : []).forEach((roleName) => { %><span class="role-tag"><%= roleName %></span><% }) %></span>
-      <%- include('guide-link', { guideLinkClass: 'header-guide-link' }) %>
       <details class="hamburger-menu">
         <summary aria-label="メニューを開く"><span class="hamburger-lines" aria-hidden="true"><i></i><i></i><i></i></span><span class="menu-label">メニュー</span></summary>
         <nav class="menu-panel" aria-label="メインメニュー">
@@ -25,7 +24,6 @@
           <% (typeof currentGroupManagers !== 'undefined' ? currentGroupManagers : []).forEach((group) => { %><a class="menu-item" href="/associations/<%= group.association %>/groups/<%= group._id %>/manage"><span>グループ管理：<%= group.name %></span><% if (group.actionCount > 0) { %><span class="menu-action-count menu-action-tag" aria-label="参加申請 <%= group.actionCount %>件">参加申請 <%= group.actionCount %>件</span><% } %><% if (group.withdrawalCount > 0) { %><span class="menu-action-count menu-action-tag">退会申請 <%= group.withdrawalCount %>件</span><% } %></a><% }) %>
           <% if ((typeof mfaRequired !== 'undefined' && mfaRequired) || (typeof mfaEnabled !== 'undefined' && mfaEnabled)) { %><a class="menu-item" href="/mfa/settings"><span>多要素認証の設定</span></a><% } %>
           <div class="menu-divider"></div>
-          <%- include('guide-link', { guideLinkClass: 'menu-item menu-guide-link' }) %>
           <% const supportPathMatch = typeof currentPath === 'string' && currentPath.match(/^\/associations\/([a-f0-9]{24})(?:\/|$)/i); const menuSupportUrl = supportPathMatch ? '/associations/' + supportPathMatch[1] + '/support' : '/support'; %>
           <a class="menu-item <%= typeof currentPath === 'string' && (currentPath === '/support' || currentPath.startsWith('/support/') || /\/(support|faq)$/.test(currentPath)) ? 'is-current' : '' %>" href="<%= menuSupportUrl %>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v7h4v-7ZM20 12h2v7h-4v-7ZM20 19c0 2-3 3-7 3"/></svg><span>サポートページ</span></a>
           <form action="/logout" method="post">
@@ -35,8 +33,6 @@
         </nav>
       </details>
     </div>
-  <% } else { %>
-    <%- include('guide-link', { guideLinkClass: 'header-guide-link' }) %>
   <% } %>
   </div>
 </header>

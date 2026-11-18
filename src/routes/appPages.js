@@ -11,15 +11,15 @@ const sharedLocals = {
 appPagesRouter.get('/app/ios', (_req, res) => {
   res.render('ios-app-promotion', {
     ...sharedLocals,
-    title: 'まちの伝言板 Lite',
-    metaDescription: '町内会のお知らせ、行事、会話、地域情報をiPhoneで確認できる「まちの伝言板 Lite」の公式紹介ページです。'
+    title: 'まちの伝言板',
+    metaDescription: '町内会のお知らせ、行事、会話、地域情報をiPhoneで確認できる「まちの伝言板」の公式紹介ページです。'
   });
 });
 
 appPagesRouter.get('/app/ios/support', (_req, res) => {
   res.render('ios-app-support', {
     ...sharedLocals,
-    title: 'まちの伝言板 Lite サポート',
-    metaDescription: 'iOSアプリ「まちの伝言板 Lite」の利用方法、よくある問題、お問い合わせ先をご案内します。'
+    title: 'まちの伝言板 サポート',
+    metaDescription: 'iOSアプリ「まちの伝言板」の利用方法、よくある問題、お問い合わせ先をご案内します。'
   });
 });
