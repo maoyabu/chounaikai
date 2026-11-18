@@ -33,6 +33,7 @@ import { dangerReportsRouter } from './routes/dangerReports.js';
 import { messageAttachmentsRouter } from './routes/messageAttachments.js';
 import express from 'express';
 import { legalRouter } from './routes/legal.js';
+import { appPagesRouter } from './routes/appPages.js';
 import { mfaEncryptionKey } from './config/mfa.js';
 import { createMfaService } from './services/mfaService.js';
 import { enforceAdminMfa } from './middleware/mfa.js';
@@ -107,6 +108,8 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.get('/health', (_req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ ok: mongoose.connection.readyState === 1 }));
   // Public legal pages remain available without a session or MFA verification.
   app.use('/', legalRouter);
+  // Public App Store promotion and support pages remain available without login.
+  app.use('/', appPagesRouter);
   // The server connects Mongoose before creating the app. Reuse that client so
   // session reads and application queries share the same monitored connection.
   const storeOptions = mongoose.connection.readyState === 1

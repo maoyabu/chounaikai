@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="町内会の情報と運営を、分かりやすくひとつにまとめるサービスです。">
+  <meta name="description" content="<%= typeof metaDescription !== 'undefined' ? metaDescription : '町内会の情報と運営を、分かりやすくひとつにまとめるサービスです。' %>">
   <% if (typeof csrfToken !== 'undefined') { %><meta name="csrf-token" content="<%= csrfToken %>"><% } %>
   <title><%= title %> | 町内会管理</title>
   <% if (typeof financeYears !== 'undefined') { %><script>window.financeYears=<%- JSON.stringify(financeYears) %>;</script><% } %>
