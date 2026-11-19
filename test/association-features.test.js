@@ -70,15 +70,15 @@ test('basic settings shows saved selections and always available functions', asy
 });
 
 
-test('resident display defaults to visible and accepts only the three display checkboxes', () => {
+test('resident display defaults to visible and accepts only the four display checkboxes', () => {
   const association = new NeighborhoodAssociation();
-  for (const key of ['departmentPlans', 'officers', 'leaders']) {
+  for (const key of ['departmentPlans', 'officers', 'leaders', 'districts']) {
     assert.equal(residentDisplayEnabled(association, key), true);
     assert.equal(residentDisplayEnabled({}, key), true);
     assert.equal(residentDisplayEnabled({ residentDisplay: { [key]: false } }, key), false);
   }
   assert.deepEqual(parseResidentDisplay({ display_officers: 'on', display_leaders: 'true', unknown: 'on' }), {
-    departmentPlans: false, officers: true, leaders: false
+    departmentPlans: false, officers: true, leaders: false, districts: false
   });
 });
 
@@ -95,7 +95,7 @@ test('feature settings save independent display preferences with audit history',
   await handler(req, { redirect(path) { redirect = path; } }, error => { throw error; });
   assert.equal(saved, true);
   assert.equal(association.optionalFeatures.events, true);
-  assert.deepEqual(association.residentDisplay, { departmentPlans: true, officers: false, leaders: false });
+  assert.deepEqual(association.residentDisplay, { departmentPlans: true, officers: false, leaders: false, districts: false });
   assert.deepEqual(auditEntry.before.residentDisplay, { officers: true });
   assert.equal(auditEntry.after.residentDisplay.officers, false);
   assert.equal(redirect, '/associations/assoc/manage/basic');

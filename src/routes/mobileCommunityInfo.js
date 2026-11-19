@@ -1,5 +1,5 @@
 import { loadResidentLeaders } from '../services/residentLeaderService.js';
-import { residentDisplayEnabled } from '../services/associationFeatureService.js';
+import { residentDisplaySettings } from '../services/associationFeatureService.js';
 import { canViewOfficerDirectory } from '../services/officerDirectoryAccess.js';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -44,11 +44,12 @@ mobileCommunityInfoRouter.get('/:associationId/community-info', async (req, res,
       avatar: row.user?.avatar || '', address: row.address || '', phone: row.phone || '', mobilePhone: row.mobilePhone || '', email: row.email || '' });
     const planOfficerDTO = row => ({ ...officerDTO(row), name: '', department: '', district: '', address: '', phone: '', mobilePhone: '', email: '' });
     const stats = summarizeAssociationHouseholds(districts, households, counts, { includeIds: true });
-    const residentDisplay = Object.fromEntries(['departmentPlans', 'officers', 'leaders'].map(key => [key, residentDisplayEnabled(association, key)]));
+    const residentDisplay = residentDisplaySettings(association);
     const leaders = await loadResidentLeaders(association, fiscalYear, viewer);
     res.json({ residentDisplay, leaders, associationName: association.name, fiscalYear, canViewOfficerDirectory: directoryAllowed,
       plans: !residentDisplay.departmentPlans ? [] : plans.map(plan => ({ id: String(plan._id), department: plan.department?.name || '部会未設定', goal: plan.goal || '',
         officers: (!residentDisplay.officers ? [] : officers).filter(row => String(row.department?._id || row.department || '') === String(plan.department?._id || plan.department || '')).map(planOfficerDTO) })),
-      officers: directoryAllowed ? officers.map(officerDTO) : [], ...stats });
+      officers: directoryAllowed ? officers.map(officerDTO) : [], ...stats,
+      districtStats: residentDisplay.districts ? stats.districtStats : [] });
   } catch (error) { next(error); }
 });

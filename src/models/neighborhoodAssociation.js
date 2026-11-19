@@ -49,7 +49,8 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
   residentDisplay: {
     departmentPlans: { type: Boolean, default: true },
     officers: { type: Boolean, default: true },
-    leaders: { type: Boolean, default: true }
+    leaders: { type: Boolean, default: true },
+    districts: { type: Boolean, default: true }
   },
   eventCategories: { type: [String], default: [] },
   socialLinks: { instagram: String, x: String, youtube: String },

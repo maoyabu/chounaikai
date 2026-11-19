@@ -1,5 +1,5 @@
 import { loadResidentLeaders } from './residentLeaderService.js';
-import { residentDisplayEnabled } from './associationFeatureService.js';
+import { residentDisplaySettings } from './associationFeatureService.js';
 import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from './goodPlaceDisclosureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
 import { discloseOfficers } from './officerDisclosureService.js';
@@ -57,7 +57,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     { $group: { _id: '$household', count: { $sum: 1 } } }
   ]) : [];
   const householdStats = summarizeAssociationHouseholds(districtGroups, households, memberCounts);
-  const display = Object.fromEntries(['departmentPlans', 'officers', 'leaders'].map(key => [key, residentDisplayEnabled(association, key)]));
+  const display = residentDisplaySettings(association);
   const leaders = !publicOnly ? await loadResidentLeaders(association, fiscalYear, viewer) : [];
   const plansWithOfficers = departmentPlans.map((plan) => ({
     ...plan,
@@ -66,7 +66,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
   return {
     residentDisplay: display, leaders,
     canViewOfficerDirectory: !publicOnly && directoryAllowed && display.officers,
-    goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers: !publicOnly && !display.officers ? [] : officers, departmentPlans: !publicOnly && !display.departmentPlans ? [] : plansWithOfficers, ...householdStats,
+    goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers: !publicOnly && !display.officers ? [] : officers, departmentPlans: !publicOnly && !display.departmentPlans ? [] : plansWithOfficers, ...householdStats, districtStats: !publicOnly && !display.districts ? [] : householdStats.districtStats,
     groups: groups.filter(group => !publicOnly || group.publicVisibility === 'open').map(group => ({ ...group, memberCount: groupCount.get(String(group._id)) || 0 }))
   };
 };

@@ -18,7 +18,9 @@ test('mobile home returns district, group and every communication role', () => {
     groupManagers: [{ group: { _id: 'association-group-1', name: '防災係' } }]
   });
 
-  assert.deepEqual(profile.association, { id: 'association-1', name: '吉田元町町内会' });
+  assert.deepEqual(profile.association, { id: 'association-1', name: '吉田元町町内会',
+    features: { goodPlaces: false, events: false, groups: false, equipment: false, finance: false },
+    residentDisplay: { departmentPlans: true, officers: true, leaders: true, districts: true } });
   assert.deepEqual(profile.district, { id: 'district-1', name: '第8A地区' });
   assert.deepEqual(profile.group, { id: 'group-1', name: '8班' });
   assert.deepEqual(profile.roles, [
@@ -44,4 +46,15 @@ test('mobile home supports district-only membership and removes duplicate roles'
   assert.deepEqual(profile.district, { id: 'district-1', name: '中央地区' });
   assert.equal(profile.group, null);
   assert.deepEqual(profile.roles, [{ kind: 'officer', name: '役員' }]);
+});
+
+test('mobile home tells the app which optional features and resident sections the association uses', () => {
+  const profile = mobileAssociationProfile({
+    membership: { association: { _id: 'association-1', name: '町内会',
+      optionalFeatures: { goodPlaces: true, events: false, groups: true, equipment: false, finance: true },
+      residentDisplay: { departmentPlans: false, officers: true, leaders: false, districts: false } } },
+    assignments: [], officers: [], leaders: [], groupManagers: []
+  });
+  assert.deepEqual(profile.association.features, { goodPlaces: true, events: false, groups: true, equipment: false, finance: true });
+  assert.deepEqual(profile.association.residentDisplay, { departmentPlans: false, officers: true, leaders: false, districts: false });
 });

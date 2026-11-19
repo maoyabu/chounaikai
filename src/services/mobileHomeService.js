@@ -4,6 +4,7 @@ import { AnnualOfficer } from '../models/annualOfficer.js';
 import { AnnualLeaderAssignment } from '../models/annualLeaderAssignment.js';
 import { AssociationGroupMembership } from '../models/associationGroup.js';
 import { annualRoleYearFilter } from '../lib/annualRoleAccess.js';
+import { associationFeatureSettings, residentDisplaySettings } from './associationFeatureService.js';
 
 const id = value => value ? String(value._id || value) : null;
 
@@ -51,7 +52,10 @@ export const mobileAssociationProfile = ({ membership, assignments, officers, le
   return {
     association: {
       id: id(membership.association),
-      name: membership.association?.name || ''
+      name: membership.association?.name || '',
+      // Added for the Android app's menus; older clients ignore these keys.
+      features: associationFeatureSettings(membership.association),
+      residentDisplay: residentDisplaySettings(membership.association)
     },
     district: district ? { id: id(district), name: district.name } : null,
     group: group ? { id: id(group), name: group.name } : null,
@@ -62,7 +66,7 @@ export const mobileAssociationProfile = ({ membership, assignments, officers, le
 
 export const loadMobileHome = async ({ userId, now = new Date() }) => {
   const memberships = await AssociationMembership.find({ user: userId, status: 'active' })
-    .populate('association', 'name')
+    .populate('association', 'name optionalFeatures residentDisplay')
     .populate({ path: 'districtGroup', select: 'name parentDistrict', populate: { path: 'parentDistrict', select: 'name' } })
     .lean();
   const associationIds = memberships.map(item => item.association?._id).filter(Boolean);
