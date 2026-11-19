@@ -29,10 +29,15 @@
   <form class="form-stack" action="/associations/<%= association._id %>/manage/features" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><h3>選択機能</h3>
   <% optionalAssociationFeatures.forEach(([key, label]) => { %><label class="association-feature-option"><input type="checkbox" name="<%= key %>" <%= association.optionalFeatures?.[key] === true ? 'checked' : '' %>> <%= label %></label><% }) %>
   <h3>住人ページの表示設定</h3><p class="help-text">チェックを外すと住人ページに表示しません。登録済みの情報は保持されます。氏名などの個人情報は公開ルールと本人の同意に従って表示します。</p>
-  <% (typeof residentDisplayFeatures !== 'undefined' ? residentDisplayFeatures : [['departmentPlans', '各部会の目標'], ['officers', '今年度の町内会役員一覧'], ['leaders', '今年度の町内会班長一覧'], ['districts', '町内会の班一覧']]).forEach(([key, label]) => { %><label class="association-feature-option"><input type="checkbox" name="display_<%= key %>" <%= association.residentDisplay?.[key] !== false ? 'checked' : '' %>> <%= label %>を表示</label><% }) %>
+  <% (typeof residentDisplayFeatures !== 'undefined' ? residentDisplayFeatures : [['departmentPlans', '各部会の目標'], ['officers', '今年度の町内会役員一覧'], ['districts', '町内会の班一覧'], ['leaders', '今年度の町内会班長']]).forEach(([key, label]) => { %><label class="association-feature-option <%= key === 'leaders' ? 'association-feature-child' : '' %>"><input type="checkbox" name="display_<%= key %>" <%= association.residentDisplay?.[key] !== false ? 'checked' : '' %> <%= key === 'leaders' && association.residentDisplay?.districts === false ? 'disabled' : '' %>> <%= label %>を表示</label><% }) %>
   <div class="form-actions"><button class="button button-primary">利用する機能を保存</button></div></form></div></section>
   <script>
     (() => {
+      const districtsToggle = document.querySelector('[name="display_districts"]');
+      const leadersToggle = document.querySelector('[name="display_leaders"]');
+      const syncLeaderToggle = () => { leadersToggle.disabled = !districtsToggle.checked; };
+      districtsToggle.addEventListener('change', syncLeaderToggle);
+      syncLeaderToggle();
       const tabs = [...document.querySelectorAll('[data-basic-tab]')];
       const panels = [...document.querySelectorAll('.setup-section')];
       const tabKey = 'basic-settings-tab:<%= association._id %>';

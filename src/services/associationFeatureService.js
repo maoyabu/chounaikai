@@ -21,10 +21,10 @@ export const featureForAssociationPath = path => {
 export const residentDisplayFeatures = [
   ['departmentPlans', '各部会の目標'],
   ['officers', '今年度の町内会役員一覧'],
-  ['leaders', '今年度の町内会班長一覧'],
-  ['districts', '町内会の班一覧']
+  ['districts', '町内会の班一覧'],
+  ['leaders', '今年度の町内会班長']
 ];
-export const residentDisplayEnabled = (association, key) => association?.residentDisplay?.[key] !== false;
+export const residentDisplayEnabled = (association, key) => association?.residentDisplay?.[key] !== false && (key !== 'leaders' || association?.residentDisplay?.districts !== false);
 export const residentDisplaySettings = association => Object.fromEntries(
   residentDisplayFeatures.map(([key]) => [key, residentDisplayEnabled(association, key)])
 );
@@ -33,5 +33,5 @@ export const associationFeatureSettings = association => Object.fromEntries(
   optionalAssociationFeatures.map(([key]) => [key, associationFeatureEnabled(association, key)])
 );
 export const parseResidentDisplay = (input = {}) => Object.fromEntries(
-  residentDisplayFeatures.map(([key]) => [key, input[`display_${key}`] === 'on'])
+  residentDisplayFeatures.map(([key]) => [key, input[`display_${key}`] === 'on' && (key !== 'leaders' || input.display_districts === 'on')])
 );

@@ -56,7 +56,7 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     { $match: { association: association._id, household: { $in: households.map(household => household._id) }, endsAt: null } },
     { $group: { _id: '$household', count: { $sum: 1 } } }
   ]) : [];
-  const householdStats = summarizeAssociationHouseholds(districtGroups, households, memberCounts);
+  const householdStats = summarizeAssociationHouseholds(districtGroups, households, memberCounts, { includeIds: true });
   const display = residentDisplaySettings(association);
   const leaders = !publicOnly ? await loadResidentLeaders(association, fiscalYear, viewer) : [];
   const plansWithOfficers = departmentPlans.map((plan) => ({

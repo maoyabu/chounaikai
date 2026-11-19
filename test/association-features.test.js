@@ -100,3 +100,9 @@ test('feature settings save independent display preferences with audit history',
   assert.equal(auditEntry.after.residentDisplay.officers, false);
   assert.equal(redirect, '/associations/assoc/manage/basic');
 });
+
+ test('leaders require the district list in both saved and effective display settings', () => {
+  assert.equal(residentDisplayEnabled({ residentDisplay: { districts: false, leaders: true } }, 'leaders'), false);
+  assert.equal(parseResidentDisplay({ display_leaders: 'on' }).leaders, false);
+  assert.equal(parseResidentDisplay({ display_districts: 'on', display_leaders: 'on' }).leaders, true);
+ });

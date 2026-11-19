@@ -2108,3 +2108,7 @@ h1, h2, h3, h4, h5, h6,
 .event-list-filters input::placeholder { color: var(--muted); opacity: 1; }
 .event-completion-select:hover, .event-list-filters select:hover, .event-list-filters input:hover { border-color: var(--green); }
 .event-completion-select:focus-visible, .event-list-filters select:focus-visible, .event-list-filters input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+#features .association-feature-child { margin-left: 2rem; }
+#features .association-feature-child:has(input:disabled) { opacity: .55; }
+.association-public-districts .district-leader { display: inline-block; margin-left: 1rem; font-weight: normal; }

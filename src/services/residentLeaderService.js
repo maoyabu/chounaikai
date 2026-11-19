@@ -10,6 +10,6 @@ export const loadResidentLeaders = async (association, fiscalYear, viewer) => {
     ...record, user: record.representative, role: { name: '班長' }
   })), viewer);
   // Use only disclosure-filtered names/photos; never expose contact fields.
-  return disclosed.map((record, index) => ({ id: String(record._id), district: records[index].districtGroup?.name || '地区・班未設定',
+  return disclosed.map((record, index) => ({ id: String(record._id), districtGroupId: String(records[index].districtGroup?._id || ''), district: records[index].districtGroup?.name || '地区・班未設定',
     displayLabel: record.displayLabel, avatar: record.user?.avatar || '' }));
 };

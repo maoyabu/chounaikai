@@ -76,7 +76,7 @@ test('PR page loads child groups and uses active non-deleted households and curr
   assert.equal(page.householdCount, 1);
   assert.equal(page.residentCount, 4);
   assert.deepEqual(page.districtStats, [
-    { name: '東地区', householdCount: 1, residentCount: 4 },
-    { name: '東地区 1班', householdCount: 1, residentCount: 4 }
+    { id: 'district', name: '東地区', householdCount: 1, residentCount: 4 },
+    { id: 'group', name: '東地区 1班', householdCount: 1, residentCount: 4 }
   ]);
 });

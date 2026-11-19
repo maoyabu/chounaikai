@@ -143,18 +143,26 @@ test('resident display switches hide API data and allow only consent-filtered di
   assert.doesNotMatch(JSON.stringify(res.data), /秘密|secret/);
 });
 
-test('Web resident section visibility follows each independent display preference', async () => {
+test('Web leaders appear beside their district only when both display preferences are enabled', async () => {
   const locals = { association: { _id: aid, name: '町内会', optionalFeatures: {}, residentDisplay: { departmentPlans: false, officers: false, leaders: false, districts: false } },
     isResidentPage: true, currentUser: { _id: uid }, fiscalYear: currentFiscalYear(), householdCount: 0, residentCount: 0,
-    departmentPlans: [], officers: [], districtStats: [], leaders: [{ displayLabel: '班長氏名', district: 'A班' }], canViewOfficerDirectory: true };
+    departmentPlans: [], officers: [], districtStats: [{ id: 'group-a', name: 'A班', householdCount: 1, residentCount: 2 }, { id: 'group-b', name: 'B班', householdCount: 0, residentCount: 0 }], leaders: [{ displayLabel: '班長氏名', districtGroupId: 'group-a', district: 'A班' }], canViewOfficerDirectory: true };
   let html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
   assert.doesNotMatch(html, /各部会の目標|年度の町内会役員|年度の町内会班長|班長氏名|町内会の班</);
   locals.association.residentDisplay.leaders = true;
   html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
-  assert.match(html, /年度の町内会班長/);
-  assert.match(html, /班長氏名/);
+  assert.doesNotMatch(html, /年度の町内会班長|班長氏名/);
   assert.doesNotMatch(html, /各部会の目標|年度の町内会役員|町内会の班</);
   locals.association.residentDisplay.districts = true;
   html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
   assert.match(html, /町内会の班</);
+  assert.match(html, /A班<span class="district-leader">班長：班長氏名<\/span>/);
+  assert.doesNotMatch(html, /年度の町内会班長/);
+  locals.association.residentDisplay.leaders = false;
+  html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
+  assert.match(html, /町内会の班</);
+  assert.doesNotMatch(html, /班長氏名/);
+  delete locals.association.residentDisplay;
+  html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
+  assert.match(html, /班長氏名/);
 });
