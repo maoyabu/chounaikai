@@ -16,3 +16,14 @@ export const featureForAssociationPath = path => {
   if (!match) return null;
   return { associationId: match[1], feature: { 'good-places': 'goodPlaces', 'manage/groups': 'groups' }[match[2]] || match[2] };
 };
+
+// Display preferences are independent of optional feature availability.
+export const residentDisplayFeatures = [
+  ['departmentPlans', '各部会の目標'],
+  ['officers', '今年度の町内会役員一覧'],
+  ['leaders', '今年度の町内会班長一覧']
+];
+export const residentDisplayEnabled = (association, key) => association?.residentDisplay?.[key] !== false;
+export const parseResidentDisplay = (input = {}) => Object.fromEntries(
+  residentDisplayFeatures.map(([key]) => [key, input[`display_${key}`] === 'on'])
+);

@@ -2,7 +2,7 @@ import { parseDistrictMapUrl } from '../lib/districtMap.js';
 import { handleLocationLink } from './locationLinks.js';
 import { loadMemberTags } from '../services/memberTagService.js';
 import { parseHazardMapUrl } from '../lib/hazardMap.js';
-import { optionalAssociationFeatures, parseAssociationFeatures } from '../services/associationFeatureService.js';
+import { optionalAssociationFeatures, parseAssociationFeatures, residentDisplayFeatures, parseResidentDisplay } from '../services/associationFeatureService.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import { requireLogin, requirePermission } from '../middleware/auth.js';
@@ -131,7 +131,7 @@ managementRouter.get('/:associationId/manage/basic', requirePermission('associat
       DistrictGroup.find({ association: association._id, parentDistrict: { $exists: true } }).sort({ sortOrder: 1, createdAt: 1, name: 1 }).lean()
     ]);
     const districtGroups = districts.map((district) => ({ ...district, groups: childGroups.filter((group) => String(group.parentDistrict) === String(district._id)) }));
-    return res.render('association-basic-settings', { title: `${association.name} 基本設定`, association, roles, departments, districtGroups, optionalAssociationFeatures });
+    return res.render('association-basic-settings', { title: `${association.name} 基本設定`, association, roles, departments, districtGroups, optionalAssociationFeatures, residentDisplayFeatures });
   } catch (error) { return next(error); }
 });
 
@@ -139,11 +139,12 @@ managementRouter.post('/:associationId/manage/features', requirePermission('asso
   try {
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } });
     if (!association) throw fail('町内会を確認できません。', 404);
-    const before = association.optionalFeatures?.toObject?.() || association.optionalFeatures || {};
+    const before = { optionalFeatures: association.optionalFeatures?.toObject?.() || association.optionalFeatures || {}, residentDisplay: association.residentDisplay?.toObject?.() || association.residentDisplay || {} };
     const after = parseAssociationFeatures(req.body);
     association.optionalFeatures = after;
+    association.residentDisplay = parseResidentDisplay(req.body);
     await association.save();
-    await audit({ association: association._id, actor: req.user._id, action: 'association.features.updated', targetType: 'NeighborhoodAssociation', targetId: association._id, before, after, req });
+    await audit({ association: association._id, actor: req.user._id, action: 'association.features.updated', targetType: 'NeighborhoodAssociation', targetId: association._id, before, after: { optionalFeatures: after, residentDisplay: association.residentDisplay }, req });
     req.session.notice = '利用する機能を保存しました。';
     return redirectBasicSettings(res, association._id);
   } catch (error) { return next(error); }

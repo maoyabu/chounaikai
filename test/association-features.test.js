@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NeighborhoodAssociation } from '../src/models/neighborhoodAssociation.js';
-import { associationFeatureEnabled, optionalAssociationFeatures, parseAssociationFeatures, featureForAssociationPath } from '../src/services/associationFeatureService.js';
+import { associationFeatureEnabled, optionalAssociationFeatures, parseAssociationFeatures, featureForAssociationPath, parseResidentDisplay, residentDisplayEnabled } from '../src/services/associationFeatureService.js';
 import { requireEnabledAssociationFeature } from '../src/middleware/associationFeatures.js';
 
 test('optional features default to disabled for both existing records and new associations', () => {
@@ -67,4 +67,36 @@ test('basic settings shows saved selections and always available functions', asy
   assert.match(html, /基本機能（常時利用）/);
   assert.match(html, /Google Drive連携/);
   assert.match(html, /保存済みデータは削除されず/);
+});
+
+
+test('resident display defaults to visible and accepts only the three display checkboxes', () => {
+  const association = new NeighborhoodAssociation();
+  for (const key of ['departmentPlans', 'officers', 'leaders']) {
+    assert.equal(residentDisplayEnabled(association, key), true);
+    assert.equal(residentDisplayEnabled({}, key), true);
+    assert.equal(residentDisplayEnabled({ residentDisplay: { [key]: false } }, key), false);
+  }
+  assert.deepEqual(parseResidentDisplay({ display_officers: 'on', display_leaders: 'true', unknown: 'on' }), {
+    departmentPlans: false, officers: true, leaders: false
+  });
+});
+
+test('feature settings save independent display preferences with audit history', async t => {
+  const { managementRouter } = await import('../src/routes/management.js');
+  const { AuditLog } = await import('../src/models/auditLog.js');
+  let saved = false, auditEntry;
+  const association = { _id: 'assoc', optionalFeatures: { events: true }, residentDisplay: { officers: true }, async save() { saved = true; } };
+  t.mock.method(NeighborhoodAssociation, 'findOne', async filter => { assert.equal(filter._id, 'assoc'); return association; });
+  t.mock.method(AuditLog, 'create', async entry => { auditEntry = entry; });
+  const handler = managementRouter.stack.find(layer => layer.route?.path === '/:associationId/manage/features').route.stack.at(-1).handle;
+  const req = { params: { associationId: 'assoc' }, user: { _id: 'manager' }, body: { events: 'on', display_departmentPlans: 'on' }, session: {}, get: () => 'test', ip: '127.0.0.1' };
+  let redirect;
+  await handler(req, { redirect(path) { redirect = path; } }, error => { throw error; });
+  assert.equal(saved, true);
+  assert.equal(association.optionalFeatures.events, true);
+  assert.deepEqual(association.residentDisplay, { departmentPlans: true, officers: false, leaders: false });
+  assert.deepEqual(auditEntry.before.residentDisplay, { officers: true });
+  assert.equal(auditEntry.after.residentDisplay.officers, false);
+  assert.equal(redirect, '/associations/assoc/manage/basic');
 });

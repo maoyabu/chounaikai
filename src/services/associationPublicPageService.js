@@ -1,3 +1,5 @@
+import { loadResidentLeaders } from './residentLeaderService.js';
+import { residentDisplayEnabled } from './associationFeatureService.js';
 import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from './goodPlaceDisclosureService.js';
 import { GoodPlace } from '../models/goodPlace.js';
 import { discloseOfficers } from './officerDisclosureService.js';
@@ -55,13 +57,16 @@ export const loadAssociationPageData = async (association, { publicOnly = true, 
     { $group: { _id: '$household', count: { $sum: 1 } } }
   ]) : [];
   const householdStats = summarizeAssociationHouseholds(districtGroups, households, memberCounts);
+  const display = Object.fromEntries(['departmentPlans', 'officers', 'leaders'].map(key => [key, residentDisplayEnabled(association, key)]));
+  const leaders = !publicOnly ? await loadResidentLeaders(association, fiscalYear, viewer) : [];
   const plansWithOfficers = departmentPlans.map((plan) => ({
     ...plan,
-    officers: officers.filter((officer) => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || ''))
+    officers: (!publicOnly && !display.officers ? [] : officers).filter((officer) => String(officer.department?._id || officer.department || '') === String(plan.department?._id || plan.department || ''))
   }));
   return {
-    canViewOfficerDirectory: !publicOnly && directoryAllowed,
-    goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers, departmentPlans: plansWithOfficers, ...householdStats,
+    residentDisplay: display, leaders,
+    canViewOfficerDirectory: !publicOnly && directoryAllowed && display.officers,
+    goodPlaces: goodPlaces.map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors)), showGoodPlaceAuthors, events, months: window.months, calendarWindow: window, fiscalYear, officers: !publicOnly && !display.officers ? [] : officers, departmentPlans: !publicOnly && !display.departmentPlans ? [] : plansWithOfficers, ...householdStats,
     groups: groups.filter(group => !publicOnly || group.publicVisibility === 'open').map(group => ({ ...group, memberCount: groupCount.get(String(group._id)) || 0 }))
   };
 };

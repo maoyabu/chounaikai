@@ -32,6 +32,7 @@ function fixture(t, consent = false) {
   t.mock.method(AssociationMembership, 'find', () => q([{ user: oid }]));
   t.mock.method(RoleAssignment, 'find', () => q([]));
   t.mock.method(AnnualOfficer, 'exists', async () => false);
+  t.mock.method(AnnualLeaderAssignment, 'find', () => q([]));
   t.mock.method(AnnualLeaderAssignment, 'exists', async filter => { assert.equal(filter.association, aid); assert.equal(filter.representative, uid); assert.equal(filter.cancelledAt, null); return false; });
   t.mock.method(AnnualOfficer, 'find', filter => {
     assert.equal(filter.association, aid); assert.equal(filter.fiscalYear, currentFiscalYear()); assert.equal(filter.cancelledAt, null);
@@ -111,4 +112,43 @@ test('Web association summary hides the directory and its link unless explicitly
   assert.doesNotMatch(hidden, /年度の町内会役員|役員の一覧を見る/);
   const visible = await ejs.renderFile('src/views/partials/association-page-content.ejs', { ...locals, canViewOfficerDirectory: true });
   assert.match(visible, /年度の町内会役員/); assert.match(visible, /役員の一覧を見る/);
+});
+
+
+test('resident display switches hide API data and allow only consent-filtered directory when enabled', async t => {
+  fixture(t, true);
+  let display = { departmentPlans: false, officers: false, leaders: false };
+  t.mock.method(NeighborhoodAssociation, 'findOne', () => q({ _id: aid, name: '町内会', residentDisplay: display,
+    officerDisclosurePolicy: { name: 'residents', photo: 'residents' } }));
+  const handler = mobileCommunityInfoRouter.stack.find(layer => layer.route?.path === '/:associationId/community-info').route.stack.at(-1).handle;
+  const req = { params: { associationId: aid }, user: { _id: uid } };
+  const res = { set() {}, json(data) { this.data = data; } };
+  await handler(req, res, error => { throw error; });
+  assert.deepEqual(res.data.plans, []);
+  assert.deepEqual(res.data.officers, []);
+  assert.deepEqual(res.data.leaders, []);
+  assert.equal(res.data.canViewOfficerDirectory, false);
+  display = { departmentPlans: true, officers: true, leaders: true };
+  AnnualLeaderAssignment.find.mock.mockImplementation(() => q([{ _id: 'leader', fiscalYear: currentFiscalYear(),
+    representative: { _id: oid, displayname: '役員氏名', email: 'secret@example.test' }, districtGroup: { name: 'A班' }, phone: '秘密電話' }]));
+  await handler(req, res, error => { throw error; });
+  assert.equal(res.data.plans.length, 1);
+  assert.equal(res.data.canViewOfficerDirectory, true);
+  assert.equal(res.data.officers[0].displayLabel, '役員氏名');
+  assert.equal(res.data.leaders[0].displayLabel, '役員氏名');
+  assert.equal(res.data.leaders[0].district, 'A班');
+  assert.doesNotMatch(JSON.stringify(res.data), /秘密|secret/);
+});
+
+test('Web resident section visibility follows each independent display preference', async () => {
+  const locals = { association: { _id: aid, name: '町内会', optionalFeatures: {}, residentDisplay: { departmentPlans: false, officers: false, leaders: false } },
+    isResidentPage: true, currentUser: { _id: uid }, fiscalYear: currentFiscalYear(), householdCount: 0, residentCount: 0,
+    departmentPlans: [], officers: [], districtStats: [], leaders: [{ displayLabel: '班長氏名', district: 'A班' }], canViewOfficerDirectory: true };
+  let html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
+  assert.doesNotMatch(html, /各部会の目標|年度の町内会役員|年度の町内会班長|班長氏名/);
+  locals.association.residentDisplay.leaders = true;
+  html = await ejs.renderFile('src/views/partials/association-page-content.ejs', locals);
+  assert.match(html, /年度の町内会班長/);
+  assert.match(html, /班長氏名/);
+  assert.doesNotMatch(html, /各部会の目標|年度の町内会役員/);
 });
