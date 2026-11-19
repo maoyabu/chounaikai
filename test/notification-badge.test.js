@@ -5,18 +5,26 @@ import vm from 'node:vm';
 import { notificationsRouter } from '../src/routes/notifications.js';
 import { Notification } from '../src/models/notification.js';
 import { requireLogin } from '../src/middleware/auth.js';
+import { AssociationMembership } from '../src/models/associationMembership.js';
+import mongoose from 'mongoose';
 
 test('badge count API requires login and counts only the current recipient', async t => {
   assert.ok(notificationsRouter.stack.some(layer => layer.handle === requireLogin));
   const route = notificationsRouter.stack.find(layer => layer.route?.path === '/unread-count').route;
-  t.mock.method(Notification, 'countDocuments', async filter => {
-    assert.deepEqual(filter, { recipient: 'current-user', readAt: null, hiddenAt: null });
-    return 4;
+  const userId = new mongoose.Types.ObjectId();
+  // 未読・非表示でない自分あての通知を数える。会話の通知はバッジに含めない。
+  t.mock.method(Notification, 'find', filter => {
+    assert.deepEqual(filter, { recipient: userId, readAt: null, hiddenAt: null });
+    return { lean: async () => [{ type: 'emergency' }, { type: 'event' }, { type: 'event' }, { type: 'event' }, { type: 'district_message' }] };
   });
-  await route.stack[0].handle({ user: { _id: 'current-user' } }, {
+  const chain = { populate() { return this; }, lean: async () => [] };
+  t.mock.method(AssociationMembership, 'find', () => chain);
+  let result;
+  await route.stack[0].handle({ user: { _id: userId } }, {
     set: (name, value) => assert.equal(value, 'no-store'),
-    json: result => assert.deepEqual(result, { unreadCount: 4 })
+    json: value => { result = value; }
   }, error => { throw error; });
+  assert.deepEqual(result, { unreadCount: 4 });
 });
 
 test('push updates count, clears zero, and still displays notifications if badging fails', async () => {

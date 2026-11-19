@@ -355,7 +355,8 @@ test('resident association detail shares the public page layout and shows reside
     title: '町内会', csrfToken: 'x', notice: null, currentPath: `/associations/${id}`, currentUser: { username: 'member', isAdmin: false },
     association: { _id: id, name: 'テスト町内会', status: 'active', optionalFeatures: { events: true }, contact: { email: 'contact@example.test' }, introduction: 'ご案内' },
     associationManager: { displayname: '山田 管理者' }, membership: {}, canManage: false,
-    pageData: { departmentPlans: [], events: [], months: [{ label: '2026年9月', cells: ['2026-09-01'] }], calendarWindow: { currentMonth: '2026-09', previousMonth: '2026-08', nextMonth: '2026-10' }, fiscalYear: 2026,
+    // 役員一覧を見られる人（町内会管理者・役員・班長）として表示する。
+    pageData: { canViewOfficerDirectory: true, departmentPlans: [], events: [], months: [{ label: '2026年9月', cells: ['2026-09-01'] }], calendarWindow: { currentMonth: '2026-09', previousMonth: '2026-08', nextMonth: '2026-10' }, fiscalYear: 2026,
       officers: [{ displayLabel: '山田 太郎', user: { displayname: '山田 太郎' }, role: { name: '会長' } }], householdCount: 2, residentCount: 5,
       districtStats: [{ name: '１班', householdCount: 2, residentCount: 5 }] }
   });

@@ -139,7 +139,9 @@ test('equipment screens render cards, edit fields, place checks, purchase histor
   };
   for (const [view, data] of Object.entries(views)) { const html = await ejs.renderFile(`src/views/${view}.ejs`, { ...common, ...data }); assert.match(html, /<main/); assert.match(html, /token/); }
   const resident = await ejs.renderFile('src/views/equipment-list.ejs', { ...common, canAnswer: false, ...views['equipment-list'] });
-  assert.doesNotMatch(resident, /この場所に追加|method="post" data-equipment-delete|>編集<|棚卸しリスト/); assert.match(resident, /貸出カレンダー/);
+  // 長押しメニュー（編集・削除）のダイアログは全ページ共通でページ末尾に入るため、画面の本文だけを確かめる。
+  const residentMain = resident.slice(resident.indexOf('<main'), resident.indexOf('</main>'));
+  assert.doesNotMatch(residentMain, /この場所に追加|method="post" data-equipment-delete|>編集<|棚卸しリスト/); assert.match(residentMain, /貸出カレンダー/);
 });
 
 test('equipment editing saves atomically on MongoDB without transaction support', async t => {

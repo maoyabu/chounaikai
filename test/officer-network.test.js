@@ -18,7 +18,8 @@ import { officerNetworkRouter } from '../src/routes/officerNetwork.js';
 
 const id = () => new mongoose.Types.ObjectId();
 const association = id(), sender = id(), first = id(), second = id(), inactive = id(), departmentId = id(), groupId = id(), announcementId = id();
-const query = value => ({ select() { return this; }, lean: async () => value });
+// distinct は町内会管理者の役職の検索で使う（ここでは管理者なし）。
+const query = value => ({ select() { return this; }, lean: async () => value, distinct: async () => [] });
 const access = t => {
   t.mock.method(NeighborhoodAssociation, 'findOne', () => query({ _id: association, name: '中央町内会' }));
   t.mock.method(AssociationMembership, 'findOne', () => query({ association, status: 'active' }));

@@ -36,6 +36,7 @@ test('public association page shows photos, introduction, counts, officers and d
     officers: [{ displayLabel: '山田 花子', user: { displayname: '山田 花子' }, role: { name: '会長' }, department: { name: '総務部' } }],
     departmentPlans: [], householdCount: 12, residentCount: 34, districtStats: [{ name: '１班', householdCount: 5, residentCount: 16 }]
   });
-  assert.doesNotMatch(html, /山田 花子/);
-  for (const label of ['one.jpg', 'two.jpg', '地域の活動を紹介します。', '12', '34', '会長', '１班', '5世帯', '16人', '町内会行事カレンダー']) assert.match(html, new RegExp(label));
+  // 役員一覧は町内会管理者・役員・班長だけに公開するため、一般公開ページには役職も氏名も出さない。
+  assert.doesNotMatch(html, /山田 花子|会長|年度の町内会役員/);
+  for (const label of ['one.jpg', 'two.jpg', '地域の活動を紹介します。', '12', '34', '１班', '5世帯', '16人', '町内会行事カレンダー']) assert.match(html, new RegExp(label));
 });
