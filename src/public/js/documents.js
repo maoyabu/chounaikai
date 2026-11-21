@@ -5,10 +5,15 @@ search?.addEventListener('input', () => {
   document.getElementById('drive-empty').hidden = visible > 0;
 });
 document.getElementById('drive-upload')?.addEventListener('submit', event => {
-  const form = event.currentTarget, file = form.elements.file.files[0];
-  if (!file || file.size > 20 * 1024 * 1024) { event.preventDefault(); document.getElementById('drive-upload-status').textContent = '20MB以下のファイルを選択してください。'; return; }
+  const form = event.currentTarget, files = Array.from(form.elements.file.files);
+  const status = document.getElementById('drive-upload-status');
+  let error = '';
+  if (!files.length || files.length > 10) error = 'ファイルは1〜10件選択してください。';
+  else if (files.some(file => !file.size || file.size > 20 * 1024 * 1024)) error = '各ファイルは空でない20MB以下のものを選択してください。';
+  else if (files.some(file => !/\.(pdf|xlsx|xls)$/i.test(file.name))) error = 'PDFまたはExcel（.xlsx・.xls）を選択してください。';
+  if (error) { event.preventDefault(); status.textContent = error; return; }
   form.querySelector('button').disabled = true;
-  document.getElementById('drive-upload-status').textContent = 'アップロード中です。完了するまでお待ちください。';
+  status.textContent = `${files.length}件のファイルをアップロード中です。完了するまでお待ちください。`;
 });
 
 document.getElementById('drive-copy-uri')?.addEventListener('click', async event => {

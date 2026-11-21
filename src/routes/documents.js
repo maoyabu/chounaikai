@@ -13,7 +13,7 @@ import { DRIVE_SCOPE, FOLDER_MIME, driveError, driveId, folderIdFromInput, drive
 export const documentsRouter = express.Router();
 documentsRouter.use(requireLogin, provideCsrfToken);
 const base = id => `/associations/${id}/documents`;
-const handler = fn => async (req, res, next) => { try { await fn(req, res); } catch (error) { if (error instanceof multer.MulterError) error = driveError('ファイルは1件ずつ、20MB以下で選択してください。'); if (!res.headersSent && error.status && error.message) return res.status(error.status).render('error', { title: 'ドキュメント管理', message: error.message }); next(error); } };
+const handler = fn => async (req, res, next) => { try { await fn(req, res); } catch (error) { if (error instanceof multer.MulterError) error = driveError('ファイルは一度に10件まで、各20MB以下で選択してください。'); if (!res.headersSent && error.status && error.message) return res.status(error.status).render('error', { title: 'ドキュメント管理', message: error.message }); next(error); } };
 const access = async req => { const result = await loadQuestionBoxAccess({ associationId: req.params.associationId, userId: req.user._id }); if (!result.canAnswer) throw driveError('町内会役員・管理者のみ利用できます。', 403); return result; };
 const connectionFor = req => DriveConnection.findOne({ association: req.params.associationId }).select('+clientSecret +refreshToken');
 const context = async req => { const result = await access(req), connection = await connectionFor(req), client = await driveClient(connection); return { ...result, connection, client }; };
@@ -92,22 +92,36 @@ documentsRouter.post('/:associationId/documents/folders', verifyCsrfToken, handl
   req.session.notice = 'フォルダを追加しました。';
   res.redirect(`${base(ctx.association._id)}?folder=${folder.id}`);
 }));
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 1, fields: 5 } }).single('file');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 10, fields: 5 } }).array('file', 10);
 documentsRouter.post('/:associationId/documents/upload', handler(async (req, res) => {
   const ctx = await context(req); // Authorize before buffering multipart data.
   await new Promise((resolve, reject) => upload(req, res, err => err ? reject(err) : resolve()));
   let csrfValid = false; verifyCsrfToken(req, res, () => { csrfValid = true; }); if (!csrfValid) return;
   const folder = await assertDriveItem(ctx.client, ctx.connection.rootFolderId, req.body.folder, { folder: true });
   if (!folder.capabilities?.canAddChildren) throw driveError('このフォルダにはアップロードできません。', 403);
-  const file = req.file; if (!file?.size) throw driveError('アップロードするファイルを選択してください。');
-  const name = Buffer.from(file.originalname, 'latin1').toString('utf8').replace(/[\x00-\x1f/\\]/g, '_').slice(0, 200);
-  const ext = name.split('.').pop().toLowerCase();
+  const files = req.files || [];
+  if (!files.length) throw driveError('アップロードするファイルを選択してください。');
   const mimes = { pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xls: 'application/vnd.ms-excel' };
-  if (!mimes[ext]) throw driveError('PDFまたはExcel（.xlsx・.xls）を選択してください。');
-  const boundary = `drive_${crypto.randomBytes(16).toString('hex')}`;
-  const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: [folder.id] })}\r\n--${boundary}\r\nContent-Type: ${mimes[ext]}\r\n\r\n`), file.buffer, Buffer.from(`\r\n--${boundary}--\r\n`)]);
-  await (await ctx.client.request('upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body })).body?.cancel();
-  req.session.notice = 'ファイルをアップロードしました。'; res.redirect(`${base(ctx.association._id)}?folder=${folder.id}`);
+  // Validate the entire selection before creating any Drive files.
+  const prepared = files.map(file => {
+    if (!file.size) throw driveError('空のファイルはアップロードできません。');
+    const name = Buffer.from(file.originalname, 'latin1').toString('utf8').replace(/[\x00-\x1f/\\]/g, '_').slice(0, 200);
+    const ext = name.split('.').pop().toLowerCase();
+    if (!mimes[ext]) throw driveError('PDFまたはExcel（.xlsx・.xls）を選択してください。');
+    return { file, name, mime: mimes[ext] };
+  });
+  let completed = 0;
+  for (const { file, name, mime } of prepared) {
+    const boundary = `drive_${crypto.randomBytes(16).toString('hex')}`;
+    const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: [folder.id] })}\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`), file.buffer, Buffer.from(`\r\n--${boundary}--\r\n`)]);
+    try {
+      await (await ctx.client.request('upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body })).body?.cancel();
+      completed++;
+    } catch (error) {
+      throw driveError(`${files.length}件中${completed}件のアップロードが完了しました。「${name}」のアップロードを確認できませんでした。一覧を確認し、未追加のファイルだけ再度選択してください。${error.status ? error.message : ''}`, error.status || 502);
+    }
+  }
+  req.session.notice = `${completed}件のファイルをアップロードしました。`; res.redirect(`${base(ctx.association._id)}?folder=${folder.id}`);
 }));
 const exports = { 'application/vnd.google-apps.spreadsheet': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'], 'application/vnd.google-apps.document': ['application/pdf', '.pdf'], 'application/vnd.google-apps.presentation': ['application/pdf', '.pdf'] };
 const content = async (client, item) => {

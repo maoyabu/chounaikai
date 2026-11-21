@@ -116,3 +116,49 @@ test('folder creation form is available only in writable folders', async () => {
   if(canAddChildren) {assert.match(html,/name="name"[^>]*maxlength="200"/);assert.match(html,/name="folder" value="child"/);assert.match(html,/name="_csrf" value="token"/);}
  }
 });
+test('multiple uploads validate all files and report partial completion', async t => {
+ setup(t);
+ const keyBefore=process.env.DRIVE_ENCRYPTION_KEY; process.env.DRIVE_ENCRYPTION_KEY='aa'.repeat(32);
+ const { encryptDriveSecret, FOLDER_MIME }=await import('../src/services/driveService.js');
+ const { Readable }=await import('node:stream');
+ const connection={association,rootFolderId:'root',clientId:'client',clientSecret:encryptDriveSecret('secret',association),refreshToken:encryptDriveSecret('refresh',association)};
+ t.mock.method(DriveConnection,'findOne',()=>({select:async()=>connection}));
+ let writes=[], failAt=0, canAddChildren=true, parent='root';
+ t.mock.method(globalThis,'fetch',async(url,options={})=>{
+  if(url==='https://oauth2.googleapis.com/token')return new Response(JSON.stringify({access_token:'access'}));
+  if(url.includes('upload/drive/')) {
+   writes.push(options.body.toString());
+   return writes.length===failAt ? new Response('{}',{status:503}) : new Response('{}');
+  }
+  const id=new URL(url).pathname.split('/').pop();
+  return new Response(JSON.stringify({id,mimeType:FOLDER_MIME,parents:id==='child'?[parent]:[],capabilities:{canAddChildren}}));
+ });
+ const uploadRequest=(names,token='token')=>{
+  const boundary='test-upload-boundary';
+  const parts=[`--${boundary}\r\nContent-Disposition: form-data; name="_csrf"\r\n\r\n${token}\r\n`,`--${boundary}\r\nContent-Disposition: form-data; name="folder"\r\n\r\nchild\r\n`];
+  for(const name of names) parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: application/octet-stream\r\n\r\ncontents\r\n`);
+  parts.push(`--${boundary}--\r\n`);
+  const body=Buffer.from(parts.join(''));
+  const request=Object.assign(Readable.from([body]),req());
+  request.headers={'content-type':`multipart/form-data; boundary=${boundary}`,'content-length':String(body.length)};
+  request.session.csrfToken='token'; request.get=name=>request.headers[name.toLowerCase()];
+  return request;
+ };
+ const path='/:associationId/documents/upload';
+ try {
+  const request=uploadRequest(['minutes.pdf','budget.xlsx','old.xls']);
+  assert.equal((await invoke(path,request,'post')).url,`/associations/${association}/documents?folder=child`);
+  assert.equal(request.session.notice,'3件のファイルをアップロードしました。');
+  assert.equal(writes.length,3);
+  for(const [index,name] of ['minutes.pdf','budget.xlsx','old.xls'].entries()) {assert.ok(writes[index].includes(`"name":"${name}"`));assert.ok(writes[index].includes('"parents":["child"]'));}
+  writes=[];
+  for(const names of [[],['good.pdf','bad.txt'],Array(11).fill('file.pdf')]) assert.equal((await invoke(path,uploadRequest(names),'post')).status,400);
+  assert.equal((await invoke(path,uploadRequest(['a.pdf'],'wrong'),'post')).status,403);
+  canAddChildren=false;assert.equal((await invoke(path,uploadRequest(['a.pdf']),'post')).status,403);
+  canAddChildren=true;parent='outside';assert.equal((await invoke(path,uploadRequest(['a.pdf']),'post')).status,403);
+  assert.equal(writes.length,0);
+  parent='root';failAt=2;
+  const output=await invoke(path,uploadRequest(['a.pdf','b.pdf','c.pdf']),'post');
+  assert.equal(output.status,400);assert.match(output.data.message,/3件中1件/);assert.match(output.data.message,/b.pdf/);assert.equal(writes.length,2);
+ } finally {if(keyBefore===undefined)delete process.env.DRIVE_ENCRYPTION_KEY;else process.env.DRIVE_ENCRYPTION_KEY=keyBefore;}
+});
