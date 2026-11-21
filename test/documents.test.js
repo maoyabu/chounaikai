@@ -73,3 +73,46 @@ test('delete moves only an allowed tenant file to trash and never permanently de
  } finally {if(keyBefore===undefined)delete process.env.DRIVE_ENCRYPTION_KEY;else process.env.DRIVE_ENCRYPTION_KEY=keyBefore;}
  function reqWithFile(){const r=req();r.params.fileId='file';return r;}
 });
+test('folder creation checks officer access, ancestry, permissions and name before writing', async t => {
+ setup(t); const keyBefore = process.env.DRIVE_ENCRYPTION_KEY; process.env.DRIVE_ENCRYPTION_KEY='aa'.repeat(32);
+ const { encryptDriveSecret, FOLDER_MIME } = await import('../src/services/driveService.js');
+ const connection = { association, rootFolderId:'root', clientId:'client', clientSecret:encryptDriveSecret('secret',association), refreshToken:encryptDriveSecret('refresh',association) };
+ t.mock.method(DriveConnection,'findOne',()=>({ select:async()=>connection }));
+ const writes=[]; let parent='root', canAddChildren=true, mimeType=FOLDER_MIME;
+ t.mock.method(globalThis,'fetch',async(url,options={})=>{
+  if(url==='https://oauth2.googleapis.com/token')return new Response(JSON.stringify({access_token:'access'}));
+  if(options.method==='POST'){writes.push({url,options});return new Response('{}');}
+  const id=new URL(url).pathname.split('/').pop();
+  return new Response(JSON.stringify(id==='child'?{id,mimeType,parents:[parent],capabilities:{canAddChildren}}:{id,mimeType:FOLDER_MIME,capabilities:{canAddChildren}}));
+ });
+ const request = (name=' 総会資料 ', folder='child') => Object.assign(req(),{body:{name,folder}});
+ const path='/:associationId/documents/folders';
+ try {
+  for (const folder of ['root','child']) {
+   const r=request(' 総会資料 ',folder);
+   assert.equal((await invoke(path,r,'post')).url,`/associations/${association}/documents?folder=${folder}`);
+   assert.equal(r.session.notice,'フォルダを追加しました。');
+   assert.deepEqual(JSON.parse(writes.at(-1).options.body),{name:'総会資料',mimeType:FOLDER_MIME,parents:[folder]});
+   assert.match(writes.at(-1).url,/supportsAllDrives=true/);
+  }
+  for (const name of ['', '  ', 'a'.repeat(201), 'a/b', 'a\\b', 'a\n', ['folder']]) {
+   // A trailing newline is trimmed; use an embedded control character instead.
+   const invalid = name === 'a\n' ? 'a\nb' : name;
+   assert.equal((await invoke(path,request(invalid),'post')).status,400);
+  }
+  canAddChildren=false; assert.equal((await invoke(path,request(),'post')).status,403);
+  canAddChildren=true; parent='outside'; assert.equal((await invoke(path,request(),'post')).status,403);
+  parent='root'; mimeType='application/pdf'; assert.equal((await invoke(path,request(),'post')).status,404);
+  t.mock.method(AnnualOfficer,'exists',async()=>null);
+  assert.equal((await invoke(path,request(),'post')).status,403);
+  assert.equal(writes.length,2);
+ } finally {if(keyBefore===undefined)delete process.env.DRIVE_ENCRYPTION_KEY;else process.env.DRIVE_ENCRYPTION_KEY=keyBefore;}
+});
+test('folder creation form is available only in writable folders', async () => {
+ const data={title:'資料',assetVersion:'test',currentUser:null,showNotificationPrompt:false,notice:null,csrfToken:'token',association:{_id:association,name:'中央町内会'},base:`/associations/${association}/documents`,connected:true,breadcrumbs:[],items:[],nextPage:''};
+ for (const canAddChildren of [true,false]) {
+  const html=await ejs.renderFile('src/views/documents-list.ejs',{...data,folder:{id:'child',name:'総会資料',capabilities:{canAddChildren}}});
+  assert.equal(html.includes(`action="${data.base}/folders"`),canAddChildren);
+  if(canAddChildren) {assert.match(html,/name="name"[^>]*maxlength="200"/);assert.match(html,/name="folder" value="child"/);assert.match(html,/name="_csrf" value="token"/);}
+ }
+});

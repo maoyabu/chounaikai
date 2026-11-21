@@ -79,6 +79,19 @@ documentsRouter.get('/:associationId/documents', handler(async (req, res) => {
   const listing = await listDriveItems(client, folderId, req.query.page || '');
   res.render('documents-list', { title: '町内会ドキュメント管理', association, base: base(association._id), connected: true, folder, breadcrumbs, items: listing.files.filter(item => item.mimeType !== 'application/vnd.google-apps.shortcut'), nextPage: listing.nextPageToken || '' });
 }));
+documentsRouter.post('/:associationId/documents/folders', verifyCsrfToken, handler(async (req, res) => {
+  const ctx = await context(req);
+  const folder = await assertDriveItem(ctx.client, ctx.connection.rootFolderId, req.body.folder, { folder: true });
+  if (!folder.capabilities?.canAddChildren) throw driveError('このフォルダにはフォルダを追加できません。', 403);
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  if (!name || name.length > 200 || /[\x00-\x1f\x7f/\\]/.test(name)) throw driveError('フォルダ名は200文字以内で入力してください。「/」「\\」や制御文字は使用できません。');
+  await (await ctx.client.request('drive/v3/files?supportsAllDrives=true', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [folder.id] })
+  })).body?.cancel();
+  req.session.notice = 'フォルダを追加しました。';
+  res.redirect(`${base(ctx.association._id)}?folder=${folder.id}`);
+}));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 1, fields: 5 } }).single('file');
 documentsRouter.post('/:associationId/documents/upload', handler(async (req, res) => {
   const ctx = await context(req); // Authorize before buffering multipart data.
