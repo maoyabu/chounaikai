@@ -47,6 +47,7 @@ test('iOS app support page includes App Store support essentials', async () => {
   assert.match(html, /mailto:machino\.dengonban@gmail\.com/);
   assert.match(html, /href="\/privacy-policy"/);
   assert.match(html, /href="\/terms"/);
+  assert.match(html, /href="\/app\/child-safety"/);
 });
 
 test('child safety standards page is public and lists reporting and contact', async () => {
