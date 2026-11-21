@@ -1,0 +1,87 @@
+<%- include('partials/head') %>
+<link rel="stylesheet" href="/assets/ios-app-pages.css?v=<%= assetVersion %>">
+<%- include('partials/ios-app-header') %>
+<main class="ios-app-page app-support-page">
+  <header class="app-page-heading">
+    <p class="eyebrow">Child Safety Standards</p>
+    <h1>子どもの安全基準</h1>
+    <p>「まちの伝言板」(Web版・iOSアプリ)および「まちの伝言板 Lite」(Androidアプリ)における、児童の性的虐待と搾取(CSAE)を防ぐための基準です。</p>
+  </header>
+
+  <div class="app-support-layout">
+    <nav class="app-support-nav" aria-label="このページの内容">
+      <strong>このページの内容</strong>
+      <a href="#policy">基本方針</a>
+      <a href="#prohibited">禁止事項</a>
+      <a href="#prevention">防止のための取り組み</a>
+      <a href="#report">報告の方法</a>
+      <a href="#response">報告を受けたときの対応</a>
+      <a href="#contact">連絡先</a>
+    </nav>
+
+    <div class="app-support-content">
+      <section id="policy" class="content-card">
+        <h2>基本方針</h2>
+        <p>本サービスは、児童の性的虐待と搾取(CSAE)および児童性的虐待コンテンツ(CSAM)を一切容認しません。子どもの安全に関するすべての法令(児童買春、児童ポルノに係る行為等の規制及び処罰並びに児童の保護等に関する法律を含みます)を遵守し、違反を確認した場合は関係当局へ報告します。</p>
+      </section>
+
+      <section id="prohibited" class="content-card">
+        <h2>禁止事項</h2>
+        <p>本サービスでは、次の行為を禁止します。投稿・会話・画像・添付ファイル・プロフィールなど、すべての機能が対象です。</p>
+        <ul>
+          <li>児童性的虐待コンテンツ(CSAM)の投稿、共有、保存、要求</li>
+          <li>児童を性的に扱う、または性的な対象として描写する画像・文章などの投稿</li>
+          <li>児童への性的な目的での接触、誘い出し、手なずけ(グルーミング)</li>
+          <li>児童の性的搾取、人身取引、児童買春に関わる行為やその勧誘</li>
+          <li>児童の個人情報や写真を、本人・保護者の同意なく不適切な目的で公開する行為</li>
+        </ul>
+      </section>
+
+      <section id="prevention" class="content-card">
+        <h2>防止のための取り組み</h2>
+        <ul>
+          <li>本サービスは町内会ごとの会員制です。町内会の情報や会話を利用できるのは、会員登録を行い、町内会の管理者に参加を承認された方に限られます。</li>
+          <li>町内会の役員・管理者と運営者は、不適切な投稿を確認し、削除できます。</li>
+          <li>禁止事項に違反した利用者には、投稿の削除、アカウントの利用停止・削除などの措置を行います。</li>
+        </ul>
+      </section>
+
+      <section id="report" class="content-card">
+        <h2>報告の方法</h2>
+        <p>子どもの安全に関する懸念や、禁止事項に当たる投稿・行為を見つけた場合は、次の方法でお知らせください。</p>
+        <h3>アプリ内から</h3>
+        <p>アプリのホーム画面の「質問・ご意見箱」から、所属する町内会の役員へ報告できます。報告を受けた町内会は運営者と連携して対応します。</p>
+        <h3>運営者へ直接</h3>
+        <p>下記の連絡先メールアドレスへご連絡ください。問題の投稿がある画面や日時をお知らせいただくと、確認が早くなります。該当する画像そのものは送らないでください。</p>
+        <h3>緊急の場合</h3>
+        <p>子どもに差し迫った危険がある場合は、ただちに警察(110番)へ通報してください。違法な情報は、インターネット・ホットラインセンターへも通報できます。</p>
+      </section>
+
+      <section id="response" class="content-card">
+        <h2>報告を受けたときの対応</h2>
+        <ul>
+          <li>報告を受けた内容は速やかに確認し、禁止事項に当たる投稿は削除します。</li>
+          <li>違反した利用者のアカウントを利用停止または削除します。</li>
+          <li>児童性的虐待コンテンツ(CSAM)や児童への危険を確認した場合は、法令に従い警察などの関係当局へ報告し、捜査に協力します。</li>
+        </ul>
+      </section>
+
+      <section id="contact" class="content-card app-contact-card">
+        <h2>連絡先</h2>
+        <p>子どもの安全に関するお問い合わせ・報告は、次のメールアドレスで受け付けています。</p>
+        <p><a class="app-support-email" href="mailto:<%= supportEmail %>"><%= supportEmail %></a></p>
+        <p class="app-note">制定日:2026年11月21日</p>
+      </section>
+
+      <section class="content-card">
+        <h2>規約・個人情報の取扱い</h2>
+        <div class="app-policy-links">
+          <a href="/terms">利用規約</a>
+          <a href="/privacy-policy">プライバシーポリシー</a>
+          <a href="/personal-information-protection">個人情報保護方針</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<%- include('partials/foot') %>

@@ -48,3 +48,15 @@ test('iOS app support page includes App Store support essentials', async () => {
   assert.match(html, /href="\/privacy-policy"/);
   assert.match(html, /href="\/terms"/);
 });
+
+test('child safety standards page is public and lists reporting and contact', async () => {
+  const rendered = [];
+  routeFor('/app/child-safety')({}, { render: (view, locals) => rendered.push({ view, locals }) });
+  assert.equal(rendered[0].view, 'child-safety');
+  const html = await renderView(path.join(views, 'child-safety.ejs'), { ...rendered[0].locals });
+  assert.match(html, /子どもの安全基準/);
+  assert.match(html, /まちの伝言板 Lite/);
+  assert.match(html, /CSAM/);
+  assert.match(html, /質問・ご意見箱/);
+  assert.match(html, /mailto:machino\.dengonban@gmail\.com/);
+});
