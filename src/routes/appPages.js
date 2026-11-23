@@ -12,7 +12,7 @@ appPagesRouter.get('/app/ios', (_req, res) => {
   res.render('ios-app-promotion', {
     ...sharedLocals,
     title: 'まちの伝言板',
-    metaDescription: '町内会のお知らせ、行事、会話、地域情報をiPhoneで確認できる「まちの伝言板」の公式紹介ページです。'
+    metaDescription: '町内会のお知らせ、行事、会話、地域情報をWeb・iOS・Androidで確認・共有できる「まちの伝言板」の公式紹介ページです。'
   });
 });
 

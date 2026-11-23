@@ -30,7 +30,9 @@ test('iOS app promotion page describes features and links to support', async () 
     hideDangerCompose: true
   });
   assert.match(html, /まちの伝言板でできること/);
-  assert.match(html, /Face IDまたはTouch ID/);
+  assert.match(html, /Webアプリ「まちの伝言板」/);
+  assert.match(html, /iOSアプリ「まちの伝言板」/);
+  assert.match(html, /Androidアプリ「まちの伝言板 Lite」/);
   assert.match(html, /href="\/app\/ios\/support"/);
 });
 
