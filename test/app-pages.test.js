@@ -10,15 +10,21 @@ const views = path.join(dirname, '../src/views');
 
 const routeFor = pathValue => appPagesRouter.stack.find(layer => layer.route?.path === pathValue)?.route.stack[0].handle;
 
-test('iOS app promotion and support routes are public render routes', () => {
+test('service promotion and support routes are public render routes', () => {
   const rendered = [];
-  for (const routePath of ['/app/ios', '/app/ios/support']) {
+  for (const routePath of ['/app/', '/app/ios/support']) {
     const handler = routeFor(routePath);
     assert.equal(typeof handler, 'function');
     handler({}, { render: (view, locals) => rendered.push({ view, locals }) });
   }
   assert.deepEqual(rendered.map(item => item.view), ['ios-app-promotion', 'ios-app-support']);
   assert.ok(rendered.every(item => item.locals.hideDangerCompose));
+});
+
+test('old iOS promotion URL permanently redirects to the service homepage', () => {
+  let redirect;
+  routeFor('/app/ios')({}, { redirect: (status, location) => { redirect = { status, location }; } });
+  assert.deepEqual(redirect, { status: 301, location: '/app/' });
 });
 
 test('iOS app promotion page describes features and links to support', async () => {
@@ -34,6 +40,8 @@ test('iOS app promotion page describes features and links to support', async () 
   assert.match(html, /iOSアプリ「まちの伝言板」/);
   assert.match(html, /Androidアプリ「まちの伝言板 Lite」/);
   assert.match(html, /href="\/app\/ios\/support"/);
+  assert.match(html, /href="\/app\/"/);
+  assert.doesNotMatch(html, /href="\/app\/ios"/);
 });
 
 test('iOS app support page includes App Store support essentials', async () => {

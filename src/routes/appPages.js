@@ -9,6 +9,10 @@ const sharedLocals = {
 };
 
 appPagesRouter.get('/app/ios', (_req, res) => {
+  res.redirect(301, '/app/');
+});
+
+appPagesRouter.get('/app/', (_req, res) => {
   res.render('ios-app-promotion', {
     ...sharedLocals,
     title: 'まちの伝言板',
