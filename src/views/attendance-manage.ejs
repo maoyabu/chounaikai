@@ -1,0 +1,57 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="page-shell attendance-page">
+<link rel="stylesheet" href="/assets/attendance.css?v=<%= assetVersion %>">
+<% const back = pollScope === 'group' ? `/associations/${association._id}/groups/${group._id}/manage` : `/associations/${association._id}/${pollScope === 'district' ? 'leader' : 'officer'}`; %>
+<a class="back-link" href="<%= back %>">← 管理メニューへ戻る</a>
+<section class="page-heading"><div><h1>イベント出欠管理</h1><p><%= association.name %><%= group ? ` / ${group.name}` : '' %>の出欠確認</p></div></section>
+<% if (typeof notice !== 'undefined' && notice) { %><p class="alert alert-success"><%= notice %></p><% } %>
+<% if (pollScope === 'district' && districtGroups.length > 1) { %><nav aria-label="担当班"><% districtGroups.forEach(d => { %><a class="button button-quiet" href="<%= base %>?scope=district&amp;districtGroup=<%= d._id %>"><%= d.name %></a><% }) %></nav><% } %>
+<section class="content-card"><h2>出欠確認カレンダー</h2>
+<div class="section-heading attendance-calendar-heading"><button type="button" id="attendance-prev" class="button button-quiet" aria-label="前月">‹ 前月</button><h3 id="attendance-month" aria-live="polite"></h3><button type="button" id="attendance-next" class="button button-quiet" aria-label="翌月">次月 ›</button></div>
+<p class="help-text">日付を選ぶとイベントの登録画面が開きます。複数の日程候補を登録できます。</p>
+<div id="attendance-calendar" class="equipment-calendar attendance-calendar"></div></section>
+<dialog id="attendance-dialog" class="equipment-day-dialog attendance-dialog" aria-labelledby="attendance-dialog-title">
+<div class="section-heading"><h2 id="attendance-dialog-title">イベントを作成</h2><button type="button" data-day-close aria-label="閉じる">×</button></div>
+<div class="equipment-day-body">
+<form action="<%= base %>" method="post" id="attendance-form" class="form-stack">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="scope" value="<%= pollScope %>">
+<% if (group) { %><input type="hidden" name="group" value="<%= group._id %>"><% } %>
+<% if (districtGroup) { %><input type="hidden" name="districtGroup" value="<%= districtGroup %>"><% } %>
+<label>イベント名<input name="title" required maxlength="150"></label>
+<fieldset><legend>日付と時間の候補</legend><div id="attendance-candidates"></div><button type="button" id="attendance-add" class="button button-quiet">別の日程・時刻を入力</button><p class="help-text">黄色は入力中、緑色は追加済みの候補です。</p></fieldset>
+<label>メモ<textarea name="memo" maxlength="3000" rows="3"></textarea></label>
+<label>回答の締め切り日<input type="date" name="deadline" required><small>日本時間の23:59まで回答できます。</small></label>
+<fieldset><legend>対象のユーザー</legend>
+<% if (pollScope === 'officer') { %>
+<input type="hidden" name="audience" id="attendance-audience" value="officers">
+<div class="attendance-choice-row" role="group" aria-label="送信先の区分">
+<label class="attendance-choice"><input type="radio" name="targetKind" value="officer" checked>役員向け</label>
+<label class="attendance-choice"><input type="radio" name="targetKind" value="resident">住民向け</label>
+</div>
+<fieldset id="attendance-officer-options" class="attendance-choice-group"><legend>役員の対象</legend>
+<label class="attendance-choice"><input type="radio" name="officerAudience" value="officers" checked>町内会の役員全員</label>
+<label class="attendance-choice"><input type="radio" name="officerAudience" value="department">役員の所属部会</label>
+<label class="attendance-choice"><input type="radio" name="officerAudience" value="officer-selected">役員を個別に選択</label>
+</fieldset>
+<fieldset id="attendance-resident-options" class="attendance-choice-group" hidden><legend>住民の対象</legend>
+<label class="attendance-choice"><input type="radio" name="residentAudience" value="all" checked disabled>全住民</label>
+<label class="attendance-choice"><input type="radio" name="residentAudience" value="selected" disabled>住民を個別に選択</label>
+</fieldset>
+<% } else { %>
+<div class="attendance-choice-row" role="group" aria-label="対象者の選択方法">
+<label class="attendance-choice"><input type="radio" name="audience" value="all" checked><%= pollScope === 'group' ? 'グループのメンバー全員' : '班のメンバー全員' %></label>
+<label class="attendance-choice"><input type="radio" name="audience" value="selected">メンバーを個別に選択</label>
+</div>
+<% } %>
+<% if (pollScope === 'officer') { %>
+<fieldset id="attendance-department" hidden><legend>所属部会（複数選択可）</legend><% departments.forEach(d => { %><label class="attendance-choice"><input type="checkbox" name="department" value="<%= d._id %>"><%= d.name %></label><% }) %></fieldset>
+<label id="attendance-leaders" class="attendance-choice"><input type="checkbox" name="includeLeaders">班長を含む（チェックを外すと班長を除外）</label>
+<% } %>
+<div id="attendance-members" hidden><% members.forEach(m => { const officer = officers.some(o => String(o.user) === String(m.user._id)); %><label class="attendance-choice" data-is-officer="<%= officer %>"><input type="checkbox" name="recipients" value="<%= m.user._id %>"><%= m.user.displayname || m.user.username %><%= officer ? '（役員）' : '' %></label><% }) %></div>
+</fieldset><div class="form-actions"><button type="button" class="button button-quiet" data-attendance-cancel>閉じる</button><button class="button button-primary" type="submit">作成して出欠確認を送る</button></div>
+</form></div></dialog>
+<section class="content-card equipment-place"><h2>作成したイベント</h2><% if (!polls.length) { %><p>イベントはまだありません。</p><% } %><ul><% polls.forEach(p => { %><li><a href="<%= base %>/<%= p._id %>"><%= p.title %></a> <small>締め切り：<%= new Date(p.deadline).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }) %></small></li><% }) %></ul></section>
+<script type="application/json" id="attendance-calendar-data"><%- JSON.stringify(polls.map(p => ({ title: p.title, dates: p.candidates.map(c => c.date), url: `${base}/${p._id}` }))).replace(/</g, '\\u003c') %></script>
+</main><script src="/assets/attendance.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

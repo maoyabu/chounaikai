@@ -1,3 +1,4 @@
+import { attendancePollsRouter } from './routes/attendancePolls.js';
 import { districtMapPresentation } from './lib/districtMap.js';
 import { mobileCommunityInfoRouter } from './routes/mobileCommunityInfo.js';
 import { mobileHouseholdsRouter } from './routes/mobileHouseholds.js';
@@ -184,6 +185,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/', systemContactsRouter);
   app.use('/', faqsRouter);
   app.use('/associations', messageAttachmentsRouter);
+  app.use('/associations', attendancePollsRouter);
   app.use('/associations', associationEventsRouter);
   app.use('/associations', associationGroupsRouter);
   app.use('/associations', associationFinanceRouter);
