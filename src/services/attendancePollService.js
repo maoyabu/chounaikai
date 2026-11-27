@@ -25,6 +25,7 @@ export const pollValues = (body, now = new Date()) => {
   const candidates = dates.map((date, i) => {
     const time = times[i];
     if (typeof date !== 'string' || typeof time !== 'string' || !validDate(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw attendanceError('候補の日付と時間を正しく入力してください。');
+    if (Number(time.slice(3)) % 10 !== 0) throw attendanceError('候補の時間は10分単位で指定してください。');
     if (date < today) throw attendanceError('過去の日付は日程候補に登録できません。');
     return { date, time };
   });

@@ -19,7 +19,7 @@
 <% if (group) { %><input type="hidden" name="group" value="<%= group._id %>"><% } %>
 <% if (districtGroup) { %><input type="hidden" name="districtGroup" value="<%= districtGroup %>"><% } %>
 <label>イベント名<input name="title" required maxlength="150"></label>
-<fieldset><legend>日付と時間の候補</legend><div id="attendance-candidates"></div><button type="button" id="attendance-add" class="button button-quiet">別の日程・時刻を入力</button><p class="help-text">黄色は入力中、緑色は追加済みの候補です。</p></fieldset>
+<fieldset><legend>日付と時間の候補</legend><button type="button" id="attendance-add" class="button button-quiet">別の日程・時刻を追加</button><div id="attendance-candidates"></div></fieldset>
 <label>メモ<textarea name="memo" maxlength="3000" rows="3"></textarea></label>
 <label>回答の締め切り日<input type="date" name="deadline" required><small>日本時間の23:59まで回答できます。</small></label>
 <fieldset><legend>対象のユーザー</legend>

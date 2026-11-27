@@ -13,23 +13,54 @@
     if (date && date < todayText()) return;
     if (candidates.children.length >= 60) { alert('日程候補は60件までです。'); return; }
     const row = document.createElement('div'); row.className = 'attendance-candidate attendance-candidate-draft';
-    const dateLabel = document.createElement('label'); dateLabel.textContent = '日付';
-    const dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.name = 'candidateDate'; dateInput.required = true; dateInput.min = todayText(); dateInput.value = date;
-    dateLabel.append(dateInput);
-    const timeLabel = document.createElement('label'); timeLabel.textContent = '時間';
-    const time = document.createElement('input'); time.type = 'time'; time.name = 'candidateTime'; time.required = true; time.value = '09:00'; timeLabel.append(time);
+    const dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.name = 'candidateDate'; dateInput.required = true; dateInput.min = todayText(); dateInput.value = date; dateInput.setAttribute('aria-label', '候補の日付');
+    const timeFields = document.createElement('div'); timeFields.className = 'attendance-time-fields';
+    const time = document.createElement('input'); time.type = 'hidden'; time.name = 'candidateTime';
+    const makeSelect = (label, values) => {
+      const select = document.createElement('select'); select.required = true; select.setAttribute('aria-label', label);
+      const blank = document.createElement('option'); blank.value = ''; blank.textContent = label; select.append(blank);
+      for (const value of values) { const option = document.createElement('option'); option.value = pad(value); option.textContent = pad(value); select.append(option); }
+      select.value = ''; return select;
+    };
+    const hours = makeSelect('時', Array.from({ length: 24 }, (_, i) => i));
+    const minutes = makeSelect('分', [0, 10, 20, 30, 40, 50]);
+    if (!date) { hours.value = '12'; minutes.value = '00'; }
+    const separator = document.createElement('span'); separator.textContent = ':'; separator.setAttribute('aria-hidden', 'true');
+    timeFields.append(time, hours, separator, minutes);
+    const updateTimePrompt = () => {
+      time.value = hours.value && minutes.value ? `${hours.value}:${minutes.value}` : '';
+      for (const select of [hours, minutes]) {
+        select.classList.toggle('attendance-time-required', !select.value);
+        select.setAttribute('aria-invalid', String(!select.value));
+      }
+    };
+    updateTimePrompt();
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'button button-quiet'; remove.textContent = '削除'; remove.addEventListener('click', () => { row.remove(); render(); });
-    const status = document.createElement('span'); status.className = 'attendance-candidate-status'; status.textContent = '入力中の候補'; status.setAttribute('aria-live', 'polite');
+    let saved = null;
     const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'button button-quiet'; confirm.textContent = '候補に追加';
+    const update = () => {
+      updateTimePrompt();
+      const unchanged = saved && saved.date === dateInput.value && saved.time === time.value;
+      row.classList.toggle('attendance-candidate-draft', !unchanged);
+      row.classList.toggle('attendance-candidate-added', Boolean(unchanged));
+      confirm.disabled = Boolean(unchanged); confirm.textContent = saved ? '修正' : '候補に追加';
+      render();
+    };
     confirm.addEventListener('click', () => {
       dateInput.min = todayText();
-      if (!dateInput.reportValidity() || !time.reportValidity()) return;
-      row.classList.replace('attendance-candidate-draft', 'attendance-candidate-added'); status.textContent = '追加済み候補'; confirm.disabled = true; confirm.textContent = '追加済み'; render();
+      if (!dateInput.reportValidity() || !hours.reportValidity() || !minutes.reportValidity()) return;
+      const isNew = !saved;
+      saved = { date: dateInput.value, time: time.value };
+      if (isNew) candidates.append(row);
+      update();
     });
-    const edit = () => { row.classList.replace('attendance-candidate-added', 'attendance-candidate-draft'); status.textContent = '入力中の候補'; confirm.disabled = false; confirm.textContent = '候補に追加'; render(); };
-    dateInput.addEventListener('input', edit); time.addEventListener('input', edit);
-    row.append(status, dateLabel, timeLabel, confirm, remove); candidates.append(row); render();
-    if (date) time.focus(); else dateInput.focus();
+    dateInput.addEventListener('input', update);
+    for (const select of [hours, minutes]) {
+      select.addEventListener('input', update); select.addEventListener('change', update);
+      select.addEventListener('focus', () => { if (!hours.value && !minutes.value) { hours.value = '12'; minutes.value = '00'; update(); } });
+    }
+    row.append(dateInput, timeFields, confirm, remove); candidates.prepend(row); render();
+    if (!date) dateInput.focus();
   };
   const polls = JSON.parse(document.getElementById('attendance-calendar-data').textContent);
   const render = () => {

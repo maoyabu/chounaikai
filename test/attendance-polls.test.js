@@ -188,3 +188,58 @@ test('回答ボタンは選択を切り替え、未回答での送信を止め�
  groups[1].buttons[2].events.click();assert.equal(error.hidden,true);
  prevented=false;events.submit({preventDefault(){prevented=true;}});assert.equal(prevented,false);
 });
+
+test('候補は新規入力を上、追加済みを下に並べ、日時の変更時だけ修正できる',async()=>{
+ const vm=await import('node:vm'),fs=await import('node:fs/promises');
+ class Element {
+  constructor(){this.children=[];this.events={};this.attributes={};this.value='';this.className='';this.classList={toggle:(name,on)=>{const names=new Set(this.className.split(' ').filter(Boolean));if(on)names.add(name);else names.delete(name);this.className=[...names].join(' ');}};}
+  append(...items){for(const item of items){item.remove();item.parent=this;this.children.push(item);}}
+  prepend(item){item.remove();item.parent=this;this.children.unshift(item);}
+  remove(){if(this.parent){this.parent.children=this.parent.children.filter(child=>child!==this);this.parent=null;}}
+  replaceChildren(){for(const child of this.children)child.parent=null;this.children=[];}
+  setAttribute(name,value){this.attributes[name]=value;}
+  addEventListener(type,fn){this.events[type]=fn;}
+  querySelectorAll(selector){return this.children.flatMap(child=>[...(selector==='input'||selector.includes(`name="${child.name}"`)?[child]:[]),...child.querySelectorAll(selector)]);}
+  reportValidity(){return Boolean(this.value);}
+  focus(){}
+ }
+ const ids=Object.fromEntries(['attendance-calendar','attendance-dialog','attendance-form','attendance-candidates','attendance-calendar-data','attendance-month','attendance-prev','attendance-next','attendance-add','attendance-members'].map(id=>[id,new Element()]));
+ ids['attendance-calendar-data'].textContent='[]';
+ ids['attendance-form'].querySelector=()=>({value:'all'});
+ const deadline=new Element();
+ const document={getElementById:id=>ids[id]||null,createElement:()=>new Element(),querySelectorAll:()=>[],querySelector:()=>deadline};
+ vm.runInNewContext(await fs.readFile('src/public/attendance.js','utf8'),{document,alert(message){throw Error(message);}});
+ const candidates=ids['attendance-candidates'];
+ ids['attendance-add'].events.click();const first=candidates.children[0];
+ const [date,timeFields,confirm]=first.children;
+ const [time,hours,,minutes]=timeFields.children;
+ assert.equal(hours.children.length,25);
+ assert.deepEqual(minutes.children.slice(1).map(option=>option.value),['00','10','20','30','40','50']);
+ assert.equal(first.children.length,4);assert.equal(confirm.textContent,'候補に追加');
+ date.value='2099-12-01';confirm.events.click();
+ assert.equal(confirm.textContent,'修正');assert.equal(confirm.disabled,true);
+ ids['attendance-add'].events.click();const second=candidates.children[0];
+ assert.equal(candidates.children[1],first);
+ second.children[0].value='2099-12-02';second.children[2].events.click();
+ assert.equal(candidates.children[0],first);assert.equal(candidates.children[1],second);
+ hours.value='10';hours.events.input();assert.equal(confirm.disabled,false);
+ hours.value='12';hours.events.input();assert.equal(confirm.disabled,true);
+ date.value='2099-12-03';date.events.input();assert.equal(confirm.disabled,false);
+ confirm.events.click();assert.equal(confirm.disabled,true);assert.equal(candidates.children[0],first);
+ second.children[3].events.click();assert.equal(candidates.children.length,1);
+ candidates.replaceChildren();
+ ids['attendance-dialog'].showModal=()=>{};
+ ids['attendance-form'].elements={title:new Element()};
+ const day=ids['attendance-calendar'].children.find(cell=>cell.children[0]?.events.click&&!cell.children[0].disabled);
+ day.children[0].events.click();
+ const [initialTime,initialHour,,initialMinute]=candidates.children[0].children[1].children;
+ assert.equal(initialTime.value,'');assert.ok(initialHour.className.includes('attendance-time-required'));assert.equal(initialMinute.attributes['aria-invalid'],'true');
+ initialHour.events.focus();assert.equal(initialTime.value,'12:00');assert.equal(initialHour.value,'12');assert.equal(initialMinute.value,'00');
+ initialHour.value='18';initialMinute.value='30';initialMinute.events.change();
+ assert.equal(initialTime.value,'18:30');assert.ok(!initialHour.className.includes('attendance-time-required'));assert.equal(initialMinute.attributes['aria-invalid'],'false');
+});
+
+test('候補時刻は10分単位で登録する',()=>{
+ for(const minute of ['00','10','20','30','40','50']) assert.equal(pollValues({...input,candidateTime:[`12:${minute}`,'19:00']},now).candidates[0].time,`12:${minute}`);
+ for(const minute of ['01','15','29','59']) assert.throws(()=>pollValues({...input,candidateTime:[`12:${minute}`,'19:00']},now),/10分単位/);
+});

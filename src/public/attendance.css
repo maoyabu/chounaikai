@@ -8,7 +8,6 @@
 .attendance-dialog .form-stack>label,.attendance-dialog .form-stack>fieldset{margin:0}
 .attendance-dialog fieldset,.attendance-page fieldset{min-width:0;border:1px solid var(--line);border-radius:.65rem;padding:1rem}
 .attendance-dialog legend{font-weight:700;padding:0 .35rem}
-.attendance-candidate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:.75rem;margin-bottom:.75rem}
 .attendance-dialog .attendance-choice,.attendance-page .attendance-options label{display:flex;align-items:center;justify-content:flex-start;gap:.6rem;line-height:1.6;font-weight:400}
 .attendance-dialog .attendance-choice input,.attendance-page .attendance-options input{flex:0 0 1rem;width:1rem;height:1rem;padding:0;margin:0;accent-color:var(--green)}
 .attendance-choice-row,.attendance-options{display:flex;flex-wrap:wrap;gap:.75rem 1.5rem}
@@ -22,13 +21,9 @@
 .attendance-page th,.attendance-page td{padding:.7rem;border-bottom:1px solid var(--line);min-width:75px}
 .attendance-page .attendance-options label{padding:.5rem 0}
 .attendance-page form.form-stack>fieldset{margin:0}
-@media(max-width:600px){.attendance-day>.equipment-calendar-day{min-height:58px}.attendance-calendar-heading .button{padding:.5rem;font-size:.85rem}.attendance-candidate{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.5rem}.attendance-candidate>.button{grid-column:1/-1;justify-self:end}.attendance-dialog input:is([type=date],[type=time]){appearance:none;min-width:0}.attendance-dialog .form-actions{flex-direction:column-reverse}}
+@media(max-width:600px){.attendance-day>.equipment-calendar-day{min-height:58px}.attendance-calendar-heading .button{padding:.5rem;font-size:.85rem}.attendance-dialog input:is([type=date],[type=time]){appearance:none;min-width:0}.attendance-dialog .form-actions{flex-direction:column-reverse}}
 .attendance-day button:disabled{background:#f2f4f3;color:#98a29c;border-color:var(--line);cursor:not-allowed;opacity:.65}
-.attendance-candidate{padding:1rem;border:1px solid #e8c56b;border-radius:.65rem;background:#fff8e6}
 .attendance-candidate-added{background:var(--green-pale);border-color:#9bc8ad}
-.attendance-candidate-status{grid-column:1/-1;color:#805b10;font-size:.85rem;font-weight:700}
-.attendance-candidate-added .attendance-candidate-status{color:var(--green-dark)}
-.attendance-candidate>.button{grid-row:3}
 .attendance-dialog #attendance-department{display:grid;gap:.65rem}
 .attendance-dialog #attendance-department[hidden]{display:none}
 .attendance-page .attendance-answer-button{min-width:72px;min-height:56px;font-size:1.6rem;background:var(--surface);border:2px solid var(--line);color:var(--muted)}
@@ -37,8 +32,7 @@
 .attendance-page .attendance-answer-button[aria-pressed=true][data-mark=no]{background:var(--danger);border-color:var(--danger);color:#fff}
 .attendance-page .attendance-answer-button[aria-pressed=true]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px currentColor}
 .attendance-answer-button:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
-@media(max-width:600px){.attendance-candidate>.button{grid-column:auto}.attendance-page .attendance-options{gap:.75rem}}
-.attendance-candidate{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:600px){.attendance-page .attendance-options{gap:.75rem}}
 .attendance-answer-list{display:grid;gap:0}
 .attendance-answer-row{display:grid;grid-template-columns:max-content max-content;align-items:center;column-gap:1.5rem;padding:.35rem 0;border-bottom:1px solid var(--line)}
 .attendance-answer-datetime{font-weight:700;line-height:1.5}
@@ -61,3 +55,18 @@
 .attendance-page .attendance-event-heading{flex-direction:row;justify-content:flex-start;align-items:baseline;flex-wrap:wrap;gap:.5rem 1.5rem;margin-bottom:1.25rem}
 .attendance-page .attendance-event-heading h1{margin:0}
 .attendance-page .attendance-event-heading p{margin:0;font-size:1rem;font-weight:400;color:var(--ink)}
+#attendance-add{margin-bottom:.5rem}
+.attendance-candidate{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) auto auto;align-items:center;gap:.5rem;margin:0;padding:.4rem .5rem;border:1px solid #e8c56b;background:#fff8e6}
+.attendance-candidate-added{background:var(--green-pale);border-color:#9bc8ad}
+.attendance-candidate+.attendance-candidate{border-top:0}
+.attendance-dialog .attendance-candidate :is(input,select){min-width:0;width:100%;padding:.5rem;font-size:1rem}
+.attendance-candidate>.button{grid-column:auto;grid-row:auto;justify-self:stretch;padding:.5rem .75rem}
+.attendance-candidate>.button:disabled{opacity:.45;cursor:default}
+@media(max-width:600px){.attendance-candidate{gap:.25rem;padding:.3rem}.attendance-dialog .attendance-candidate :is(input,select){font-size:.8rem;padding:.4rem .2rem}.attendance-candidate>.button{padding:.4rem .35rem;font-size:.8rem}}
+
+.attendance-dialog .attendance-candidate :is(input,select).attendance-time-required{border:2px solid var(--danger);background:var(--danger-bg)}
+.attendance-dialog .attendance-candidate :is(input,select).attendance-time-required:focus{border-color:var(--danger);box-shadow:0 0 0 3px rgba(163,59,53,.13)}
+
+.attendance-time-fields{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:.2rem;min-width:0}
+.attendance-time-fields>input[type=hidden]{display:none}
+.attendance-dialog .attendance-time-fields select{padding-inline:.25rem}
