@@ -1,3 +1,4 @@
+import { publicSiteCanonical } from '../services/publicPageSeoService.js';
 import { canViewOfficerDirectory } from '../services/officerDirectoryAccess.js';
 import { attachDashboardSafety } from '../services/safetyService.js';
 import { associationFeatureEnabled } from '../services/associationFeatureService.js';
@@ -47,6 +48,12 @@ import { AssociationGroupJoinRequest, AssociationGroupMembership } from '../mode
 export const webRouter = express.Router();
 
 webRouter.use(provideCsrfToken);
+// Account entry points are navigation steps, not public search landing pages.
+webRouter.use(['/login', '/register', '/associations/:associationId/register/start'], (req, res, next) => {
+  res.set('X-Robots-Tag', 'noindex');
+  res.locals.robotsMeta = 'noindex';
+  next();
+});
 const renderPasswordReset = (res, mode, extra = {}) => res.render('password-reset', { title: 'パスワードの再設定', mode, message: null, formError: null, ...extra });
 webRouter.use(['/forgot-password', '/reset-password'], (req, res, next) => {
   res.set('Cache-Control', 'no-store');
@@ -227,7 +234,7 @@ webRouter.get('/associations', async (req, res, next) => {
       const countById = new Map(counts.map(item => [String(item._id), item.count]));
       directoryGoodPlaces.forEach(report => { report.likeCount = countById.get(String(report._id)) || 0; });
     }
-    return res.render('association-list', { directoryGoodPlaces, title: '町内会一覧', associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
+    return res.render('association-list', { directoryGoodPlaces, title: '町内会一覧', documentTitle: '町内会一覧 | まちの伝言板', metaDescription: 'まちの伝言板を利用する町内会の一覧です。地域から町内会を探し、活動や加入の案内をご覧いただけます。', canonicalUrl: publicSiteCanonical(req, '/associations', { prefecture, city, keyword }), associations, filters: { prefecture, city, keyword }, prefectures, citiesByPrefecture });
   } catch (error) { return next(error); }
 });
 

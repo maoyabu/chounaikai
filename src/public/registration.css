@@ -2112,3 +2112,12 @@ h1, h2, h3, h4, h5, h6,
 #features .association-feature-child { margin-left: 2rem; }
 #features .association-feature-child:has(input:disabled) { opacity: .55; }
 .association-public-districts .district-leader { display: inline-flex; align-items: center; gap: .5rem; margin-left: 1rem; font-weight: normal; vertical-align: middle; }
+
+/* Public calendars submit month choices instead of exposing a chain of month links. */
+.association-event-navigation.calendar-navigation-public{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.55rem}
+.association-event-navigation.calendar-navigation-public>form{margin:0;min-width:0}
+.association-event-navigation.calendar-navigation-public>.calendar-nav-prev{grid-column:1;grid-row:1;justify-self:start}
+.association-event-navigation.calendar-navigation-public>.calendar-nav-date{grid-column:2;grid-row:1;justify-self:center}
+.association-event-navigation.calendar-navigation-public>.calendar-nav-next{grid-column:3;grid-row:1;justify-self:end}
+.association-event-navigation.calendar-navigation-public button{white-space:nowrap}
+@media(max-width:600px){.association-event-navigation.calendar-navigation-public{gap:.25rem}.calendar-navigation-public>.calendar-nav-prev button,.calendar-navigation-public>.calendar-nav-next button{padding:.3rem .35rem}}

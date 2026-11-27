@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %><link rel="canonical" href="<%= canonicalUrl %>"><% } %>
   <meta name="description" content="<%= typeof metaDescription !== 'undefined' ? metaDescription : '町内会の情報と運営を、分かりやすくひとつにまとめるサービスです。' %>">
   <% if (typeof csrfToken !== 'undefined') { %><meta name="csrf-token" content="<%= csrfToken %>"><% } %>
-  <title><%= title %> | 町内会管理</title>
+  <title><%= typeof documentTitle !== 'undefined' && documentTitle ? documentTitle : `${title} | 町内会管理` %></title>
+  <% if (typeof robotsMeta !== 'undefined' && robotsMeta) { %><meta name="robots" content="<%= robotsMeta %>"><% } %>
   <% if (typeof financeYears !== 'undefined') { %><script>window.financeYears=<%- JSON.stringify(financeYears) %>;</script><% } %>
   <link rel="stylesheet" href="/assets/app.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/assets/registration.css?v=<%= assetVersion %>">

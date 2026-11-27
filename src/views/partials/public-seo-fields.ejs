@@ -1,0 +1,5 @@
+<section class="content-card"><h2>検索結果の表示設定</h2>
+  <label>検索用タイトル<input name="publicPageTitle" value="<%= page.publicPageTitle || '' %>" maxlength="120" placeholder="未入力の場合は名称から自動生成"></label>
+  <label>検索用説明文<textarea name="publicMetaDescription" rows="3" maxlength="300" placeholder="地域や活動内容など、このページを紹介する説明文"><%= page.publicMetaDescription || '' %></textarea></label>
+  <p class="help-text">未入力の場合は名称と紹介文から自動生成します。一般公開ページに適用されます。Googleの検索結果では、設定した内容と異なる表示になる場合があります。</p>
+</section>

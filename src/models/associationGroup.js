@@ -23,6 +23,8 @@ const associationGroupSchema = new mongoose.Schema({
   publicDescription: { type: String, trim: true, maxlength: 5000 },
   publicVisibility: { type: String, enum: ['members', 'open'], default: 'members' },
   publicPhotos: [{ url: String, publicId: String, caption: String }],
+  publicPageTitle: { type: String, trim: true, maxlength: 120, default: '' },
+  publicMetaDescription: { type: String, trim: true, maxlength: 300, default: '' },
   status: { type: String, enum: ['active', 'suspended', 'deleted'], default: 'active', index: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true, collection: 'association_groups' });

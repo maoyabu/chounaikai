@@ -1,3 +1,4 @@
+import { publicPageCanonical, publicPageMetadata, publicSeoValues } from '../services/publicPageSeoService.js';
 import QRCode from 'qrcode';
 import { benefitColors, benefitIcons, joinBenefitValues } from '../services/joinBenefitsService.js';
 import { persistEventImage, deleteEventImage } from '../services/eventAttachmentService.js';
@@ -63,7 +64,7 @@ associationEventsRouter.get('/:associationId/public', async (req, res, next) => 
     if (!association) throw notFound();
     res.set('Cache-Control', 'no-store');
     const pageData = await loadAssociationPageData(association, { month: req.query.month });
-    return res.render('association-public-events', { title: `${association.name} 町内会について`, association, ...pageData });
+    return res.render('association-public-events', { title: `${association.name} 町内会について`, association, ...pageData, canonicalUrl: publicPageCanonical(req, association._id), ...publicPageMetadata(association) });
   } catch (error) { return next(error); }
 });
 
@@ -82,6 +83,7 @@ associationEventsRouter.post('/:associationId/public/edit', requireLogin, requir
     if (!mongoose.isValidObjectId(req.params.associationId)) throw notFound();
     const association = await NeighborhoodAssociation.findOne({ _id: req.params.associationId, status: 'active', deletedAt: { $exists: false } });
     if (!association) throw notFound();
+    const seoValues = publicSeoValues(req.body);
     const introduction = String(req.body.introduction || '').trim();
     if (introduction.length > 5000) throw Object.assign(new Error('基本情報は5000文字以内で入力してください。'), { status: 400 });
     const photos = Array.from({ length: 3 }, (_, slot) => association.publicPhotos?.[slot] || null);
@@ -99,6 +101,7 @@ associationEventsRouter.post('/:associationId/public/edit', requireLogin, requir
       }
     }
     association.introduction = introduction;
+    Object.assign(association, seoValues);
     association.publicPhotos = photos;
     await association.save();
     await Promise.allSettled(replaced.map(deletePublicPhoto));

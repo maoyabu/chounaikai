@@ -1,3 +1,4 @@
+import { publicPageCanonical, publicPageMetadata, publicSeoValues } from '../services/publicPageSeoService.js';
 import { persistEventImage, deleteEventImage } from '../services/eventAttachmentService.js';
 import { acceptAnnouncementAttachments } from '../services/announcementAttachmentService.js';
 import express from 'express';
@@ -30,7 +31,7 @@ associationGroupsRouter.get('/:associationId/groups/:groupId', async (req, res, 
     const [members, allEvents] = await Promise.all([AssociationGroupMembership.find({ group: group._id, status: 'active' }).populate('user', 'displayname username email avatar').sort({ createdAt: 1 }).lean(), AssociationEvent.find({ association: group.association, group: group._id, visible: true }).sort({ startDate: 1, startTime: 1 }).lean()]);
     const joinRequest = membership ? await AssociationGroupJoinRequest.findOne({ association: group.association, group: group._id, applicant: req.user._id, status: 'pending' }).lean() : null;
     const calendar = calendarWindow(req.query.month), start = `${calendar.first.getFullYear()}-${String(calendar.first.getMonth() + 1).padStart(2, '0')}-01`, endDate = new Date(calendar.first.getFullYear(), calendar.first.getMonth() + 3, 1), end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`, events = expandRecurringEvents(allEvents, start, end).filter(event => event.startDate < end && event.endDate >= start);
-    return res.render('association-group-public', { title: group.name, association, group, members: members.filter(item => item.user), events, ...calendar, calendarWindow: calendar, joinRequest, isResident: Boolean(membership), isManager: Boolean(req.user && await groupAccess(group._id, group.association, req.user._id)) });
+    return res.render('association-group-public', { title: group.name, association, group, canonicalUrl: group.publicVisibility === 'open' ? publicPageCanonical(req, association._id, group._id) : undefined, ...(group.publicVisibility === 'open' ? publicPageMetadata(association, group) : { robotsMeta: 'noindex, nofollow' }), members: members.filter(item => item.user), events, ...calendar, calendarWindow: calendar, joinRequest, isResident: Boolean(membership), isManager: Boolean(req.user && await groupAccess(group._id, group.association, req.user._id)) });
   } catch (error) { return next(error); }
 });
 
@@ -107,8 +108,10 @@ associationGroupsRouter.post('/:associationId/groups/:groupId/manage/pr', accept
   const uploaded = [];
   try {
     const group = await AssociationGroup.findOne({ _id: req.params.groupId, association: req.params.associationId, status: { $in: ['active', 'suspended'] } }); if (!group || !await groupAccess(group._id, group.association, req.user._id)) throw fail('操作権限がありません。', 403);
+    const seoValues = publicSeoValues(req.body);
     const photos = Array.from({ length: 3 }, (_, slot) => group.publicPhotos?.[slot] || null), replaced = [];
     for (let slot = 0; slot < 3; slot++) { const file = req.files?.[`photo${slot}`]?.[0]; if (file) { const photo = await uploadPublicPhoto(file, group.association, `group_${slot}`); uploaded.push(photo); if (photos[slot]?.publicId) replaced.push(photos[slot].publicId); photos[slot] = photo; } else if (req.body[`remove${slot}`] === 'on') { if (photos[slot]?.publicId) replaced.push(photos[slot].publicId); photos[slot] = null; } }
+    Object.assign(group, seoValues);
     group.name = String(req.body.name || '').trim(); group.publicDescription = String(req.body.publicDescription || '').trim(); group.publicVisibility = req.body.publicVisibility === 'open' ? 'open' : 'members'; group.publicPhotos = photos; if (!group.name) throw fail('グループ名を入力してください。'); await group.save(); await Promise.allSettled(replaced.map(deletePublicPhoto)); req.session.notice = 'グループPRページを更新しました。'; return res.redirect(`/associations/${group.association}/groups/${group._id}/manage`);
   } catch (error) { await Promise.allSettled(uploaded.map(photo => deletePublicPhoto(photo.publicId))); return next(error); }
 });

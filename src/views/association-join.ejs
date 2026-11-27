@@ -4,7 +4,7 @@
 <main class="page-shell join-page">
 <div class="join-screen-only join-page-navigation"><% if (currentUser) { %><a class="back-link" href="/associations/<%= association._id %>/join/manage">← 加入申し込みページ管理へ戻る</a><% } %><a href="/associations/<%= association._id %>/public">町内会PRページへ</a></div>
 <section class="content-card"><div class="join-card-heading"><p class="eyebrow">町内会・まちの伝言板への加入のご案内</p><button class="button button-quiet join-screen-only" type="button" id="join-export-open">画像表示・保存・印刷</button></div><h1><%= association.name %></h1><p class="body-copy"><%= association.introduction || '地域の情報を共有し、みんなで暮らしやすいまちをつくりましょう。' %></p><% if (association.serviceArea) { %><p>対象地域：<%= association.serviceArea %></p><% } %>
-<a class="button button-primary join-screen-only" href="/associations/<%= association._id %>/register/start">町内会に参加する（会員登録）</a>
+<a class="button button-primary join-screen-only" rel="nofollow" href="/associations/<%= association._id %>/register/start">町内会に参加する（会員登録）</a>
 <div class="join-print-only join-qr"><img src="<%= qrCode %>" alt="加入案内ページのQRコード" width="160" height="160"><div><strong>町内会に参加する</strong><p>QRコードから加入案内を開き、会員登録へお進みください。</p><small><%= joinUrl %></small></div></div></section>
 <%- include('partials/join-benefits') %>
 </main>

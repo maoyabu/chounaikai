@@ -49,6 +49,16 @@ test('anonymous invitation leads to account registration; authenticated particip
   assert.equal((await publicPage.json()).view, 'association-join');
   const anonymous = await request(`/associations/${id}/register/start`, false);
   assert.equal(anonymous.headers.get('location'), '/register');
+  assert.equal(anonymous.status, 302);
+  assert.equal(anonymous.headers.get('x-robots-tag'), 'noindex');
+  const loginEntry = await request(`/associations/${id}/register/start?login=1`, false);
+  assert.equal(loginEntry.headers.get('location'), '/login');
+  assert.equal(loginEntry.headers.get('x-robots-tag'), 'noindex');
+  const loginPage = await request('/login', false);
+  assert.equal(loginPage.status, 200);
+  assert.equal(loginPage.headers.get('x-robots-tag'), 'noindex');
+  const registerPage = await request('/register', false);
+  assert.equal(registerPage.headers.get('x-robots-tag'), 'noindex');
   const button = await request(`/associations/${id}/register/start`);
   assert.equal(button.headers.get('location'), `/associations/${id}/join`);
   const form = await request(button.headers.get('location'));

@@ -37,6 +37,8 @@ const neighborhoodAssociationSchema = new mongoose.Schema({
     phone: String
   },
   introduction: { type: String, default: '' },
+  publicPageTitle: { type: String, trim: true, maxlength: 120, default: '' },
+  publicMetaDescription: { type: String, trim: true, maxlength: 300, default: '' },
   joinBenefits: { type: [{ title: { type: String, required: true, maxlength: 100 }, content: { type: String, required: true, maxlength: 2000 }, color: { type: String, enum: benefitColors.map(([value]) => value), default: 'green' }, icon: { type: String, enum: benefitIcons.map(([value]) => value), default: 'town' } }], default: [], validate: { validator: values => values.length <= 10, message: 'メリットは10件以内で登録してください。' } },
   publicPhotos: { type: [{ url: String, publicId: String }], default: [] },
   optionalFeatures: {

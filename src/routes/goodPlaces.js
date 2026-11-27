@@ -1,3 +1,4 @@
+import { publicSiteCanonical, goodPlaceHistoryCanonical } from '../services/publicPageSeoService.js';
 import { goodPlaceIdsByLikes, loadGoodPlaceHistoryReactions, parseCommentsEnabled, setGoodPlaceLike, addGoodPlaceComment, moderateGoodPlaceComment, loadGoodPlaceReactions } from '../services/goodPlaceReactionService.js';
 import { canViewGoodPlaceAuthors, goodPlaceAuthorQuery, redactGoodPlaceAuthor } from '../services/goodPlaceDisclosureService.js';
 import express from 'express';
@@ -62,7 +63,7 @@ goodPlacesRouter.get('/associations/:associationId/good-places', async (req, res
     }
     const historyReports = reports.slice(0, 50).map(report => redactGoodPlaceAuthor(report, showGoodPlaceAuthors));
     const visibleReports = showGoodPlaceAuthors ? await loadGoodPlaceHistoryReactions(req.params.associationId, historyReports) : historyReports;
-    res.render('good-place-history', { sort, title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: visibleReports, hasNext: reports.length > 50, page });
+    res.render('good-place-history', { canonicalUrl: goodPlaceHistoryCanonical(req, req.params.associationId, page, sort), documentTitle: `${res.locals.goodPlaceAssociation.name}のわがまちのいいところ | まちの伝言板`, metaDescription: `${res.locals.goodPlaceAssociation.name}の地域の魅力や身近ないいところを写真で紹介します。`, sort, title: 'わがまちのいいところ', association: res.locals.goodPlaceAssociation, showGoodPlaceAuthors, reports: visibleReports, hasNext: reports.length > 50, page });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(photo)?', async (req, res, next) => {
@@ -81,7 +82,7 @@ goodPlacesRouter.get('/associations/:associationId/good-places/:reportId/:photo(
     const owner = showGoodPlaceAuthors && String(report.author?._id || report.author) === String(req.user._id);
     const commentPage = Math.max(1, Math.min(100000, Number.parseInt(req.query?.commentPage, 10) || 1));
     const reactions = showGoodPlaceAuthors ? await loadGoodPlaceReactions({ associationId: req.params.associationId, reportId: req.params.reportId, userId: req.user._id, owner, page: commentPage }) : null;
-    res.render('good-place-detail', { reactions, title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, canEdit: owner, showGoodPlaceAuthors });
+    res.render('good-place-detail', { canonicalUrl: publicSiteCanonical(req, `/associations/${req.params.associationId}/good-places/${report._id}`), documentTitle: `${report.title} | ${res.locals.goodPlaceAssociation.name} | まちの伝言板`, reactions, title: report.title, association: res.locals.goodPlaceAssociation, report, canDelete, canEdit: owner, showGoodPlaceAuthors });
   } catch (error) { next(error); }
 });
 goodPlacesRouter.post('/associations/:associationId/good-places/:reportId/edit', requireLogin, async (req, res, next) => {

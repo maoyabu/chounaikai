@@ -1,3 +1,4 @@
+import { publicSeoRouter } from './routes/publicSeo.js';
 import { attendancePollsRouter } from './routes/attendancePolls.js';
 import { districtMapPresentation } from './lib/districtMap.js';
 import { mobileCommunityInfoRouter } from './routes/mobileCommunityInfo.js';
@@ -80,6 +81,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', publicBaseUrl = process.env.PUBLIC_BASE_URL, trustProxy = nodeEnv === 'production' ? 1 : false, mongoOptions = {}, rateLimitStore, mfaService, mfaKey = process.env.MFA_ENCRYPTION_KEY, privacyAuditWriter, siteSecurityService, lineLoginService, passkeyService }) => {
   const app = express();
   app.disable('x-powered-by');
+  app.locals.publicBaseUrl = publicBaseUrl;
   app.set('env', nodeEnv);
   app.use(productionErrorResponses(nodeEnv));
   app.locals.siteSecurityService = siteSecurityService || createSiteSecurityService();
@@ -111,6 +113,7 @@ export const createApp = ({ mongoUri, sessionSecret, nodeEnv = 'development', pu
   app.use('/', legalRouter);
   // Public App Store promotion and support pages remain available without login.
   app.use('/', appPagesRouter);
+  app.use('/', publicSeoRouter);
   // The server connects Mongoose before creating the app. Reuse that client so
   // session reads and application queries share the same monitored connection.
   const storeOptions = mongoose.connection.readyState === 1
